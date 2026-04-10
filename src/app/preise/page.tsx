@@ -1,6 +1,5 @@
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import Image from "next/image";
 
 const PLANS = [
   {
@@ -153,17 +152,9 @@ export default function Preise() {
           </div>
         </section>
 
-        {/* Bild + CTA */}
-        <section className="max-w-5xl mx-auto px-4 py-20 grid md:grid-cols-2 gap-12 items-center">
-          <div className="relative h-96 rounded-3xl overflow-hidden shadow-2xl">
-            <Image
-              src="/Startseite_Bild.png"
-              alt="Beispiel MyStoryBook"
-              fill
-              className="object-cover object-top"
-            />
-          </div>
-          <div className="space-y-6">
+        {/* CTA */}
+        <section className="max-w-5xl mx-auto px-4 py-20">
+          <div className="space-y-6 max-w-xl mx-auto text-center">
             <h2 className="text-3xl font-bold text-brand-800" style={{ fontFamily: "var(--font-display)" }}>
               Das persönlichste Geschenk, das du machen kannst.
             </h2>
