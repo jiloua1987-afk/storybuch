@@ -138,23 +138,6 @@ export default function UeberUns() {
           </div>
         </section>
 
-        {/* Beispiel Buchseite */}
-        <section className="bg-white py-20">
-          <div className="max-w-3xl mx-auto px-4 space-y-8 text-center">
-            <h2 className="text-3xl font-bold text-brand-800" style={{ fontFamily: "var(--font-display)" }}>
-              So sieht dein Buch aus
-            </h2>
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              className="rounded-3xl overflow-hidden shadow-2xl border border-gray-100"
-            >
-              <Image src="/Comic.png" alt="Beispiel Buchseite" width={900} height={650} className="w-full h-auto" />
-            </motion.div>
-          </div>
-        </section>
-
       </main>
       <Footer />
     </>

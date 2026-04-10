@@ -90,10 +90,10 @@ export default function LandingHero({ onStart }: { onStart: () => void }) {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.6 }}
-            className="relative rounded-3xl overflow-hidden shadow-2xl border border-gray-100 max-w-3xl mx-auto"
+            className="relative rounded-3xl overflow-hidden shadow-2xl border border-gray-100 max-w-3xl mx-auto bg-white"
           >
             <Image
-              src="/Comic.png"
+              src="/Startseite_Bild.png"
               alt="Beispiel Buchseite im Comic-Stil"
               width={900}
               height={650}
