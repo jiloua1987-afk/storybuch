@@ -19,9 +19,15 @@ export interface Chapter {
   imagePrompt?: string;
 }
 
+export type IllustrationStyle = "comic" | "aquarell" | "bleistift" | "realistisch";
+export type BookLanguage = "de" | "en" | "fr" | "es";
+
 export interface BookProject {
   id: string;
   title: string;
+  dedication?: string;
+  illustrationStyle?: IllustrationStyle;
+  language?: BookLanguage;
   storyInput: string;
   guidedAnswers: {
     characters: string;
