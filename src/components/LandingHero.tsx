@@ -60,7 +60,7 @@ export default function LandingHero({ onStart }: { onStart: () => void }) {
             className="relative h-[500px] rounded-3xl overflow-hidden shadow-2xl"
           >
             <Image
-              src="/image.png"
+              src="/familie.png"
               alt="Familie liest ihr persönliches Bilderbuch"
               fill
               className="object-cover object-top"
@@ -93,7 +93,7 @@ export default function LandingHero({ onStart }: { onStart: () => void }) {
             className="relative rounded-3xl overflow-hidden shadow-2xl border border-gray-100 max-w-3xl mx-auto bg-white"
           >
             <Image
-              src="/Startseite_Bild.png"
+              src="/Comic.png"
               alt="Beispiel Buchseite im Comic-Stil"
               width={900}
               height={650}

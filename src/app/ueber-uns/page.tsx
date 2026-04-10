@@ -80,7 +80,7 @@ export default function UeberUns() {
             transition={{ delay: 0.2 }}
             className="relative h-96 rounded-3xl overflow-hidden shadow-2xl"
           >
-            <Image src="/image.png" alt="Familie mit Buch" fill className="object-cover object-top" />
+            <Image src="/Startseite_Bild.png" alt="MyStoryBook Produkt" fill className="object-contain" />
           </motion.div>
         </section>
 
