@@ -1,0 +1,162 @@
+"use client";
+import { motion } from "framer-motion";
+import Navbar from "@/components/Navbar";
+import Footer from "@/components/Footer";
+import Image from "next/image";
+
+const REASONS = [
+  {
+    emoji: "💝",
+    title: "Das persönlichste Geschenk",
+    desc: "Kein Gutschein, kein Standardgeschenk – ein Buch, das nur für diese eine Person existiert. Mit echten Erinnerungen, echten Momenten.",
+  },
+  {
+    emoji: "📖",
+    title: "Erinnerungen für immer",
+    desc: "Fotos verschwinden in der Cloud. Ein gedrucktes Buch bleibt – im Regal, auf dem Nachttisch, in der Familie.",
+  },
+  {
+    emoji: "✍️",
+    title: "Kein Aufwand",
+    desc: "Stichpunkte reichen. Wir kümmern uns um Text, Illustrationen und Layout. Du musst nichts ausformulieren.",
+  },
+  {
+    emoji: "🎨",
+    title: "Professionell gestaltet",
+    desc: "Jede Seite wird individuell illustriert – im Comic-, Aquarell- oder Skizzenstil. Kein Fotobuch von der Stange.",
+  },
+  {
+    emoji: "📦",
+    title: "Druckfertig geliefert",
+    desc: "Hard- oder Softcover, hochwertig gedruckt, direkt zu dir nach Hause. In 5–7 Werktagen.",
+  },
+  {
+    emoji: "🌍",
+    title: "In jeder Sprache",
+    desc: "Dein Buch kann auf Deutsch, Englisch, Französisch oder Spanisch erstellt werden – perfekt als Geschenk ins Ausland.",
+  },
+];
+
+const OCCASIONS = [
+  { emoji: "💍", label: "Hochzeit & Jahrestag" },
+  { emoji: "👶", label: "Geburt & erstes Jahr" },
+  { emoji: "🎂", label: "Geburtstag" },
+  { emoji: "✈️", label: "Urlaub & Reisen" },
+  { emoji: "👨‍👩‍👧‍👦", label: "Familiengeschichten" },
+  { emoji: "🎓", label: "Abitur & Abschluss" },
+  { emoji: "👴", label: "Biografie & Lebenswerk" },
+  { emoji: "🤝", label: "Freundschaft" },
+];
+
+export default function UeberUns() {
+  return (
+    <>
+      <Navbar />
+      <main className="bg-gradient-to-br from-brand-50 via-white to-warm-50 min-h-screen">
+
+        {/* Hero */}
+        <section className="max-w-5xl mx-auto px-4 pt-20 pb-16 grid md:grid-cols-2 gap-12 items-center">
+          <motion.div
+            initial={{ opacity: 0, x: -30 }}
+            animate={{ opacity: 1, x: 0 }}
+            className="space-y-6"
+          >
+            <div className="inline-flex items-center gap-2 bg-brand-100 text-brand-700 px-4 py-1.5 rounded-full text-sm font-medium">
+              📚 Über MyStoryBook
+            </div>
+            <h1 className="text-4xl font-bold text-brand-900 leading-tight" style={{ fontFamily: "var(--font-display)" }}>
+              Wir glauben, dass jede Geschichte es verdient, erzählt zu werden.
+            </h1>
+            <p className="text-gray-500 leading-relaxed">
+              MyStoryBook wurde mit einer einfachen Idee gegründet: Jeder Mensch hat Geschichten, die es wert sind, bewahrt zu werden. Urlaubserinnerungen, Liebesgeschichten, Familienmomente – sie verschwinden viel zu schnell im Alltag.
+            </p>
+            <p className="text-gray-500 leading-relaxed">
+              Wir machen es einfach, diese Momente in ein wunderschönes, illustriertes Buch zu verwandeln. Kein Schreibtalent nötig. Keine Designkenntnisse. Nur deine Erinnerungen.
+            </p>
+          </motion.div>
+          <motion.div
+            initial={{ opacity: 0, x: 30 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.2 }}
+            className="relative h-96 rounded-3xl overflow-hidden shadow-2xl"
+          >
+            <Image src="/familie.png" alt="Familie mit Buch" fill className="object-cover object-top" />
+          </motion.div>
+        </section>
+
+        {/* Warum MyStoryBook */}
+        <section className="bg-white py-20">
+          <div className="max-w-5xl mx-auto px-4 space-y-12">
+            <div className="text-center space-y-3">
+              <h2 className="text-3xl font-bold text-brand-800" style={{ fontFamily: "var(--font-display)" }}>
+                Warum MyStoryBook?
+              </h2>
+              <p className="text-gray-400 max-w-xl mx-auto">
+                Weil Erinnerungen mehr verdienen als einen Ordner auf dem Handy.
+              </p>
+            </div>
+            <div className="grid md:grid-cols-3 gap-6">
+              {REASONS.map((r, i) => (
+                <motion.div
+                  key={r.title}
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: i * 0.1 }}
+                  className="p-6 rounded-2xl bg-brand-50 space-y-3"
+                >
+                  <div className="text-3xl">{r.emoji}</div>
+                  <h3 className="font-bold text-brand-800">{r.title}</h3>
+                  <p className="text-gray-500 text-sm leading-relaxed">{r.desc}</p>
+                </motion.div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* Anlässe */}
+        <section className="py-20">
+          <div className="max-w-5xl mx-auto px-4 space-y-10">
+            <div className="text-center space-y-3">
+              <h2 className="text-3xl font-bold text-brand-800" style={{ fontFamily: "var(--font-display)" }}>
+                Für jeden Anlass
+              </h2>
+              <p className="text-gray-400">Das persönlichste Geschenk – egal zu welchem Anlass.</p>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {OCCASIONS.map((o) => (
+                <motion.div
+                  key={o.label}
+                  whileHover={{ y: -4 }}
+                  className="bg-white rounded-2xl p-5 text-center shadow-sm border border-brand-50 space-y-2"
+                >
+                  <div className="text-3xl">{o.emoji}</div>
+                  <div className="text-sm font-medium text-brand-800">{o.label}</div>
+                </motion.div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* Beispiel Buchseite */}
+        <section className="bg-white py-20">
+          <div className="max-w-3xl mx-auto px-4 space-y-8 text-center">
+            <h2 className="text-3xl font-bold text-brand-800" style={{ fontFamily: "var(--font-display)" }}>
+              So sieht dein Buch aus
+            </h2>
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              className="rounded-3xl overflow-hidden shadow-2xl border border-gray-100"
+            >
+              <Image src="/Comic.png" alt="Beispiel Buchseite" width={900} height={650} className="w-full h-auto" />
+            </motion.div>
+          </div>
+        </section>
+
+      </main>
+      <Footer />
+    </>
+  );
+}

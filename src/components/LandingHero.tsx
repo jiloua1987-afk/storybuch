@@ -2,6 +2,14 @@
 import { motion } from "framer-motion";
 import Button from "@/components/ui/Button";
 import Image from "next/image";
+import Footer from "@/components/Footer";
+
+const REVIEWS = [
+  { name: "Sandra M.", stars: 5, text: "Das schönste Geschenk, das ich je gemacht habe. Meine Mutter hat geweint vor Freude.", occasion: "Muttertag" },
+  { name: "Thomas K.", stars: 5, text: "Unser Sardinien-Urlaub als Buch – die Kinder lieben es und wollen es jeden Abend anschauen.", occasion: "Familienurlaub" },
+  { name: "Julia & Marc", stars: 5, text: "Unsere Liebesgeschichte als Comic-Buch. Einfach unglaublich wie persönlich das geworden ist.", occasion: "Jahrestag" },
+  { name: "Petra W.", stars: 5, text: "Für meinen Vater zum 70. Geburtstag – seine Biografie als illustriertes Buch. Er ist sprachlos.", occasion: "Geburtstag" },
+];
 
 export default function LandingHero({ onStart }: { onStart: () => void }) {
   return (
@@ -177,6 +185,52 @@ export default function LandingHero({ onStart }: { onStart: () => void }) {
         </div>
       </div>
 
+      {/* Referenzen */}
+      <div className="bg-brand-50 py-20">
+        <div className="max-w-5xl mx-auto px-4 space-y-10">
+          <div className="text-center space-y-3">
+            <div className="inline-flex items-center gap-2 bg-brand-100 text-brand-700 px-4 py-1.5 rounded-full text-sm font-bold">
+              ⭐ Über 30.000 glückliche Kunden
+            </div>
+            <h2 className="text-3xl font-bold text-brand-800" style={{ fontFamily: "var(--font-display)" }}>
+              Was unsere Kunden sagen
+            </h2>
+          </div>
+          <div className="grid md:grid-cols-2 gap-5">
+            {REVIEWS.map((r) => (
+              <motion.div
+                key={r.name}
+                whileHover={{ y: -3 }}
+                className="bg-white rounded-2xl p-6 shadow-sm border border-brand-50 space-y-3"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex gap-0.5">
+                    {Array.from({ length: r.stars }).map((_, i) => (
+                      <span key={i} className="text-yellow-400">★</span>
+                    ))}
+                  </div>
+                  <span className="text-xs text-brand-300 bg-brand-50 px-2 py-1 rounded-full">{r.occasion}</span>
+                </div>
+                <p className="text-gray-600 text-sm leading-relaxed italic">"{r.text}"</p>
+                <p className="text-brand-700 font-medium text-sm">— {r.name}</p>
+              </motion.div>
+            ))}
+          </div>
+          <div className="grid grid-cols-3 gap-6 max-w-lg mx-auto text-center">
+            {[
+              { number: "30.000+", label: "glückliche Kunden" },
+              { number: "4.9 ★", label: "Durchschnittsbewertung" },
+              { number: "5–7", label: "Werktage Lieferzeit" },
+            ].map((s) => (
+              <div key={s.label} className="space-y-1">
+                <div className="text-2xl font-bold text-brand-700">{s.number}</div>
+                <div className="text-xs text-gray-400">{s.label}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
       {/* CTA */}
       <div className="py-20 text-center space-y-4 bg-gradient-to-r from-brand-500 to-warm-500">
         <h2
@@ -194,6 +248,7 @@ export default function LandingHero({ onStart }: { onStart: () => void }) {
           Kostenlos starten ✨
         </Button>
       </div>
+      <Footer />
     </div>
   );
 }
