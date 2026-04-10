@@ -53,7 +53,7 @@ export default function Step3Style() {
             key={design.id}
             whileHover={{ scale: 1.01 }}
             whileTap={{ scale: 0.99 }}
-            onClick={() => setSelectedDesign(design.id)}
+            onClick={() => setSelectedDesign(design.id as "kinderbuch" | "romantisch" | "biografie")}
             className={`flex gap-4 p-4 rounded-2xl border-2 text-left transition-all ${
               selectedDesign === design.id
                 ? "border-brand-400 bg-brand-50 shadow-md"
