@@ -133,7 +133,7 @@ export default function Step5Preview() {
                     disabled={!!regenerating}
                     className="absolute bottom-3 right-3 bg-white/90 backdrop-blur text-brand-700 text-xs px-3 py-1.5 rounded-full shadow hover:bg-white transition-all disabled:opacity-50"
                   >
-                    🔄 Neu generieren
+                    🔄 Neu erstellen
                   </button>
                 </div>
 

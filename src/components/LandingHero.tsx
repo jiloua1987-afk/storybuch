@@ -4,9 +4,30 @@ import Button from "@/components/ui/Button";
 import Image from "next/image";
 
 const EXAMPLE_BOOKS = [
-  { seed: "tuscany", title: "Toskana-Abenteuer", emoji: "🇮🇹" },
-  { seed: "wedding", title: "Unsere Hochzeit", emoji: "💍" },
-  { seed: "childhood", title: "Emmas erstes Jahr", emoji: "👶" },
+  {
+    seed: "sardinia-comic",
+    title: "Sommer auf Sardinien",
+    emoji: "🏖️",
+    bg: "https://picsum.photos/seed/sardinia/300/400",
+    overlay: "from-cyan-500/60 to-blue-600/60",
+    panels: ["🏖️", "🏰", "🌅"],
+  },
+  {
+    seed: "wedding-story",
+    title: "Unsere Hochzeit",
+    emoji: "💍",
+    bg: "https://picsum.photos/seed/wedding2/300/400",
+    overlay: "from-rose-400/60 to-pink-600/60",
+    panels: ["💍", "💐", "🥂"],
+  },
+  {
+    seed: "baby-first-year",
+    title: "Emmas erstes Jahr",
+    emoji: "👶",
+    bg: "https://picsum.photos/seed/baby/300/400",
+    overlay: "from-yellow-400/60 to-orange-400/60",
+    panels: ["👶", "🎂", "🌟"],
+  },
 ];
 
 export default function LandingHero({ onStart }: { onStart: () => void }) {
@@ -53,7 +74,7 @@ export default function LandingHero({ onStart }: { onStart: () => void }) {
           </Button>
         </motion.div>
 
-        {/* Floating book mockups */}
+        {/* Book mockups – comic panel style */}
         <motion.div
           initial={{ opacity: 0, y: 40 }}
           animate={{ opacity: 1, y: 0 }}
@@ -65,18 +86,44 @@ export default function LandingHero({ onStart }: { onStart: () => void }) {
               key={book.seed}
               animate={{ y: [0, -8, 0] }}
               transition={{ duration: 3, delay: i * 0.5, repeat: Infinity, ease: "easeInOut" }}
-              className="relative rounded-2xl overflow-hidden shadow-xl aspect-[3/4] cursor-pointer group"
+              className="relative rounded-2xl overflow-hidden shadow-xl aspect-[3/4] cursor-pointer group bg-white border-2 border-gray-100"
             >
-              <Image
-                src={`https://picsum.photos/seed/${book.seed}/300/400`}
-                alt={book.title}
-                fill
-                className="object-cover group-hover:scale-105 transition-transform duration-500"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-              <div className="absolute bottom-3 left-3 right-3">
-                <p className="text-white text-xs font-medium">{book.emoji} {book.title}</p>
+              {/* Comic panel layout */}
+              <div className="absolute inset-0 flex flex-col">
+                {/* Top panel – large image */}
+                <div className="relative flex-[2] overflow-hidden border-b-2 border-gray-800">
+                  <Image
+                    src={book.bg}
+                    alt={book.title}
+                    fill
+                    className="object-cover group-hover:scale-105 transition-transform duration-500"
+                  />
+                  <div className={`absolute inset-0 bg-gradient-to-br ${book.overlay}`} />
+                  {/* Caption box top-left */}
+                  <div className="absolute top-2 left-2 bg-white/95 border border-gray-300 rounded px-2 py-1 max-w-[80%]">
+                    <p className="text-gray-800 font-bold leading-tight" style={{ fontSize: "7px", fontFamily: "var(--font-display)" }}>
+                      {book.title}
+                    </p>
+                  </div>
+                </div>
+                {/* Bottom panels – 2 small */}
+                <div className="flex flex-1">
+                  <div className="relative flex-1 border-r border-gray-800 overflow-hidden">
+                    <Image src={book.bg} alt="" fill className="object-cover object-bottom" />
+                    <div className={`absolute inset-0 bg-gradient-to-t ${book.overlay} opacity-70`} />
+                    <div className="absolute bottom-1 left-1 bg-white/90 border border-gray-300 rounded px-1">
+                      <p style={{ fontSize: "5px" }} className="text-gray-700 font-medium">Eine unvergessliche Reise...</p>
+                    </div>
+                  </div>
+                  <div className="relative flex-1 overflow-hidden">
+                    <Image src={book.bg} alt="" fill className="object-cover object-right" />
+                    <div className={`absolute inset-0 bg-gradient-to-t ${book.overlay} opacity-50`} />
+                    <div className="absolute top-1 right-1 text-lg">{book.emoji}</div>
+                  </div>
+                </div>
               </div>
+              {/* Hover overlay */}
+              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all duration-300" />
             </motion.div>
           ))}
         </motion.div>
