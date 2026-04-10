@@ -52,7 +52,7 @@ export default function LandingHero({ onStart }: { onStart: () => void }) {
             </div>
           </motion.div>
 
-          {/* Bild rechts */}
+          {/* Bild rechts – image.png (neues Bild) */}
           <motion.div
             initial={{ opacity: 0, x: 30 }}
             animate={{ opacity: 1, x: 0 }}
@@ -60,7 +60,7 @@ export default function LandingHero({ onStart }: { onStart: () => void }) {
             className="relative h-[500px] rounded-3xl overflow-hidden shadow-2xl"
           >
             <Image
-              src="/familie.png"
+              src="/image.png"
               alt="Familie liest ihr persönliches Bilderbuch"
               fill
               className="object-cover object-top"
