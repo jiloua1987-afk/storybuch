@@ -1,58 +1,119 @@
 "use client";
 import { motion } from "framer-motion";
 import Button from "@/components/ui/Button";
+import Image from "next/image";
 
 export default function LandingHero({ onStart }: { onStart: () => void }) {
   return (
     <div className="min-h-screen bg-gradient-to-br from-brand-50 via-white to-warm-50">
-      {/* Hero */}
-      <div className="max-w-5xl mx-auto px-4 pt-16 pb-20 text-center space-y-8">
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-          className="space-y-4"
-        >
-          <div className="inline-flex items-center gap-2 bg-brand-100 text-brand-700 px-4 py-1.5 rounded-full text-sm font-medium">
-            ✨ Deine Erinnerungen. Dein Buch.
-          </div>
-          <h1
-            className="text-5xl md:text-6xl font-bold text-brand-900 leading-tight"
-            style={{ fontFamily: "var(--font-display)" }}
-          >
-            Deine Geschichte.
-            <br />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-500 to-warm-500">
-              Dein Buch.
-            </span>
-          </h1>
-          <p className="text-xl text-gray-500 max-w-2xl mx-auto leading-relaxed">
-            Verwandle deine Erinnerungen in ein wunderschönes, illustriertes Buch –
-            gedruckt und direkt zu dir nach Hause geliefert.
-          </p>
-          {/* Hemmschwelle nehmen */}
-          <div className="inline-flex items-center gap-2 bg-green-50 text-green-700 border border-green-200 px-4 py-2 rounded-full text-sm">
-            💡 Stichpunkte reichen völlig aus – wir kümmern uns um den Rest
-          </div>
-        </motion.div>
 
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-          className="flex flex-col sm:flex-row gap-4 justify-center"
-        >
-          <Button onClick={onStart} size="lg">
-            Jetzt Buch erstellen ✨
-          </Button>
-          <Button variant="secondary" size="lg">
-            Beispiele ansehen
-          </Button>
-        </motion.div>
+      {/* Hero – Familie liest Buch */}
+      <div className="relative overflow-hidden">
+        <div className="max-w-5xl mx-auto px-4 pt-16 pb-0 grid md:grid-cols-2 gap-12 items-center">
+          {/* Text links */}
+          <motion.div
+            initial={{ opacity: 0, x: -30 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.6 }}
+            className="space-y-6 pb-16"
+          >
+            <div className="inline-flex items-center gap-2 bg-brand-100 text-brand-700 px-4 py-1.5 rounded-full text-sm font-medium">
+              ✨ Deine Erinnerungen. Dein Buch.
+            </div>
+            <h1
+              className="text-4xl md:text-5xl font-bold text-brand-900 leading-tight"
+              style={{ fontFamily: "var(--font-display)" }}
+            >
+              Erlebe deine schönsten Geschichten als
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-500 to-warm-500"> liebevoll gestaltetes Bilderbuch.</span>
+            </h1>
+            <p className="text-lg text-gray-500 leading-relaxed">
+              Verwandle deine Erinnerungen in ein wunderschönes, illustriertes Buch –
+              gedruckt und direkt zu dir nach Hause geliefert.
+            </p>
+            <div className="inline-flex items-center gap-2 bg-green-50 text-green-700 border border-green-200 px-4 py-2 rounded-full text-sm">
+              💡 Stichpunkte reichen völlig aus – wir kümmern uns um den Rest
+            </div>
+            <div className="flex flex-col sm:flex-row gap-4">
+              <Button onClick={onStart} size="lg">
+                Jetzt Buch erstellen ✨
+              </Button>
+              <Button variant="secondary" size="lg">
+                Beispiele ansehen
+              </Button>
+            </div>
+          </motion.div>
+
+          {/* Bild rechts */}
+          <motion.div
+            initial={{ opacity: 0, x: 30 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.6, delay: 0.2 }}
+            className="relative h-[500px] rounded-3xl overflow-hidden shadow-2xl"
+          >
+            <Image
+              src="/familie.png"
+              alt="Familie liest ihr persönliches Bilderbuch"
+              fill
+              className="object-cover object-top"
+              priority
+            />
+          </motion.div>
+        </div>
       </div>
 
-      {/* Features */}
+      {/* Beispiel Buchseite */}
       <div className="bg-white py-20">
+        <div className="max-w-5xl mx-auto px-4 space-y-12">
+          <div className="text-center space-y-3">
+            <h2
+              className="text-3xl font-bold text-brand-800"
+              style={{ fontFamily: "var(--font-display)" }}
+            >
+              So sieht dein fertiges Buch aus
+            </h2>
+            <p className="text-gray-400 text-sm">
+              Jede Geschichte bekommt ihren eigenen Stil – hier ein Beispiel im Comic-Look
+            </p>
+          </div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+            className="relative rounded-3xl overflow-hidden shadow-2xl border border-gray-100 max-w-3xl mx-auto"
+          >
+            <Image
+              src="/Comic.png"
+              alt="Beispiel Buchseite im Comic-Stil"
+              width={900}
+              height={650}
+              className="w-full h-auto"
+            />
+          </motion.div>
+
+          {/* Startseite_Bild als zweites Beispiel */}
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6, delay: 0.2 }}
+            className="relative rounded-3xl overflow-hidden shadow-xl border border-gray-100 max-w-sm mx-auto"
+          >
+            <Image
+              src="/Startseite_Bild.png"
+              alt="Weiteres Beispiel"
+              width={500}
+              height={700}
+              className="w-full h-auto"
+            />
+          </motion.div>
+        </div>
+      </div>
+
+      {/* So einfach geht's */}
+      <div className="bg-brand-50 py-20">
         <div className="max-w-5xl mx-auto px-4">
           <h2
             className="text-3xl font-bold text-center text-brand-800 mb-4"
@@ -89,7 +150,7 @@ export default function LandingHero({ onStart }: { onStart: () => void }) {
               <motion.div
                 key={f.title}
                 whileHover={{ y: -4 }}
-                className="text-center p-6 rounded-2xl bg-brand-50 space-y-3"
+                className="text-center p-6 rounded-2xl bg-white shadow-sm space-y-3"
               >
                 <div className="text-4xl">{f.emoji}</div>
                 <h3 className="font-bold text-brand-800">{f.title}</h3>
@@ -101,7 +162,7 @@ export default function LandingHero({ onStart }: { onStart: () => void }) {
       </div>
 
       {/* Reassurance bar */}
-      <div className="bg-brand-50 py-10">
+      <div className="bg-white py-10 border-t border-brand-50">
         <div className="max-w-4xl mx-auto px-4 grid md:grid-cols-3 gap-6 text-center">
           {[
             { emoji: "🖊️", text: "Stichpunkte reichen – kein Aufsatz nötig" },
