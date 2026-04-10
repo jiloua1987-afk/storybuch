@@ -18,7 +18,7 @@ export default function Navbar() {
             className="text-xl font-bold text-brand-700"
             style={{ fontFamily: "var(--font-display)" }}
           >
-            MeinKapitel
+            MyStoryBook
           </span>
         </motion.button>
 

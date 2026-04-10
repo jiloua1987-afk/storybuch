@@ -1,34 +1,125 @@
 "use client";
 import { useState } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { useBookStore } from "@/store/bookStore";
 import Button from "@/components/ui/Button";
-import { TONES } from "@/lib/dummyData";
 import toast from "react-hot-toast";
+
+// ── Kategorien ────────────────────────────────────────────────────────────────
+const CATEGORIES = [
+  { id: "liebe",    emoji: "💕", label: "Liebesgeschichte",  tone: "romantisch" },
+  { id: "familie",  emoji: "👨‍👩‍👧‍👦", label: "Familie",           tone: "kindgerecht" },
+  { id: "urlaub",   emoji: "✈️", label: "Urlaub / Reise",    tone: "humorvoll"  },
+  { id: "feier",    emoji: "🎉", label: "Feier / Event",     tone: "humorvoll"  },
+  { id: "biografie",emoji: "📜", label: "Biografie",         tone: "biografisch"},
+  { id: "freunde",  emoji: "🤝", label: "Freundschaft",      tone: "humorvoll"  },
+  { id: "sonstiges",emoji: "✨", label: "Sonstiges",         tone: "episch"     },
+];
+
+// ── Geführte Fragen je Kategorie ──────────────────────────────────────────────
+const GUIDED_QUESTIONS: Record<string, { key: string; label: string; placeholder: string }[]> = {
+  liebe: [
+    { key: "kennengelernt", label: "Euer Kennenlernen", placeholder: "Wann, wo und wie habt ihr euch kennengelernt? Was hat dich direkt fasziniert?" },
+    { key: "zusammen",      label: "Der Anfang",        placeholder: "Wann seid ihr zusammengekommen? Wie war dieser Moment?" },
+    { key: "personen",      label: "Wer seid ihr?",     placeholder: "Eure Namen, ein paar Worte zu euch" },
+    { key: "zeitraum",      label: "Zeitraum",          placeholder: "z. B. seit 2018, 5 gemeinsame Jahre" },
+  ],
+  familie: [
+    { key: "personen",  label: "Wer gehört dazu?",      placeholder: "z. B. Mama, Papa, Emma (6), Luca (4)" },
+    { key: "zeitraum",  label: "Zeitraum",              placeholder: "z. B. Sommer 2023" },
+    { key: "ort",       label: "Wo spielt die Geschichte?", placeholder: "z. B. Zuhause, Sardinien, Oma und Opas Haus" },
+  ],
+  urlaub: [
+    { key: "personen",  label: "Wer war dabei?",        placeholder: "z. B. wir als Familie, ich und mein Partner" },
+    { key: "ort",       label: "Wohin ging die Reise?", placeholder: "z. B. Toskana, Italien – Florenz und Siena" },
+    { key: "zeitraum",  label: "Wann?",                 placeholder: "z. B. Sommer 2023, 2 Wochen" },
+  ],
+  feier: [
+    { key: "anlass",    label: "Was wurde gefeiert?",   placeholder: "z. B. 40. Geburtstag, Hochzeit, Abitur" },
+    { key: "personen",  label: "Wer war dabei?",        placeholder: "z. B. Familie und enge Freunde" },
+    { key: "ort",       label: "Wo?",                   placeholder: "z. B. Restaurant Rosengarten, München" },
+    { key: "zeitraum",  label: "Wann?",                 placeholder: "z. B. 12. Juni 2024" },
+  ],
+  biografie: [
+    { key: "personen",  label: "Um wen geht es?",       placeholder: "Name, Geburtsjahr, ein paar Worte" },
+    { key: "zeitraum",  label: "Welcher Lebensabschnitt?", placeholder: "z. B. Kindheit, die 80er Jahre, das ganze Leben" },
+    { key: "ort",       label: "Wo aufgewachsen / gelebt?", placeholder: "z. B. Hamburg, später München" },
+  ],
+  freunde: [
+    { key: "personen",  label: "Wer seid ihr?",         placeholder: "Eure Namen und wie ihr euch kennt" },
+    { key: "zeitraum",  label: "Seit wann?",            placeholder: "z. B. seit der Schulzeit, seit 2015" },
+    { key: "ort",       label: "Wo spielt die Geschichte?", placeholder: "z. B. Berlin, verschiedene Städte" },
+  ],
+  sonstiges: [
+    { key: "personen",  label: "Wer kommt vor?",        placeholder: "Namen und kurze Beschreibung" },
+    { key: "ort",       label: "Wo?",                   placeholder: "Ort oder Schauplatz" },
+    { key: "zeitraum",  label: "Wann?",                 placeholder: "Zeitraum oder Datum" },
+  ],
+};
+
+interface Moment {
+  id: string;
+  title: string;
+  description: string;
+}
 
 export default function Step1Story() {
   const { setStep, setProject } = useBookStore();
+
+  const [mode, setMode] = useState<"frei" | "gefuehrt">("gefuehrt");
+  const [category, setCategory] = useState<string | null>(null);
   const [storyInput, setStoryInput] = useState("");
-  const [tone, setTone] = useState("kindgerecht");
-  const [guided, setGuided] = useState({
-    characters: "",
-    location: "",
-    timeframe: "",
-    specialMoments: "",
-  });
-  const [showGuided, setShowGuided] = useState(false);
+  const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [moments, setMoments] = useState<Moment[]>([
+    { id: "m1", title: "", description: "" },
+  ]);
+
+  const selectedCat = CATEGORIES.find((c) => c.id === category);
+  const questions = category ? GUIDED_QUESTIONS[category] : [];
+
+  const addMoment = () => {
+    setMoments((prev) => [...prev, { id: `m${Date.now()}`, title: "", description: "" }]);
+  };
+
+  const updateMoment = (id: string, field: "title" | "description", value: string) => {
+    setMoments((prev) => prev.map((m) => (m.id === id ? { ...m, [field]: value } : m)));
+  };
+
+  const removeMoment = (id: string) => {
+    if (moments.length === 1) return;
+    setMoments((prev) => prev.filter((m) => m.id !== id));
+  };
 
   const handleNext = () => {
-    if (!storyInput.trim() && !guided.characters.trim()) {
-      toast.error("Bitte erzähl uns deine Geschichte!");
+    const hasContent =
+      storyInput.trim() ||
+      Object.values(answers).some((v) => v.trim()) ||
+      moments.some((m) => m.title.trim());
+
+    if (!hasContent) {
+      toast.error("Bitte gib uns ein paar Infos zu deiner Geschichte.");
       return;
     }
+
+    const momentsText = moments
+      .filter((m) => m.title.trim())
+      .map((m) => `${m.title}: ${m.description}`)
+      .join(" | ");
+
+    const guidedAnswers = {
+      ...answers,
+      specialMoments: momentsText,
+      characters: answers.personen || "",
+      location: answers.ort || answers.ort || "",
+      timeframe: answers.zeitraum || "",
+    };
+
     setProject({
       id: `proj-${Date.now()}`,
       title: "Mein persönliches Buch",
       storyInput,
-      guidedAnswers: guided,
-      tone: tone as any,
+      guidedAnswers,
+      tone: (selectedCat?.tone as any) || "kindgerecht",
       design: "kinderbuch",
       characters: [],
       chapters: [],
@@ -44,89 +135,170 @@ export default function Step1Story() {
       animate={{ opacity: 1, y: 0 }}
       className="max-w-2xl mx-auto space-y-8"
     >
+      {/* Header */}
       <div className="text-center space-y-2">
         <h2 className="text-3xl font-bold text-brand-800" style={{ fontFamily: "var(--font-display)" }}>
           Erzähl uns deine Geschichte ✍️
         </h2>
-        <p className="text-gray-500">
-          Schreib frei drauf los – oder lass dich von unseren Fragen führen.
-        </p>
+        <p className="text-gray-500">Schreib frei oder lass dich Schritt für Schritt führen.</p>
         <div className="inline-flex items-center gap-2 bg-green-50 text-green-700 border border-green-200 px-4 py-2 rounded-full text-sm">
           💡 Stichpunkte reichen völlig – je mehr Details, desto persönlicher wird dein Buch
         </div>
       </div>
 
-      {/* Toggle */}
+      {/* Mode toggle */}
       <div className="flex gap-3 bg-brand-50 p-1 rounded-2xl">
         <button
-          onClick={() => setShowGuided(false)}
+          onClick={() => setMode("gefuehrt")}
           className={`flex-1 py-2 rounded-xl text-sm font-medium transition-all ${
-            !showGuided ? "bg-white shadow text-brand-700" : "text-gray-500"
+            mode === "gefuehrt" ? "bg-white shadow text-brand-700" : "text-gray-500"
+          }`}
+        >
+          🧭 Schritt für Schritt
+        </button>
+        <button
+          onClick={() => setMode("frei")}
+          className={`flex-1 py-2 rounded-xl text-sm font-medium transition-all ${
+            mode === "frei" ? "bg-white shadow text-brand-700" : "text-gray-500"
           }`}
         >
           ✍️ Freitext
         </button>
-        <button
-          onClick={() => setShowGuided(true)}
-          className={`flex-1 py-2 rounded-xl text-sm font-medium transition-all ${
-            showGuided ? "bg-white shadow text-brand-700" : "text-gray-500"
-          }`}
-        >
-          🧭 Geführte Eingabe
-        </button>
       </div>
 
-      {!showGuided ? (
+      {/* ── FREITEXT ── */}
+      {mode === "frei" && (
         <div className="space-y-3">
           <textarea
             value={storyInput}
             onChange={(e) => setStoryInput(e.target.value)}
-            placeholder="Es war einmal... Stichpunkte reichen! z. B.: Toskana, Sommer 2023, Emma 6 Jahre, erster Gelato, verlorener Teddy, Sonnenuntergang. Wir machen daraus dein Buch!"
+            placeholder="Stichpunkte reichen! z. B.: Toskana, Sommer 2023, Emma 6 Jahre, erster Gelato, verlorener Teddy, Sonnenuntergang. Wir machen daraus dein Buch!"
             rows={10}
             className="w-full p-4 rounded-2xl border-2 border-brand-100 focus:border-brand-400 focus:outline-none resize-none text-gray-700 bg-white shadow-sm transition-all"
           />
           <p className="text-xs text-gray-400 text-right">{storyInput.length} Zeichen</p>
         </div>
-      ) : (
-        <div className="space-y-4">
-          {[
-            { key: "characters", label: "👥 Wer kommt vor?", placeholder: "z. B. Mama, Papa, Tochter Emma (6 Jahre)" },
-            { key: "location", label: "📍 Wo spielt die Geschichte?", placeholder: "z. B. Toskana, Italien – Florenz und Siena" },
-            { key: "timeframe", label: "📅 Wann war das?", placeholder: "z. B. Sommer 2023, 2 Wochen Urlaub" },
-            { key: "specialMoments", label: "⭐ Besondere Momente?", placeholder: "z. B. Emmas erster Gelato, der verlorene Teddy" },
-          ].map(({ key, label, placeholder }) => (
-            <div key={key} className="space-y-1">
-              <label className="text-sm font-medium text-brand-700">{label}</label>
-              <input
-                value={guided[key as keyof typeof guided]}
-                onChange={(e) => setGuided({ ...guided, [key]: e.target.value })}
-                placeholder={placeholder}
-                className="w-full p-3 rounded-xl border-2 border-brand-100 focus:border-brand-400 focus:outline-none text-gray-700 bg-white transition-all"
-              />
-            </div>
-          ))}
-        </div>
       )}
 
-      {/* Tone selector */}
-      <div className="space-y-3">
-        <label className="text-sm font-medium text-brand-700">🎭 Tonalität</label>
-        <div className="flex flex-wrap gap-2">
-          {TONES.map((t) => (
-            <button
-              key={t.id}
-              onClick={() => setTone(t.id)}
-              className={`px-4 py-2 rounded-full text-sm font-medium border-2 transition-all ${
-                tone === t.id
-                  ? "bg-brand-500 border-brand-500 text-white shadow-md"
-                  : "bg-white border-brand-100 text-gray-600 hover:border-brand-300"
-              }`}
-            >
-              {t.emoji} {t.label}
-            </button>
-          ))}
+      {/* ── SCHRITT FÜR SCHRITT ── */}
+      {mode === "gefuehrt" && (
+        <div className="space-y-6">
+
+          {/* 1. Kategorie wählen */}
+          <div className="space-y-3">
+            <label className="text-sm font-semibold text-brand-700">
+              1. Um was für eine Geschichte handelt es sich?
+            </label>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              {CATEGORIES.map((cat) => (
+                <button
+                  key={cat.id}
+                  onClick={() => { setCategory(cat.id); setAnswers({}); }}
+                  className={`p-3 rounded-2xl border-2 text-center transition-all ${
+                    category === cat.id
+                      ? "border-brand-400 bg-brand-50 shadow-md"
+                      : "border-gray-100 bg-white hover:border-brand-200"
+                  }`}
+                >
+                  <div className="text-2xl mb-1">{cat.emoji}</div>
+                  <div className="text-xs font-medium text-brand-800">{cat.label}</div>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* 2. Passende Fragen */}
+          <AnimatePresence>
+            {category && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0 }}
+                className="space-y-4"
+              >
+                <label className="text-sm font-semibold text-brand-700">
+                  2. Ein paar Infos <span className="font-normal text-gray-400">(alles optional – Stichpunkte reichen)</span>
+                </label>
+                {questions.map(({ key, label, placeholder }) => (
+                  <div key={key} className="space-y-1">
+                    <label className="text-sm font-medium text-gray-600">{label}</label>
+                    <input
+                      value={answers[key] || ""}
+                      onChange={(e) => setAnswers({ ...answers, [key]: e.target.value })}
+                      placeholder={placeholder}
+                      className="w-full p-3 rounded-xl border-2 border-brand-100 focus:border-brand-400 focus:outline-none text-gray-700 bg-white transition-all"
+                    />
+                  </div>
+                ))}
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* 3. Besondere Momente */}
+          <AnimatePresence>
+            {category && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="space-y-3"
+              >
+                <div className="flex items-center justify-between">
+                  <label className="text-sm font-semibold text-brand-700">
+                    3. Besondere Momente / Szenen{" "}
+                    <span className="font-normal text-gray-400">(jeder Moment wird ein Panel im Buch)</span>
+                  </label>
+                </div>
+                <p className="text-xs text-gray-400">
+                  Füge so viele Momente hinzu wie du möchtest – jeder bekommt seine eigene Illustration.
+                </p>
+
+                <div className="space-y-3">
+                  {moments.map((moment, i) => (
+                    <motion.div
+                      key={moment.id}
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      className="bg-brand-50 rounded-2xl p-4 space-y-2 relative"
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-bold text-brand-400 w-5">#{i + 1}</span>
+                        <input
+                          value={moment.title}
+                          onChange={(e) => updateMoment(moment.id, "title", e.target.value)}
+                          placeholder="Titel des Moments, z. B. Der erste Gelato"
+                          className="flex-1 p-2 rounded-xl border-2 border-brand-100 focus:border-brand-400 focus:outline-none text-sm text-gray-700 bg-white"
+                        />
+                        {moments.length > 1 && (
+                          <button
+                            onClick={() => removeMoment(moment.id)}
+                            className="text-gray-300 hover:text-red-400 transition-colors text-lg leading-none"
+                          >
+                            ×
+                          </button>
+                        )}
+                      </div>
+                      <textarea
+                        value={moment.description}
+                        onChange={(e) => updateMoment(moment.id, "description", e.target.value)}
+                        placeholder="Kurze Beschreibung – Stichpunkte reichen! z. B.: Eisdiele mit 100 Sorten, Emma probiert alles, Nase ganz bunt"
+                        rows={2}
+                        className="w-full p-2 rounded-xl border-2 border-brand-100 focus:border-brand-400 focus:outline-none text-sm text-gray-700 bg-white resize-none"
+                      />
+                    </motion.div>
+                  ))}
+                </div>
+
+                <button
+                  onClick={addMoment}
+                  className="w-full py-3 rounded-2xl border-2 border-dashed border-brand-200 text-brand-500 text-sm font-medium hover:bg-brand-50 hover:border-brand-400 transition-all flex items-center justify-center gap-2"
+                >
+                  <span className="text-xl">+</span> Weiteren Moment hinzufügen
+                </button>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
-      </div>
+      )}
 
       <Button onClick={handleNext} size="lg" fullWidth>
         Weiter zu den Bildern →
