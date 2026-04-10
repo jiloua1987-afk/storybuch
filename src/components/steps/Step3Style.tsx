@@ -14,7 +14,7 @@ const DESIGN_PREVIEWS: Record<string, string> = {
 
 export default function Step3Style() {
   const { setStep, project, updateProject } = useBookStore();
-  const [selectedDesign, setSelectedDesign] = useState(project?.design || "kinderbuch");
+  const [selectedDesign, setSelectedDesign] = useState<"kinderbuch" | "romantisch" | "biografie">(project?.design || "kinderbuch");
   const [bookTitle, setBookTitle] = useState(project?.title || "");
 
   const handleNext = () => {
