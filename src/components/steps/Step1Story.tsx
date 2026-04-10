@@ -51,6 +51,9 @@ export default function Step1Story() {
         <p className="text-gray-500">
           Schreib frei drauf los – oder lass dich von unseren Fragen führen.
         </p>
+        <div className="inline-flex items-center gap-2 bg-green-50 text-green-700 border border-green-200 px-4 py-2 rounded-full text-sm">
+          💡 Stichpunkte reichen völlig – je mehr Details, desto persönlicher wird dein Buch
+        </div>
       </div>
 
       {/* Toggle */}
@@ -78,7 +81,7 @@ export default function Step1Story() {
           <textarea
             value={storyInput}
             onChange={(e) => setStoryInput(e.target.value)}
-            placeholder="Es war einmal... Schreib deine Geschichte hier. Je mehr Details, desto besser wird dein Buch! Erzähl von den Personen, dem Ort, besonderen Momenten..."
+            placeholder="Es war einmal... Stichpunkte reichen! z. B.: Toskana, Sommer 2023, Emma 6 Jahre, erster Gelato, verlorener Teddy, Sonnenuntergang. Wir machen daraus dein Buch!"
             rows={10}
             className="w-full p-4 rounded-2xl border-2 border-brand-100 focus:border-brand-400 focus:outline-none resize-none text-gray-700 bg-white shadow-sm transition-all"
           />

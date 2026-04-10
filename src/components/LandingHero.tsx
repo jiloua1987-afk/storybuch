@@ -30,6 +30,10 @@ export default function LandingHero({ onStart }: { onStart: () => void }) {
             Verwandle deine Erinnerungen in ein wunderschönes, illustriertes Buch –
             gedruckt und direkt zu dir nach Hause geliefert.
           </p>
+          {/* Hemmschwelle nehmen */}
+          <div className="inline-flex items-center gap-2 bg-green-50 text-green-700 border border-green-200 px-4 py-2 rounded-full text-sm">
+            💡 Stichpunkte reichen völlig aus – wir kümmern uns um den Rest
+          </div>
         </motion.div>
 
         <motion.div
@@ -51,27 +55,35 @@ export default function LandingHero({ onStart }: { onStart: () => void }) {
       <div className="bg-white py-20">
         <div className="max-w-5xl mx-auto px-4">
           <h2
-            className="text-3xl font-bold text-center text-brand-800 mb-12"
+            className="text-3xl font-bold text-center text-brand-800 mb-4"
             style={{ fontFamily: "var(--font-display)" }}
           >
             So einfach geht's
           </h2>
-          <div className="grid md:grid-cols-3 gap-8">
+          <p className="text-center text-gray-400 text-sm mb-12">
+            Keine langen Texte nötig – ein paar Stichpunkte genügen.
+          </p>
+          <div className="grid md:grid-cols-4 gap-6">
             {[
               {
                 emoji: "✍️",
-                title: "Geschichte erzählen",
-                desc: "Schreib frei oder beantworte geführte Fragen. Lade Fotos hoch.",
+                title: "Geschichte eingeben",
+                desc: "Stichpunkte reichen! Wer, wo, wann – mehr brauchen wir nicht. Alles andere ist optional.",
+              },
+              {
+                emoji: "📸",
+                title: "Fotos hochladen",
+                desc: "Optional: Lade Bilder hoch. Je mehr Details, desto persönlicher wird dein Buch.",
               },
               {
                 emoji: "📖",
-                title: "Dein Buch wird erstellt",
-                desc: "Text, Kapitel und Illustrationen im Comic-Stil – vollautomatisch.",
+                title: "Buch wird erstellt",
+                desc: "Text und Illustrationen im Comic-Stil werden vollautomatisch für dich erstellt.",
               },
               {
-                emoji: "📦",
-                title: "Gedruckt nach Hause",
-                desc: "Hardcover oder Softcover – in 5–7 Werktagen bei dir.",
+                emoji: "✏️",
+                title: "Bearbeiten & bestellen",
+                desc: "In der Vorschau kannst du alles anpassen – Texte, Bilder, Reihenfolge. Erst dann bestellst du.",
               },
             ].map((f) => (
               <motion.div
@@ -81,21 +93,38 @@ export default function LandingHero({ onStart }: { onStart: () => void }) {
               >
                 <div className="text-4xl">{f.emoji}</div>
                 <h3 className="font-bold text-brand-800">{f.title}</h3>
-                <p className="text-gray-500 text-sm">{f.desc}</p>
+                <p className="text-gray-500 text-sm leading-relaxed">{f.desc}</p>
               </motion.div>
             ))}
           </div>
         </div>
       </div>
 
+      {/* Reassurance bar */}
+      <div className="bg-brand-50 py-10">
+        <div className="max-w-4xl mx-auto px-4 grid md:grid-cols-3 gap-6 text-center">
+          {[
+            { emoji: "🖊️", text: "Stichpunkte reichen – kein Aufsatz nötig" },
+            { emoji: "👁️", text: "Vorschau vor der Bestellung – du hast die volle Kontrolle" },
+            { emoji: "🔄", text: "Alles bearbeitbar – Texte, Bilder, Reihenfolge" },
+          ].map((item) => (
+            <div key={item.text} className="flex items-center justify-center gap-3">
+              <span className="text-2xl">{item.emoji}</span>
+              <span className="text-sm text-brand-700 font-medium">{item.text}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
       {/* CTA */}
-      <div className="py-20 text-center space-y-6 bg-gradient-to-r from-brand-500 to-warm-500">
+      <div className="py-20 text-center space-y-4 bg-gradient-to-r from-brand-500 to-warm-500">
         <h2
           className="text-3xl font-bold text-white"
           style={{ fontFamily: "var(--font-display)" }}
         >
           Bereit für dein persönliches Buch?
         </h2>
+        <p className="text-white/80 text-sm">Dauert nur wenige Minuten – Stichpunkte reichen.</p>
         <Button
           onClick={onStart}
           size="lg"

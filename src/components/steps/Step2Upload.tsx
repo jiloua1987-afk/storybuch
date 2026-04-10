@@ -83,8 +83,11 @@ export default function Step2Upload() {
           Deine Bilder 📸
         </h2>
         <p className="text-gray-500">
-          Lade Fotos hoch – die KI nutzt sie als Vorlage für die Illustrationen.
+          Komplett optional – aber je mehr Fotos, desto persönlicher wird dein Buch.
         </p>
+        <div className="inline-flex items-center gap-2 bg-green-50 text-green-700 border border-green-200 px-4 py-2 rounded-full text-sm">
+          💡 Keine Fotos? Kein Problem – du kannst diesen Schritt überspringen
+        </div>
       </div>
 
       {/* DSGVO Consent */}
