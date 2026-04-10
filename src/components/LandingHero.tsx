@@ -101,22 +101,7 @@ export default function LandingHero({ onStart }: { onStart: () => void }) {
             />
           </motion.div>
 
-          {/* Startseite_Bild als zweites Beispiel */}
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6, delay: 0.2 }}
-            className="relative rounded-3xl overflow-hidden shadow-xl border border-gray-100 max-w-sm mx-auto"
-          >
-            <Image
-              src="/Startseite_Bild.png"
-              alt="Weiteres Beispiel"
-              width={500}
-              height={700}
-              className="w-full h-auto"
-            />
-          </motion.div>
+          {/* Startseite_Bild als zweites Beispiel – nur auf Über-uns */}
         </div>
       </div>
 

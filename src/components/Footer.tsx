@@ -30,8 +30,8 @@ export default function Footer() {
           <ul className="space-y-2 text-brand-200 text-sm">
             <li><Link href="/ueber-uns" className="hover:text-white transition-colors">Über uns</Link></li>
             <li><Link href="/faq" className="hover:text-white transition-colors">FAQ & Kontakt</Link></li>
+            <li><Link href="/preise" className="hover:text-white transition-colors">Preise</Link></li>
             <li><a href="#" className="hover:text-white transition-colors">Beispiele</a></li>
-            <li><a href="#" className="hover:text-white transition-colors">Preise</a></li>
           </ul>
         </div>
 

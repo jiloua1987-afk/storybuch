@@ -30,7 +30,7 @@ export default function Navbar() {
           )}
           <a href="/ueber-uns" className="hover:text-brand-600 transition-colors">Über uns</a>
           <a href="/faq" className="hover:text-brand-600 transition-colors">FAQ</a>
-          <a href="#" className="hover:text-brand-600 transition-colors">Preise</a>
+          <a href="/preise" className="hover:text-brand-600 transition-colors">Preise</a>
           <button className="bg-brand-500 text-white px-4 py-1.5 rounded-full text-sm font-medium hover:bg-brand-600 transition-all">
             Anmelden
           </button>
