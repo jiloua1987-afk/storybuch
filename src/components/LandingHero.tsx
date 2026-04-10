@@ -1,34 +1,6 @@
 "use client";
 import { motion } from "framer-motion";
 import Button from "@/components/ui/Button";
-import Image from "next/image";
-
-const EXAMPLE_BOOKS = [
-  {
-    seed: "sardinia-comic",
-    title: "Sommer auf Sardinien",
-    emoji: "🏖️",
-    bg: "https://picsum.photos/seed/sardinia/300/400",
-    overlay: "from-cyan-500/60 to-blue-600/60",
-    panels: ["🏖️", "🏰", "🌅"],
-  },
-  {
-    seed: "wedding-story",
-    title: "Unsere Hochzeit",
-    emoji: "💍",
-    bg: "https://picsum.photos/seed/wedding2/300/400",
-    overlay: "from-rose-400/60 to-pink-600/60",
-    panels: ["💍", "💐", "🥂"],
-  },
-  {
-    seed: "baby-first-year",
-    title: "Emmas erstes Jahr",
-    emoji: "👶",
-    bg: "https://picsum.photos/seed/baby/300/400",
-    overlay: "from-yellow-400/60 to-orange-400/60",
-    panels: ["👶", "🎂", "🌟"],
-  },
-];
 
 export default function LandingHero({ onStart }: { onStart: () => void }) {
   return (
@@ -42,7 +14,7 @@ export default function LandingHero({ onStart }: { onStart: () => void }) {
           className="space-y-4"
         >
           <div className="inline-flex items-center gap-2 bg-brand-100 text-brand-700 px-4 py-1.5 rounded-full text-sm font-medium">
-            ✨ KI-gestützte Buchgenerierung
+            ✨ Deine Erinnerungen. Dein Buch.
           </div>
           <h1
             className="text-5xl md:text-6xl font-bold text-brand-900 leading-tight"
@@ -73,60 +45,6 @@ export default function LandingHero({ onStart }: { onStart: () => void }) {
             Beispiele ansehen
           </Button>
         </motion.div>
-
-        {/* Book mockups – comic panel style */}
-        <motion.div
-          initial={{ opacity: 0, y: 40 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.5 }}
-          className="grid grid-cols-3 gap-4 max-w-2xl mx-auto mt-12"
-        >
-          {EXAMPLE_BOOKS.map((book, i) => (
-            <motion.div
-              key={book.seed}
-              animate={{ y: [0, -8, 0] }}
-              transition={{ duration: 3, delay: i * 0.5, repeat: Infinity, ease: "easeInOut" }}
-              className="relative rounded-2xl overflow-hidden shadow-xl aspect-[3/4] cursor-pointer group bg-white border-2 border-gray-100"
-            >
-              {/* Comic panel layout */}
-              <div className="absolute inset-0 flex flex-col">
-                {/* Top panel – large image */}
-                <div className="relative flex-[2] overflow-hidden border-b-2 border-gray-800">
-                  <Image
-                    src={book.bg}
-                    alt={book.title}
-                    fill
-                    className="object-cover group-hover:scale-105 transition-transform duration-500"
-                  />
-                  <div className={`absolute inset-0 bg-gradient-to-br ${book.overlay}`} />
-                  {/* Caption box top-left */}
-                  <div className="absolute top-2 left-2 bg-white/95 border border-gray-300 rounded px-2 py-1 max-w-[80%]">
-                    <p className="text-gray-800 font-bold leading-tight" style={{ fontSize: "7px", fontFamily: "var(--font-display)" }}>
-                      {book.title}
-                    </p>
-                  </div>
-                </div>
-                {/* Bottom panels – 2 small */}
-                <div className="flex flex-1">
-                  <div className="relative flex-1 border-r border-gray-800 overflow-hidden">
-                    <Image src={book.bg} alt="" fill className="object-cover object-bottom" />
-                    <div className={`absolute inset-0 bg-gradient-to-t ${book.overlay} opacity-70`} />
-                    <div className="absolute bottom-1 left-1 bg-white/90 border border-gray-300 rounded px-1">
-                      <p style={{ fontSize: "5px" }} className="text-gray-700 font-medium">Eine unvergessliche Reise...</p>
-                    </div>
-                  </div>
-                  <div className="relative flex-1 overflow-hidden">
-                    <Image src={book.bg} alt="" fill className="object-cover object-right" />
-                    <div className={`absolute inset-0 bg-gradient-to-t ${book.overlay} opacity-50`} />
-                    <div className="absolute top-1 right-1 text-lg">{book.emoji}</div>
-                  </div>
-                </div>
-              </div>
-              {/* Hover overlay */}
-              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all duration-300" />
-            </motion.div>
-          ))}
-        </motion.div>
       </div>
 
       {/* Features */}
@@ -146,9 +64,9 @@ export default function LandingHero({ onStart }: { onStart: () => void }) {
                 desc: "Schreib frei oder beantworte geführte Fragen. Lade Fotos hoch.",
               },
               {
-                emoji: "✨",
-                title: "KI generiert dein Buch",
-                desc: "Text, Kapitel und Illustrationen werden automatisch erstellt.",
+                emoji: "📖",
+                title: "Dein Buch wird erstellt",
+                desc: "Text, Kapitel und Illustrationen im Comic-Stil – vollautomatisch.",
               },
               {
                 emoji: "📦",
