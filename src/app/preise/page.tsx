@@ -155,12 +155,12 @@ export default function Preise() {
 
         {/* CTA */}
         <section className="max-w-5xl mx-auto px-4 py-20 grid md:grid-cols-2 gap-12 items-center">
-          <div className="relative h-[480px] rounded-3xl overflow-hidden shadow-2xl bg-white">
+          <div className="relative h-[480px] rounded-3xl overflow-hidden shadow-2xl">
             <Image
-              src="/image.png"
+              src="/image_einzel.png"
               alt="Familie liest MyStoryBook"
               fill
-              className="object-contain"
+              className="object-cover object-top"
             />
           </div>
           <div className="space-y-6 max-w-xl mx-auto text-center">
