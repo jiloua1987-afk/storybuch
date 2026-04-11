@@ -5,10 +5,10 @@ import Image from "next/image";
 import Footer from "@/components/Footer";
 
 const REVIEWS = [
-  { name: "Sandra M.", stars: 5, text: "Das schönste Geschenk, das ich je gemacht habe. Meine Mutter hat geweint vor Freude.", occasion: "Muttertag" },
-  { name: "Thomas K.", stars: 5, text: "Unser Sardinien-Urlaub als Buch – die Kinder lieben es und wollen es jeden Abend anschauen.", occasion: "Familienurlaub" },
-  { name: "Julia & Marc", stars: 5, text: "Unsere Liebesgeschichte als Comic-Buch. Einfach unglaublich wie persönlich das geworden ist.", occasion: "Jahrestag" },
-  { name: "Petra W.", stars: 5, text: "Für meinen Vater zum 70. Geburtstag – seine Biografie als illustriertes Buch. Er ist sprachlos.", occasion: "Geburtstag" },
+  { name: "Sandra M.", stars: 5, text: "Unser Sardinien-Urlaub als Comic – die Kinder wollen es jeden Abend lesen. Jedes Panel bringt sie zum Lachen!", occasion: "Familienurlaub" },
+  { name: "Julia & Marc", stars: 5, text: "Unsere Liebesgeschichte als Comic bis zur Hochzeit. Die Dialoge treffen uns so genau – wir haben geweint und gelacht.", occasion: "Jahrestag" },
+  { name: "Thomas K.", stars: 5, text: "Zum 40. Geburtstag meines besten Freundes – unser Freundschafts-Comic. Absoluter Wahnsinn wie persönlich das ist.", occasion: "Geburtstag" },
+  { name: "Petra W.", stars: 5, text: "Das persönlichste Geschenk, das ich je gemacht habe. Kein Gutschein der Welt kommt da ran.", occasion: "Muttertag" },
 ];
 
 export default function LandingHero({ onStart }: { onStart: () => void }) {
@@ -26,25 +26,24 @@ export default function LandingHero({ onStart }: { onStart: () => void }) {
             className="space-y-6 pb-16"
           >
             <div className="inline-flex items-center gap-2 bg-brand-100 text-brand-700 px-4 py-1.5 rounded-full text-sm font-medium">
-              ✨ Deine Erinnerungen. Dein Buch.
+              💥 Deine Erinnerungen. Als Comic.
             </div>
             <h1
               className="text-4xl md:text-5xl font-bold text-brand-900 leading-tight"
               style={{ fontFamily: "var(--font-display)" }}
             >
-              Erlebe deine schönsten Geschichten als
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-500 to-warm-500"> liebevoll gestaltetes Bilderbuch.</span>
+              Deine Geschichte –
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-500 to-warm-500"> als personalisierter Comic.</span>
             </h1>
             <p className="text-lg text-gray-500 leading-relaxed">
-              Verwandle deine Erinnerungen in ein wunderschönes, illustriertes Buch –
-              gedruckt und direkt zu dir nach Hause geliefert.
+              Urlaub, Liebe, Familie, Freundschaft – wir verwandeln deine echten Erinnerungen in einen Comic mit Illustrationen und echten Dialogen. Gedruckt und geliefert.
             </p>
             <div className="inline-flex items-center gap-2 bg-green-50 text-green-700 border border-green-200 px-4 py-2 rounded-full text-sm">
-              💡 Stichpunkte reichen völlig aus – wir kümmern uns um den Rest
+              💡 Stichpunkte reichen – Dialoge schlagen wir dir vor
             </div>
             <div className="flex flex-col sm:flex-row gap-4">
               <Button onClick={onStart} size="lg">
-                Jetzt Buch erstellen ✨
+                Jetzt Comic erstellen 💥
               </Button>
               <Button variant="secondary" size="lg">
                 Beispiele ansehen
@@ -78,10 +77,10 @@ export default function LandingHero({ onStart }: { onStart: () => void }) {
               className="text-3xl font-bold text-brand-800"
               style={{ fontFamily: "var(--font-display)" }}
             >
-              So sieht dein fertiges Buch aus
+              So sieht dein Comic aus
             </h2>
             <p className="text-gray-400 text-sm">
-              Jede Geschichte bekommt ihren eigenen Stil – hier ein Beispiel im Comic-Look
+              Echte Illustrationen, echte Dialoge – jede Erinnerung wird ein Panel
             </p>
           </div>
 
@@ -112,32 +111,32 @@ export default function LandingHero({ onStart }: { onStart: () => void }) {
             className="text-3xl font-bold text-center text-brand-800 mb-4"
             style={{ fontFamily: "var(--font-display)" }}
           >
-            So einfach geht's
+            So einfach wird deine Erinnerung zum Comic
           </h2>
           <p className="text-center text-gray-400 text-sm mb-12">
-            Keine langen Texte nötig – ein paar Stichpunkte genügen.
+            Keine langen Texte, keine Zeichenkenntnisse – ein paar Stichpunkte genügen.
           </p>
           <div className="grid md:grid-cols-4 gap-6">
             {[
               {
                 emoji: "✍️",
                 title: "Geschichte eingeben",
-                desc: "Stichpunkte reichen! Wer, wo, wann – mehr brauchen wir nicht. Alles andere ist optional.",
+                desc: "Stichpunkte reichen! Wer, wo, wann – mehr brauchen wir nicht.",
               },
               {
-                emoji: "📸",
-                title: "Fotos hochladen",
-                desc: "Optional: Lade Bilder hoch. Je mehr Details, desto persönlicher wird dein Buch.",
+                emoji: "💬",
+                title: "Dialoge vorschlagen",
+                desc: "Wir schlagen passende Dialoge vor – du kannst sie anpassen oder übernehmen.",
               },
               {
-                emoji: "📖",
-                title: "Buch wird erstellt",
-                desc: "Text und Illustrationen im Comic-Stil werden vollautomatisch für dich erstellt.",
+                emoji: "💥",
+                title: "Comic wird erstellt",
+                desc: "Panels, Illustrationen und Sprechblasen werden vollautomatisch erstellt.",
               },
               {
                 emoji: "✏️",
                 title: "Bearbeiten & bestellen",
-                desc: "In der Vorschau kannst du alles anpassen – Texte, Bilder, Reihenfolge. Erst dann bestellst du.",
+                desc: "Alles anpassbar in der Vorschau – Texte, Dialoge, Bilder. Erst dann bestellst du.",
               },
             ].map((f) => (
               <motion.div
@@ -159,8 +158,8 @@ export default function LandingHero({ onStart }: { onStart: () => void }) {
         <div className="max-w-4xl mx-auto px-4 grid md:grid-cols-3 gap-6 text-center">
           {[
             { emoji: "🖊️", text: "Stichpunkte reichen – kein Aufsatz nötig" },
-            { emoji: "👁️", text: "Vorschau vor der Bestellung – du hast die volle Kontrolle" },
-            { emoji: "🔄", text: "Alles bearbeitbar – Texte, Bilder, Reihenfolge" },
+            { emoji: "💬", text: "Dialoge werden vorgeschlagen – du entscheidest" },
+            { emoji: "🔄", text: "Alles bearbeitbar – Panels, Dialoge, Reihenfolge" },
           ].map((item) => (
             <div key={item.text} className="flex items-center justify-center gap-3">
               <span className="text-2xl">{item.emoji}</span>
@@ -222,7 +221,7 @@ export default function LandingHero({ onStart }: { onStart: () => void }) {
           className="text-3xl font-bold text-white"
           style={{ fontFamily: "var(--font-display)" }}
         >
-          Bereit für dein persönliches Buch?
+          Bereit für deinen persönlichen Comic?
         </h2>
         <p className="text-white/80 text-sm">Dauert nur wenige Minuten – Stichpunkte reichen.</p>
         <Button
@@ -230,7 +229,7 @@ export default function LandingHero({ onStart }: { onStart: () => void }) {
           size="lg"
           className="bg-white text-brand-700 hover:bg-brand-50 shadow-xl"
         >
-          Kostenlos starten ✨
+          Jetzt Comic erstellen 💥
         </Button>
       </div>
       <Footer />

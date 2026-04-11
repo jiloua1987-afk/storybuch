@@ -6,24 +6,24 @@ import Image from "next/image";
 
 const REASONS = [
   {
-    emoji: "💝",
-    title: "Das persönlichste Geschenk",
-    desc: "Kein Gutschein, kein Standardgeschenk – ein Buch, das nur für diese eine Person existiert. Mit echten Erinnerungen, echten Momenten.",
+    emoji: "💥",
+    title: "Einzigartig am Markt",
+    desc: "Kein Fotobuch, kein Kinderbuch von der Stange – ein personalisierter Comic mit echten Dialogen. Den gibt es nur bei uns.",
   },
   {
-    emoji: "📖",
-    title: "Erinnerungen für immer",
-    desc: "Fotos verschwinden in der Cloud. Ein gedrucktes Buch bleibt – im Regal, auf dem Nachttisch, in der Familie.",
+    emoji: "💬",
+    title: "Echte Dialoge",
+    desc: "Jedes Panel hat Sprechblasen mit Dialogen die sich anfühlen als wärst du dabei. Wir schlagen sie vor – du passt sie an.",
   },
   {
     emoji: "✍️",
     title: "Kein Aufwand",
-    desc: "Stichpunkte reichen. Wir kümmern uns um Text, Illustrationen und Layout. Du musst nichts ausformulieren.",
+    desc: "Stichpunkte reichen. Wir kümmern uns um Illustrationen, Dialoge und Layout. Du musst nichts ausformulieren.",
   },
   {
     emoji: "🎨",
-    title: "Professionell gestaltet",
-    desc: "Jede Seite wird individuell illustriert – im Comic-, Aquarell- oder Skizzenstil. Kein Fotobuch von der Stange.",
+    title: "Professionell illustriert",
+    desc: "Jedes Panel wird individuell im Comic-Stil illustriert – keine Stockfotos, keine Templates.",
   },
   {
     emoji: "📦",
@@ -33,7 +33,7 @@ const REASONS = [
   {
     emoji: "🌍",
     title: "In jeder Sprache",
-    desc: "Dein Buch kann auf Deutsch, Englisch, Französisch oder Spanisch erstellt werden – perfekt als Geschenk ins Ausland.",
+    desc: "Dein Comic kann auf Deutsch, Englisch, Französisch oder Spanisch erstellt werden – perfekt als Geschenk ins Ausland.",
   },
 ];
 
@@ -62,16 +62,16 @@ export default function UeberUns() {
             className="space-y-6"
           >
             <div className="inline-flex items-center gap-2 bg-brand-100 text-brand-700 px-4 py-1.5 rounded-full text-sm font-medium">
-              📚 Über MyStoryBook
+              💥 Über MyComicStory
             </div>
             <h1 className="text-4xl font-bold text-brand-900 leading-tight" style={{ fontFamily: "var(--font-display)" }}>
-              Wir glauben, dass jede Geschichte es verdient, erzählt zu werden.
+              Wir glauben, dass jede Erinnerung es verdient, als Comic erzählt zu werden.
             </h1>
             <p className="text-gray-500 leading-relaxed">
-              MyStoryBook wurde mit einer einfachen Idee gegründet: Jeder Mensch hat Geschichten, die es wert sind, bewahrt zu werden. Urlaubserinnerungen, Liebesgeschichten, Familienmomente – sie verschwinden viel zu schnell im Alltag.
+              MyComicStory wurde mit einer einfachen Idee gegründet: Erinnerungen sind zu wertvoll, um in einem Fotoordner zu verschwinden. Urlaubsmomente, Liebesgeschichten, Familienabende – sie verdienen mehr.
             </p>
             <p className="text-gray-500 leading-relaxed">
-              Wir machen es einfach, diese Momente in ein wunderschönes, illustriertes Buch zu verwandeln. Kein Schreibtalent nötig. Keine Designkenntnisse. Nur deine Erinnerungen.
+              Wir machen es einfach, diese Momente in einen personalisierten Comic zu verwandeln – mit echten Illustrationen und Dialogen, die sich anfühlen als wärst du dabei. Kein Schreibtalent nötig. Keine Zeichenkenntnisse. Nur deine Erinnerungen.
             </p>
           </motion.div>
           <motion.div
@@ -89,10 +89,10 @@ export default function UeberUns() {
           <div className="max-w-5xl mx-auto px-4 space-y-12">
             <div className="text-center space-y-3">
               <h2 className="text-3xl font-bold text-brand-800" style={{ fontFamily: "var(--font-display)" }}>
-                Warum MyStoryBook?
+                Warum MyComicStory?
               </h2>
               <p className="text-gray-400 max-w-xl mx-auto">
-                Weil Erinnerungen mehr verdienen als einen Ordner auf dem Handy.
+                Weil Erinnerungen mehr verdienen als einen Fotoordner auf dem Handy.
               </p>
             </div>
             <div className="grid md:grid-cols-3 gap-6">

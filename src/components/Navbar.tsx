@@ -13,12 +13,12 @@ export default function Navbar() {
           onClick={resetProject}
           className="flex items-center gap-2"
         >
-          <span className="text-2xl">📚</span>
+          <span className="text-2xl">💥</span>
           <span
             className="text-xl font-bold text-brand-700"
             style={{ fontFamily: "var(--font-display)" }}
           >
-            MyStoryBook
+            MyComicStory
           </span>
         </motion.button>
 

@@ -9,13 +9,13 @@ export default function Footer() {
         {/* Brand */}
         <div className="space-y-4 md:col-span-1">
           <div className="flex items-center gap-2">
-            <span className="text-2xl">📚</span>
+            <span className="text-2xl">💥</span>
             <span className="text-xl font-bold" style={{ fontFamily: "var(--font-display)" }}>
-              MyStoryBook
+              MyComicStory
             </span>
           </div>
           <p className="text-brand-200 text-sm leading-relaxed">
-            Deine Erinnerungen. Dein Buch. Für immer.
+            Deine Erinnerungen. Als Comic. Für immer.
           </p>
           <div className="flex gap-3">
             <a href="#" className="w-9 h-9 bg-brand-700 rounded-full flex items-center justify-center hover:bg-brand-600 transition-all text-sm">f</a>

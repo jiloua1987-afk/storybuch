@@ -3,9 +3,9 @@ import "./globals.css";
 import { Toaster } from "react-hot-toast";
 
 export const metadata: Metadata = {
-          title: "MyStoryBook – Dein persönliches Buch",
-  description: "Verwandle deine Erinnerungen in ein illustriertes Buch. Stichpunkte reichen – druckfertig und lieferbar.",
-  keywords: ["Buch erstellen", "persönliche Geschichte", "KI Buch", "illustriertes Buch", "Fotobuch"],
+          title: "MyComicStory – Deine Erinnerungen als Comic",
+  description: "Verwandle deine Erinnerungen in einen personalisierten Comic mit echten Dialogen – gedruckt und geliefert.",
+  keywords: ["Comic erstellen", "personalisierter Comic", "Erinnerungen als Comic", "Comic Buch", "Geschenk Comic"],
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
