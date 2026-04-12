@@ -59,10 +59,18 @@ export default function Step4Generate() {
 
       if (structureRes.ok) {
         const data = await structureRes.json();
-        setDebugInfo(`API OK: ${data.chapters?.length || 0} Kapitel, ${data.characters?.length || 0} Figuren`);
         chapters = data.chapters || [];
         characters = data.characters || [];
-        if (chapters.length === 0) throw new Error("GPT hat keine Kapitel zurückgegeben. Bitte nochmal versuchen.");
+        setDebugInfo(`API OK: ${chapters.length} Kapitel, ${characters.length} Figuren`);
+        // Fallback if GPT returned empty
+        if (chapters.length === 0) {
+          setDebugInfo("GPT antwortete leer – nutze Demo-Daten als Fallback");
+          chapters = DUMMY_PROJECT.chapters.map((c) => ({
+            id: c.id, nummer: 1, titel: c.title,
+            handlung: c.content, szene_beschreibung: c.content,
+            illustration_prompt: c.imagePrompt || "",
+          }));
+        }
       } else {
         const errData = await structureRes.json().catch(() => ({}));
         const msg = `API Fehler ${structureRes.status}: ${errData.error || structureRes.statusText}`;

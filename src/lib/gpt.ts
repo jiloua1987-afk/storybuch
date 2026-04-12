@@ -46,15 +46,15 @@ export async function generateBookStructure(
         role: "system",
         content: `Du bist ein kreativer Comic-Autor. Erstelle aus der Geschichte eine Comic-Struktur mit 5 Kapiteln auf ${lang}.
 Tonalität: ${tone}
-Antworte NUR mit einem JSON-Array:
-[{
+Antworte NUR mit einem JSON-Objekt mit einem "chapters" Array:
+{"chapters": [{
   "id": "ch1",
   "nummer": 1,
   "titel": "Kapitelname",
   "handlung": "Was passiert in diesem Kapitel (2-3 Sätze)",
   "szene_beschreibung": "Visuelle Beschreibung der Hauptszene",
   "illustration_prompt": "English description for DALL-E, no text, no letters, no speech bubbles, no captions, pure illustration"
-}]`,
+}]}`,
       },
       { role: "user", content: context },
     ],
@@ -63,7 +63,8 @@ Antworte NUR mit einem JSON-Array:
   });
 
   const raw = JSON.parse(response.choices[0].message.content || "{}");
-  return Array.isArray(raw) ? raw : raw.chapters || raw.kapitel || [];
+  const chapters = raw.chapters || raw.kapitel || (Array.isArray(raw) ? raw : []);
+  return chapters;
 }
 
 // ── Character Builder ─────────────────────────────────────────────────────────
@@ -129,15 +130,15 @@ Figuren: ${charList}
 ${mustHaveSentences ? `Wichtige Sätze die vorkommen sollen: ${mustHaveSentences}` : ""}
 
 Schreibe 2-3 kurze, lebendige Dialoge für die Szene.
-Antworte NUR mit JSON-Array:
-[{
+Antworte NUR mit JSON-Objekt mit "dialogs" Array:
+{"dialogs": [{
   "speaker": "Name",
   "text": "Dialog-Text (max 8 Wörter)",
   "position": "${positions.join("|")}",
   "bubble_type": "${bubbleTypes.join("|")}",
   "bubble_color": "#hex aus Figuren-Liste",
   "order": 1
-}]`,
+}]}`,
       },
       {
         role: "user",
@@ -149,7 +150,7 @@ Antworte NUR mit JSON-Array:
   });
 
   const raw = JSON.parse(response.choices[0].message.content || "{}");
-  return Array.isArray(raw) ? raw : raw.dialogs || raw.dialoge || [];
+  return raw.dialogs || raw.dialoge || (Array.isArray(raw) ? raw : []);
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
