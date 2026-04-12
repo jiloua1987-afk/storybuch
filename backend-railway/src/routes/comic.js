@@ -212,63 +212,74 @@ Respond ONLY with JSON: {"pages": [{"id":"page1","pageNumber":1,"title":"Title i
   }
 });
 
-// ── POST /api/comic/page ──────────────────────────────────────────────────────
+// ── Optimierter Prompt-Builder (basierend auf ChatGPT-Empfehlung) ─────────────
+function buildComicPrompt({ scenes, characters = [], location = "", illustrationStyle = "comic", comicStyle = "emotional", category = "familie" }) {
+  const style = ILLUS_STYLE[illustrationStyle] || ILLUS_STYLE.comic;
+  const comicMod = COMIC_STYLE_MOD[comicStyle] || COMIC_STYLE_MOD.emotional;
+  const mood = CATEGORY_MOOD[category] || CATEGORY_MOOD.familie;
+
+  const characterBlock = `CRITICAL CHARACTER REQUIREMENT:
+Use the provided reference image as the primary identity source.
+All characters MUST closely match:
+- faces, hair (style + color), body proportions, age
+DO NOT invent new faces. DO NOT change identity.
+${characters.length > 0 ? `Character descriptions for reference:\n${characters.map(c => `- ${c.name}: ${c.visual_anchor}`).join("\n")}` : ""}
+
+CONSISTENCY REQUIREMENT:
+All characters must remain identical across ALL panels:
+- same faces, same proportions, same clothing style, same colors`;
+
+  const styleBlock = `STYLE:
+${style}, ${comicMod}, ${mood}
+cinematic lighting, clean, professional illustration quality`;
+
+  const layoutBlock = `COMIC PAGE LAYOUT:
+Create a single comic page with ${scenes.length} panels.
+Clean white borders between panels.
+Layout: ${scenes.length <= 3 ? "2 panels top, 1 wide bottom" : scenes.length === 5 ? "2 panels top, 1 wide middle, 2 panels bottom" : "2x2 grid"}
+
+IMPORTANT:
+NO text, NO speech bubbles, NO captions in the image.
+Leave empty space in top-left or top-right corner of each panel for text overlay.`;
+
+  const sceneBlock = `SCENES:
+${scenes.map((scene, i) => `${i + 1}. ${scene}`).join("\n")}`;
+
+  const environmentBlock = `ENVIRONMENT:
+${location || "beautiful scenic location"}, ${mood}
+LIGHTING: bright daylight for active scenes, golden hour for emotional scenes`;
+
+  const negativeBlock = `NEGATIVE:
+text, speech bubbles, captions, watermark, distorted faces, inconsistent characters, extra fingers, unrealistic anatomy`;
+
+  return `Create a high-quality illustrated comic page.
+
+${characterBlock}
+
+${layoutBlock}
+
+${styleBlock}
+
+${sceneBlock}
+
+${environmentBlock}
+
+${negativeBlock}`;
+}
 router.post("/page", async (req, res) => {
   try {
     const { page, characters = [], illustrationStyle = "comic", comicStyle = "emotional", category = "familie" } = req.body;
 
-    // FIXER ANTEIL: Konsistenz + Character Anchors + Stil
-    const charAnchors = characters.map(c => `[${c.name}: ${c.visual_anchor}]`).join(" ");
-
-    const layoutMap = {
-      3: "2 panels top row, 1 wide panel bottom",
-      4: "2 panels top row, 2 panels bottom row",
-      5: "2 panels top row, 1 wide panel middle, 2 panels bottom row",
-      6: "3 panels top row, 3 panels bottom row",
-    };
-    const layout = layoutMap[page.panels.length] || layoutMap[4];
-
-    const panelDescs = page.panels.map(p =>
-      `Panel ${p.nummer}: ${p.szene}`
-    ).join("\n");
-
-    const style = ILLUS_STYLE[illustrationStyle] || ILLUS_STYLE.comic;
-    const comicMod = COMIC_STYLE_MOD[comicStyle] || COMIC_STYLE_MOD.emotional;
-    const mood = CATEGORY_MOOD[category] || CATEGORY_MOOD.familie;
-
-    const fullPrompt = `Create a high-quality illustrated comic page based on the provided reference image.
-
-CRITICAL CHARACTER REQUIREMENT:
-The people in the generated image MUST closely match the faces, hair, body proportions, and overall appearance of the people in the reference photo.
-Use the reference image as the primary identity source for all characters.
-Do NOT invent new faces. Do NOT change hairstyles, hair color, or age.
-Maintain strong visual similarity to the reference image.
-${charAnchors ? `Character descriptions: ${charAnchors}` : ""}
-
-CONSISTENCY REQUIREMENT:
-All characters must look identical across ALL panels:
-- same faces, same proportions, same clothing style, same colors, same visual identity
-
-COMIC PAGE LAYOUT:
-Generate a single comic page with ${page.panels.length} panels.
-Panels cleanly separated with white borders.
-Layout: ${layout}
-
-STYLE:
-${style}, ${comicMod}, ${mood}, cinematic lighting, detailed but clean.
-
-IMPORTANT:
-NO text inside the image. NO speech bubbles. NO captions.
-Leave empty space in top-left or top-right corner of each panel for later text overlay.
-
-SCENES:
-${panelDescs}
-
-ENVIRONMENT: ${page.location || "beautiful scenic location"}, ${page.timeOfDay || "warm daylight"}.
-
-DETAIL LEVEL: high detail, professional illustration quality.
-
-NEGATIVE: text, speech bubbles, captions, watermark, distorted faces, inconsistent characters, extra fingers, unrealistic anatomy.`;
+    // Optimierter Prompt mit buildComicPrompt
+    const scenes = page.panels.map(p => p.szene);
+    const fullPrompt = buildComicPrompt({
+      scenes,
+      characters,
+      location: page.location || "",
+      illustrationStyle,
+      comicStyle,
+      category,
+    });
 
     console.log(`Generating page "${page.title}" (${page.panels.length} panels, style: ${illustrationStyle}, category: ${category})`);
 
