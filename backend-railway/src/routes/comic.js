@@ -191,7 +191,7 @@ Respond ONLY with JSON: {"pages": [{"id":"page1","pageNumber":1,"title":"Title i
             model: "gpt-4o",
             messages: [{ role: "user", content: [
               { type: "image_url", image_url: { url: `data:image/jpeg;base64,${ref}`, detail: "high" } },
-              { type: "text", text: `Look at this photo and describe the person named "${char.name}" for a comic book artist who needs to draw them consistently. Be extremely precise about: exact hair color and texture, eye color, skin tone, estimated age, face shape, any distinctive features (beard, glasses, freckles, dimples etc.), typical clothing style and colors. Write in English, max 70 words. This description will be used as a visual anchor for all comic panels.` },
+              { type: "text", text: `Look at this photo. Describe the visual appearance of the people for a comic book artist who needs to draw cartoon versions of them. Focus ONLY on visual features: approximate age range, hair color and texture, skin tone, clothing colors and style. Do NOT identify anyone. Write in English, max 70 words per person. Start with "Person ${i+1} (${char.name}):"` },
             ]}],
             max_tokens: 150,
           });
@@ -286,19 +286,32 @@ router.post("/page", async (req, res) => {
       else if (item?.b64_json) rawUrl = `data:image/png;base64,${item.b64_json}`;
     }
 
-    if (!rawUrl) return res.json({ imageUrl: "" });
+    if (!rawUrl) {
+      console.error("No image URL generated for page:", page.title);
+      return res.json({ imageUrl: "" });
+    }
+
+    console.log(`Raw image URL type: ${rawUrl.startsWith("data:") ? "base64" : "url"}, length: ${rawUrl.length}`);
 
     // Sharp: Text-Overlay (Titel + Caption-Boxen)
     const buf = await fetchBuf(rawUrl);
-    if (!buf) return res.json({ imageUrl: rawUrl });
+    if (!buf) {
+      console.error("Could not fetch image buffer");
+      return res.json({ imageUrl: rawUrl }); // Return raw URL as fallback
+    }
 
     const meta = await sharp(buf).metadata();
     const W = meta.width || 1536, H = meta.height || 1024;
     const svgStr = buildPageSVG(page.title, page.panels, W, H);
-    const comp = await sharp(buf).composite([{ input: Buffer.from(svgStr), top: 0, left: 0 }]).png().toBuffer();
 
-    console.log(`✓ Page "${page.title}" done`);
-    res.json({ imageUrl: `data:image/png;base64,${comp.toString("base64")}` });
+    const comp = await sharp(buf)
+      .composite([{ input: Buffer.from(svgStr), top: 0, left: 0 }])
+      .jpeg({ quality: 85 }) // JPEG statt PNG – viel kleiner
+      .toBuffer();
+
+    const base64 = comp.toString("base64");
+    console.log(`✓ Page "${page.title}" done, size: ${Math.round(base64.length / 1024)}KB`);
+    res.json({ imageUrl: `data:image/jpeg;base64,${base64}` });
   } catch (err) {
     console.error("Page error:", err.message);
     res.status(500).json({ error: err.message, imageUrl: "" });
@@ -365,8 +378,8 @@ router.post("/cover", async (req, res) => {
     svg += `<rect x="${W/2-40}" y="${H-overlayH*0.18}" width="80" height="3" fill="#C9963A" rx="1"/>`;
     svg += `</svg>`;
 
-    const comp = await sharp(buf).composite([{ input: Buffer.from(svg), top: 0, left: 0 }]).png().toBuffer();
-    res.json({ coverImageUrl: `data:image/png;base64,${comp.toString("base64")}` });
+    const comp = await sharp(buf).composite([{ input: Buffer.from(svg), top: 0, left: 0 }]).jpeg({ quality: 85 }).toBuffer();
+    res.json({ coverImageUrl: `data:image/jpeg;base64,${comp.toString("base64")}` });
   } catch (err) {
     console.error("Cover error:", err.message);
     res.status(500).json({ error: err.message, coverImageUrl: "" });
@@ -414,9 +427,9 @@ router.post("/ending", async (req, res) => {
     svg += `</svg>`;
 
     const buf = await sharp({ create: { width: W, height: H, channels: 4, background: { r: 245, g: 237, b: 224, alpha: 1 } } })
-      .composite([{ input: Buffer.from(svg), top: 0, left: 0 }]).png().toBuffer();
+      .composite([{ input: Buffer.from(svg), top: 0, left: 0 }]).jpeg({ quality: 90 }).toBuffer();
 
-    res.json({ imageUrl: `data:image/png;base64,${buf.toString("base64")}` });
+    res.json({ imageUrl: `data:image/jpeg;base64,${buf.toString("base64")}` });
   } catch (err) {
     console.error("Ending error:", err.message);
     res.status(500).json({ error: err.message });
