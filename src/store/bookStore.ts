@@ -19,6 +19,15 @@ export interface Chapter {
   imagePrompt?: string;
 }
 
+export type ComicStyle = "action" | "emotional" | "humor";
+export type DialogMode = "auto" | "custom";
+
+export interface CustomDialog {
+  id: string;
+  speaker: string;
+  text: string;
+}
+
 export type IllustrationStyle = "comic" | "aquarell" | "bleistift" | "realistisch";
 export type BookLanguage = "de" | "en" | "fr" | "es";
 
@@ -28,6 +37,10 @@ export interface BookProject {
   dedication?: string;
   illustrationStyle?: IllustrationStyle;
   language?: BookLanguage;
+  comicStyle?: ComicStyle;
+  dialogMode?: DialogMode;
+  customDialogs?: CustomDialog[];
+  mustHaveSentences?: string;
   storyInput: string;
   guidedAnswers: {
     characters: string;
