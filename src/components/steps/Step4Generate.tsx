@@ -133,7 +133,7 @@ export default function Step4Generate() {
           guidedAnswers: project?.guidedAnswers || {},
           tone:          project?.tone || "humorvoll",
           language:      project?.language || "de",
-          dedication:    project?.dedication || "",
+          dedication:    project?.guidedAnswers?.dedication || project?.dedication || "",
         });
         if (endData.imageUrl) {
           chapters.push({ id: "ending", title: "Das Ende", content: "", imageUrl: endData.imageUrl, imagePrompt: "" });

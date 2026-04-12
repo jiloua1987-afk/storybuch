@@ -361,16 +361,24 @@ router.post("/page", async (req, res) => {
 
     if (!rawUrl) return res.json({ imageUrl: "" });
 
-    // Wenn URL → direkt zurückgeben
-    if (!rawUrl.startsWith("data:")) {
-      console.log(`✓ Page "${page.title}" done (URL)`);
-      return res.json({ imageUrl: rawUrl });
-    }
+    // Sharp Text-Overlay: Titel + Caption-Boxen auf das Bild legen
+    const buf = await fetchBuf(rawUrl);
+    if (!buf) return res.json({ imageUrl: rawUrl });
 
-    // Wenn bereits komprimiertes base64 → direkt zurückgeben (schon klein genug)
-    const sizeKB = Math.round(rawUrl.length / 1024);
-    console.log(`✓ Page "${page.title}" done (base64, ${sizeKB}KB)`);
-    res.json({ imageUrl: rawUrl });
+    // Auf 1200px skalieren
+    const resized = await sharp(buf).resize(1200, null, { withoutEnlargement: true }).toBuffer();
+    const meta = await sharp(resized).metadata();
+    const W = meta.width || 1200, H = meta.height || 800;
+    const svgStr = buildPageSVG(page.title, page.panels, W, H);
+
+    const comp = await sharp(resized)
+      .composite([{ input: Buffer.from(svgStr), top: 0, left: 0 }])
+      .jpeg({ quality: 88 })
+      .toBuffer();
+
+    const sizeKB = Math.round(comp.length / 1024);
+    console.log(`✓ Page "${page.title}" done with overlay, size: ${sizeKB}KB`);
+    res.json({ imageUrl: `data:image/jpeg;base64,${comp.toString("base64")}` });
   } catch (err) {
     console.error("Page error:", err.message);
     res.status(500).json({ error: err.message, imageUrl: "" });
