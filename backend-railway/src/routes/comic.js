@@ -260,13 +260,12 @@ router.post("/page", async (req, res) => {
           image: file,
           prompt: `Use the people from this reference photo as the main characters. ${fullPrompt}`,
           n: 1,
-          size: "1024x768", // Kleinere Größe → kleinere base64
+          size: "1536x1024",
         });
         const item = (editRes.data || [])[0];
         if (item?.url) {
           rawUrl = item.url;
         } else if (item?.b64_json) {
-          // Sofort auf kleine Größe komprimieren
           const imgBuf2 = Buffer.from(item.b64_json, "base64");
           const small = await sharp(imgBuf2).resize(900, null).jpeg({ quality: 75 }).toBuffer();
           rawUrl = `data:image/jpeg;base64,${small.toString("base64")}`;
@@ -284,7 +283,7 @@ router.post("/page", async (req, res) => {
         model: "gpt-image-1",
         prompt: fullPrompt,
         n: 1,
-        size: "1024x768",
+        size: "1536x1024",
         quality: "high",
       });
       const item = (genRes.data || [])[0];
@@ -356,16 +355,25 @@ router.post("/cover", async (req, res) => {
     if (!rawUrl) {
       const genRes = await openai.images.generate({ model: "gpt-image-1", prompt, n: 1, size: "1024x1536", quality: "high" });
       const item = (genRes.data || [])[0];
-      rawUrl = item?.url || (item?.b64_json ? `data:image/png;base64,${item.b64_json}` : "");
+      rawUrl = item?.url || "";
+      if (!rawUrl && item?.b64_json) {
+        const imgBuf2 = Buffer.from(item.b64_json, "base64");
+        const small = await sharp(imgBuf2).resize(600, null).jpeg({ quality: 85 }).toBuffer();
+        rawUrl = `data:image/jpeg;base64,${small.toString("base64")}`;
+      }
     }
 
     if (!rawUrl) return res.json({ coverImageUrl: "" });
 
-    const buf = await fetchBuf(rawUrl);
+    // Bild laden und auf vernünftige Größe skalieren
+    let buf = await fetchBuf(rawUrl);
     if (!buf) return res.json({ coverImageUrl: rawUrl });
 
+    // Auf max 600px Breite skalieren für Cover-Vorschau
+    buf = await sharp(buf).resize(600, null, { withoutEnlargement: true }).toBuffer();
+
     const meta = await sharp(buf).metadata();
-    const W = meta.width || 1024, H = meta.height || 1536;
+    const W = meta.width || 600, H = meta.height || 900;
 
     // Dynamischer Titelumbruch
     const titleWords = title.split(" ");
@@ -445,39 +453,56 @@ router.post("/ending", async (req, res) => {
     const r = await openai.chat.completions.create({
       model: "gpt-4o",
       messages: [
-        { role: "system", content: `Write a warm, emotional closing paragraph for a personal comic book in ${lang}. Tone: ${tone || "warm and nostalgic"}. Max 70 words. Make it feel like the last page of a beloved book — personal, touching, memorable. No title needed.` },
+        { role: "system", content: `Write a warm, emotional and personal closing text for a comic book in ${lang}. Tone: ${tone || "warm, nostalgic, loving"}. 3-4 short sentences. Make it feel like a heartfelt letter — personal, touching, like something you'd write to someone you love. No title.` },
         { role: "user", content: storyInput || Object.values(guidedAnswers).filter(Boolean).join(", ") },
       ],
-      max_tokens: 120, temperature: 0.9,
+      max_tokens: 150, temperature: 0.9,
     });
 
     const endText = r.choices[0].message.content || "";
-    const W = 1536, H = 1024;
-    const textLines = wrapText(endText, 55);
-    const dedLines = dedication ? wrapText(`"${dedication}"`, 50) : [];
+    const W = 900, H = 600;
+    const textLines = wrapText(endText, 48);
+    const dedLines = dedication ? wrapText(`"${dedication}"`, 44) : [];
 
     let svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}">`;
-    svg += `<rect width="${W}" height="${H}" fill="#F5EDE0"/>`;
-    svg += `<rect x="${W/2-80}" y="80" width="160" height="3" fill="#C9963A" rx="1"/>`;
-    svg += `<text x="${W/2}" y="60" text-anchor="middle" font-family="Georgia,serif" font-size="18" fill="#8B7355" letter-spacing="4">${escXml("ERINNERUNGEN")}</text>`;
-    const startY = H * 0.28;
+    // Warmer Hintergrund mit leichtem Muster
+    svg += `<rect width="${W}" height="${H}" fill="#FDF8F2"/>`;
+    // Dekorative Ecken
+    svg += `<rect x="30" y="30" width="${W-60}" height="${H-60}" fill="none" stroke="#E8D9C0" stroke-width="1.5" rx="4"/>`;
+    svg += `<rect x="36" y="36" width="${W-72}" height="${H-72}" fill="none" stroke="#E8D9C0" stroke-width="0.5" rx="2"/>`;
+
+    // Obere Dekoration
+    svg += `<rect x="${W/2-60}" y="55" width="120" height="2" fill="#C9963A" rx="1"/>`;
+    svg += `<text x="${W/2}" y="48" text-anchor="middle" font-family="Georgia,serif" font-size="13" fill="#C9963A" letter-spacing="5">${escXml("✦  ERINNERUNGEN  ✦")}</text>`;
+
+    // Haupttext
+    const startY = 110;
     textLines.forEach((line, i) => {
-      svg += `<text x="${W/2}" y="${startY+i*42}" text-anchor="middle" font-family="Georgia,serif" font-size="26" fill="#1A1410" font-style="italic">${escXml(line)}</text>`;
+      svg += `<text x="${W/2}" y="${startY + i * 38}" text-anchor="middle" font-family="Georgia,serif" font-size="22" fill="#2d1b4e" font-style="italic">${escXml(line)}</text>`;
     });
-    const divY = startY + textLines.length * 42 + 50;
-    svg += `<rect x="${W/2-40}" y="${divY}" width="80" height="2" fill="#C9963A" rx="1"/>`;
+
+    // Trennlinie
+    const divY = startY + textLines.length * 38 + 30;
+    svg += `<rect x="${W/2-30}" y="${divY}" width="60" height="1.5" fill="#C9963A" rx="1"/>`;
+
+    // Widmung
     if (dedLines.length > 0) {
+      const dedY = divY + 35;
       dedLines.forEach((line, i) => {
-        svg += `<text x="${W/2}" y="${divY+50+i*36}" text-anchor="middle" font-family="Georgia,serif" font-size="22" fill="#8B7355">${escXml(line)}</text>`;
+        svg += `<text x="${W/2}" y="${dedY + i * 30}" text-anchor="middle" font-family="Georgia,serif" font-size="18" fill="#8B7355">${escXml(line)}</text>`;
       });
     }
-    svg += `<rect x="${W/2-80}" y="${H-80}" width="160" height="3" fill="#C9963A" rx="1"/>`;
-    svg += `<text x="${W/2}" y="${H-45}" text-anchor="middle" font-family="Georgia,serif" font-size="18" fill="#8B7355" letter-spacing="4">${escXml("THE END")}</text>`;
+
+    // Untere Dekoration
+    svg += `<rect x="${W/2-60}" y="${H-55}" width="120" height="2" fill="#C9963A" rx="1"/>`;
+    svg += `<text x="${W/2}" y="${H-38}" text-anchor="middle" font-family="Georgia,serif" font-size="13" fill="#C9963A" letter-spacing="5">${escXml("✦  THE END  ✦")}</text>`;
     svg += `</svg>`;
 
-    const buf = await sharp({ create: { width: W, height: H, channels: 4, background: { r: 245, g: 237, b: 224, alpha: 1 } } })
-      .composite([{ input: Buffer.from(svg), top: 0, left: 0 }]).jpeg({ quality: 90 }).toBuffer();
+    const buf = await sharp({
+      create: { width: W, height: H, channels: 4, background: { r: 253, g: 248, b: 242, alpha: 1 } }
+    }).composite([{ input: Buffer.from(svg), top: 0, left: 0 }]).jpeg({ quality: 90 }).toBuffer();
 
+    console.log(`✓ Ending done, size: ${Math.round(buf.length / 1024)}KB`);
     res.json({ imageUrl: `data:image/jpeg;base64,${buf.toString("base64")}` });
   } catch (err) {
     console.error("Ending error:", err.message);
