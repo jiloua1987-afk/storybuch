@@ -1,37 +1,27 @@
 "use client";
-import { motion } from "framer-motion";
 import { useBookStore } from "@/store/bookStore";
+import Link from "next/link";
 
 export default function Navbar() {
-  const { project, resetProject } = useBookStore();
+  const { resetProject } = useBookStore();
 
   return (
-    <nav className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-brand-100 shadow-sm">
-      <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
-        <motion.button
-          whileHover={{ scale: 1.03 }}
+    <nav className="sticky top-0 z-50 bg-[#fdfaf7] border-b border-purple-100">
+      <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
+        <button
           onClick={resetProject}
-          className="flex items-center gap-2"
+          className="font-display text-xl font-semibold text-[#1f1a2e] hover:opacity-70 transition-opacity"
         >
-          <span className="text-2xl">💥</span>
-          <span
-            className="text-xl font-bold text-brand-700"
-            style={{ fontFamily: "var(--font-display)" }}
+          MyComicStory
+        </button>
+        <div className="flex items-center gap-6 text-sm text-gray-500">
+          <Link href="/ueber-uns" className="hover:text-[#1f1a2e] transition-colors">Über uns</Link>
+          <Link href="/faq" className="hover:text-[#1f1a2e] transition-colors">FAQ</Link>
+          <Link href="/preise" className="hover:text-[#1f1a2e] transition-colors">Preise</Link>
+          <button
+            onClick={resetProject}
+            className="bg-purple-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-purple-700 transition-colors"
           >
-            MyComicStory
-          </span>
-        </motion.button>
-
-        <div className="flex items-center gap-4 text-sm text-gray-500">
-          {project && (
-            <span className="hidden md:block text-brand-600 font-medium truncate max-w-[200px]">
-              ✍️ {project.title}
-            </span>
-          )}
-          <a href="/ueber-uns" className="hover:text-brand-600 transition-colors">Über uns</a>
-          <a href="/faq" className="hover:text-brand-600 transition-colors">FAQ</a>
-          <a href="/preise" className="hover:text-brand-600 transition-colors">Preise</a>
-          <button className="bg-brand-500 text-white px-4 py-1.5 rounded-full text-sm font-medium hover:bg-brand-600 transition-all">
             Anmelden
           </button>
         </div>

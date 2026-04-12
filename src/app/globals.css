@@ -2,56 +2,32 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Inter:wght@300;400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Inter:wght@300;400;500;600&display=swap');
 
-:root {
-  --font-display: 'Playfair Display', Georgia, serif;
-}
-
-* {
-  box-sizing: border-box;
-}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
 
 body {
   font-family: 'Inter', sans-serif;
-  background: #fdf4ff;
+  background: #fdfaf7;
+  color: #1f1a2e;
+  -webkit-font-smoothing: antialiased;
 }
 
-/* Book flip animation */
-.book-page {
-  transform-style: preserve-3d;
-  transition: transform 0.6s cubic-bezier(0.645, 0.045, 0.355, 1.000);
+.font-display {
+  font-family: 'Playfair Display', Georgia, serif;
 }
 
-.book-page.flipped {
-  transform: rotateY(-180deg);
+.fade-up {
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 500ms ease, transform 500ms ease;
+}
+.fade-up.visible {
+  opacity: 1;
+  transform: translateY(0);
 }
 
-/* Shimmer loading effect */
-.shimmer {
-  background: linear-gradient(
-    90deg,
-    #f0e6ff 25%,
-    #e0c8ff 50%,
-    #f0e6ff 75%
-  );
-  background-size: 200% 100%;
-  animation: shimmer 1.5s infinite;
-}
-
-/* Custom scrollbar */
-::-webkit-scrollbar { width: 6px; }
-::-webkit-scrollbar-track { background: #f1f1f1; }
-::-webkit-scrollbar-thumb { background: #c044ef; border-radius: 3px; }
-
-/* Page perspective for book */
-.book-container {
-  perspective: 2000px;
-}
-
-.prose-book {
-  font-family: var(--font-display);
-  line-height: 1.9;
-  font-size: 1.05rem;
-  color: #2d1b4e;
-}
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: #fdfaf7; }
+::-webkit-scrollbar-thumb { background: #d8b4fe; border-radius: 3px; }

@@ -1,237 +1,214 @@
 "use client";
-import { motion } from "framer-motion";
-import Button from "@/components/ui/Button";
+import { useEffect, useRef } from "react";
 import Image from "next/image";
 import Footer from "@/components/Footer";
 
-const REVIEWS = [
-  { name: "Sandra M.", stars: 5, text: "Unser Sardinien-Urlaub als Comic – die Kinder wollen es jeden Abend lesen. Jedes Panel bringt sie zum Lachen!", occasion: "Familienurlaub" },
-  { name: "Julia & Marc", stars: 5, text: "Unsere Liebesgeschichte als Comic bis zur Hochzeit. Die Dialoge treffen uns so genau – wir haben geweint und gelacht.", occasion: "Jahrestag" },
-  { name: "Thomas K.", stars: 5, text: "Zum 40. Geburtstag meines besten Freundes – unser Freundschafts-Comic. Absoluter Wahnsinn wie persönlich das ist.", occasion: "Geburtstag" },
-  { name: "Petra W.", stars: 5, text: "Das persönlichste Geschenk, das ich je gemacht habe. Kein Gutschein der Welt kommt da ran.", occasion: "Muttertag" },
+function useFadeUp() {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(
+      ([e]) => { if (e.isIntersecting) { el.classList.add("visible"); obs.disconnect(); } },
+      { threshold: 0.12 }
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
+  return ref;
+}
+
+const STEPS = [
+  { n: "1", title: "Geschichte eingeben",   body: "Stichpunkte reichen. Wer, wo, wann – mehr brauchen wir nicht." },
+  { n: "2", title: "Dialoge vorschlagen",    body: "Wir schlagen passende Dialoge vor – du kannst sie anpassen oder übernehmen." },
+  { n: "3", title: "Comic wird erstellt",    body: "Panels, Illustrationen und Sprechblasen werden vollautomatisch erstellt." },
+  { n: "4", title: "Bearbeiten & bestellen", body: "Alles anpassbar in der Vorschau. Erst dann bestellst du." },
+];
+
+const BENEFITS = [
+  { title: "Kein Schreibtalent nötig",    body: "Stichpunkte reichen – wir kümmern uns um Text, Illustrationen und Layout." },
+  { title: "Vorschau vor der Bestellung", body: "Du siehst jede Seite bevor du bestellst. Alles ist bearbeitbar." },
+  { title: "Gedruckt und geliefert",      body: "Hard- oder Softcover, hochwertig gedruckt, in 5–7 Werktagen bei dir." },
+];
+
+const TESTIMONIALS = [
+  { quote: "Unser Sardinien-Urlaub als Comic – die Kinder wollen es jeden Abend lesen. Jedes Panel bringt sie zum Lachen!", name: "Sandra M.", occasion: "Familienurlaub" },
+  { quote: "Unsere Liebesgeschichte als Comic bis zur Hochzeit. Die Dialoge treffen uns so genau – wir haben geweint und gelacht.", name: "Julia & Marc", occasion: "Jahrestag" },
+  { quote: "Zum 40. Geburtstag meines besten Freundes – unser Freundschafts-Comic. Absoluter Wahnsinn wie persönlich das ist.", name: "Thomas K.", occasion: "Geburtstag" },
+  { quote: "Das persönlichste Geschenk, das ich je gemacht habe. Kein Gutschein der Welt kommt da ran.", name: "Petra W.", occasion: "Muttertag" },
 ];
 
 export default function LandingHero({ onStart }: { onStart: () => void }) {
+  const previewRef = useFadeUp();
+  const stepsRef   = useFadeUp();
+  const benefitRef = useFadeUp();
+  const testiRef   = useFadeUp();
+  const ctaRef     = useFadeUp();
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-brand-50 via-white to-warm-50">
+    <div className="bg-[#fdfaf7]">
 
-      {/* Hero – Familie liest Buch */}
-      <div className="relative overflow-hidden">
-        <div className="max-w-5xl mx-auto px-4 pt-16 pb-0 grid md:grid-cols-2 gap-12 items-center">
-          {/* Text links */}
-          <motion.div
-            initial={{ opacity: 0, x: -30 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.6 }}
-            className="space-y-6 pb-16"
-          >
-            <div className="inline-flex items-center gap-2 bg-brand-100 text-brand-700 px-4 py-1.5 rounded-full text-sm font-medium">
-              💥 Deine Erinnerungen. Als Comic.
-            </div>
-            <h1
-              className="text-4xl md:text-5xl font-bold text-brand-900 leading-tight"
-              style={{ fontFamily: "var(--font-display)" }}
+      {/* ── HERO ── */}
+      <section className="max-w-5xl mx-auto px-6 pt-20 pb-24 grid md:grid-cols-2 gap-14 items-center">
+        <div className="space-y-7">
+          <div className="inline-block bg-purple-50 text-purple-700 text-xs font-medium px-3 py-1.5 rounded-full border border-purple-100">
+            Über 30.000 Bücher gedruckt
+          </div>
+          <h1 className="font-display text-4xl md:text-5xl font-semibold text-[#1f1a2e] leading-tight">
+            Erlebe deine schönsten Momente als persönlichen Comic.
+          </h1>
+          <p className="text-lg text-gray-500 leading-relaxed max-w-md">
+            Urlaub, Liebe, Familie – wir verwandeln deine echten Erinnerungen in einen illustrierten Comic mit Dialogen, gedruckt und direkt zu dir nach Hause geliefert.
+          </p>
+          <p className="text-sm text-purple-500 font-medium">
+            Stichpunkte reichen – wir kümmern uns um den Rest.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-3">
+            <button
+              onClick={onStart}
+              className="bg-purple-600 text-white px-7 py-3.5 rounded-xl font-medium hover:bg-purple-700 transition-colors"
             >
-              Deine Geschichte –
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-500 to-warm-500"> als personalisierter Comic.</span>
-            </h1>
-            <p className="text-lg text-gray-500 leading-relaxed">
-              Urlaub, Liebe, Familie, Freundschaft – wir verwandeln deine echten Erinnerungen in einen Comic mit Illustrationen und echten Dialogen. Gedruckt und geliefert.
-            </p>
-            <div className="inline-flex items-center gap-2 bg-green-50 text-green-700 border border-green-200 px-4 py-2 rounded-full text-sm">
-              💡 Stichpunkte reichen – Dialoge schlagen wir dir vor
-            </div>
-            <div className="flex flex-col sm:flex-row gap-4">
-              <Button onClick={onStart} size="lg">
-                Jetzt Comic erstellen 💥
-              </Button>
-              <Button variant="secondary" size="lg">
-                Beispiele ansehen
-              </Button>
-            </div>
-          </motion.div>
-
-          {/* Bild rechts – image.png (neues Bild) */}
-          <motion.div
-            initial={{ opacity: 0, x: 30 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.6, delay: 0.2 }}
-            className="relative h-[500px] rounded-3xl overflow-hidden shadow-2xl"
-          >
-            <Image
-              src="/familie.png"
-              alt="Familie liest ihr persönliches Bilderbuch"
-              fill
-              className="object-cover object-top"
-              priority
-            />
-          </motion.div>
+              Jetzt Comic erstellen
+            </button>
+            <button className="border border-gray-200 text-gray-600 px-7 py-3.5 rounded-xl font-medium hover:border-gray-400 transition-colors bg-white">
+              Beispiele ansehen
+            </button>
+          </div>
         </div>
-      </div>
+        <div className="relative h-[460px] rounded-2xl overflow-hidden shadow-xl">
+          <Image src="/image.png" alt="MyComicStory" fill className="object-cover object-top" priority />
+        </div>
+      </section>
 
-      {/* Beispiel Buchseite */}
-      <div className="bg-white py-20">
-        <div className="max-w-5xl mx-auto px-4 space-y-12">
+      {/* ── COMIC PREVIEW ── */}
+      <section className="bg-white py-24">
+        <div ref={previewRef} className="fade-up max-w-5xl mx-auto px-6 space-y-10">
           <div className="text-center space-y-3">
-            <h2
-              className="text-3xl font-bold text-brand-800"
-              style={{ fontFamily: "var(--font-display)" }}
-            >
+            <h2 className="font-display text-3xl md:text-4xl font-semibold text-[#1f1a2e]">
               So sieht dein Comic aus
             </h2>
-            <p className="text-gray-400 text-sm">
-              Echte Illustrationen, echte Dialoge – jede Erinnerung wird ein Panel
+            <p className="text-gray-500 text-lg">
+              Echte Illustrationen, echte Dialoge – jede Erinnerung wird ein Panel.
             </p>
           </div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6 }}
-            className="relative rounded-3xl overflow-hidden shadow-2xl border border-gray-100 max-w-3xl mx-auto bg-white"
-          >
-            <Image
-              src="/Comic.png"
-              alt="Beispiel Buchseite im Comic-Stil"
-              width={900}
-              height={650}
-              className="w-full h-auto"
-            />
-          </motion.div>
-
-          {/* Startseite_Bild als zweites Beispiel – nur auf Über-uns */}
-        </div>
-      </div>
-
-      {/* So einfach geht's */}
-      <div className="bg-brand-50 py-20">
-        <div className="max-w-5xl mx-auto px-4">
-          <h2
-            className="text-3xl font-bold text-center text-brand-800 mb-4"
-            style={{ fontFamily: "var(--font-display)" }}
-          >
-            So einfach wird deine Erinnerung zum Comic
-          </h2>
-          <p className="text-center text-gray-400 text-sm mb-12">
-            Keine langen Texte, keine Zeichenkenntnisse – ein paar Stichpunkte genügen.
-          </p>
-          <div className="grid md:grid-cols-4 gap-6">
-            {[
-              {
-                emoji: "✍️",
-                title: "Geschichte eingeben",
-                desc: "Stichpunkte reichen! Wer, wo, wann – mehr brauchen wir nicht.",
-              },
-              {
-                emoji: "💬",
-                title: "Dialoge vorschlagen",
-                desc: "Wir schlagen passende Dialoge vor – du kannst sie anpassen oder übernehmen.",
-              },
-              {
-                emoji: "💥",
-                title: "Comic wird erstellt",
-                desc: "Panels, Illustrationen und Sprechblasen werden vollautomatisch erstellt.",
-              },
-              {
-                emoji: "✏️",
-                title: "Bearbeiten & bestellen",
-                desc: "Alles anpassbar in der Vorschau – Texte, Dialoge, Bilder. Erst dann bestellst du.",
-              },
-            ].map((f) => (
-              <motion.div
-                key={f.title}
-                whileHover={{ y: -4 }}
-                className="text-center p-6 rounded-2xl bg-white shadow-sm space-y-3"
-              >
-                <div className="text-4xl">{f.emoji}</div>
-                <h3 className="font-bold text-brand-800">{f.title}</h3>
-                <p className="text-gray-500 text-sm leading-relaxed">{f.desc}</p>
-              </motion.div>
-            ))}
+          <div className="rounded-2xl overflow-hidden shadow-lg border border-gray-100 max-w-3xl mx-auto">
+            <Image src="/Comic.png" alt="Beispiel Comic-Seite" width={860} height={620} className="w-full h-auto" />
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* Reassurance bar */}
-      <div className="bg-white py-10 border-t border-brand-50">
-        <div className="max-w-4xl mx-auto px-4 grid md:grid-cols-3 gap-6 text-center">
-          {[
-            { emoji: "🖊️", text: "Stichpunkte reichen – kein Aufsatz nötig" },
-            { emoji: "💬", text: "Dialoge werden vorgeschlagen – du entscheidest" },
-            { emoji: "🔄", text: "Alles bearbeitbar – Panels, Dialoge, Reihenfolge" },
-          ].map((item) => (
-            <div key={item.text} className="flex items-center justify-center gap-3">
-              <span className="text-2xl">{item.emoji}</span>
-              <span className="text-sm text-brand-700 font-medium">{item.text}</span>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Referenzen */}
-      <div className="bg-brand-50 py-20">
-        <div className="max-w-5xl mx-auto px-4 space-y-10">
+      {/* ── HOW IT WORKS ── */}
+      <section className="bg-purple-50 py-24">
+        <div ref={stepsRef} className="fade-up max-w-5xl mx-auto px-6 space-y-12">
           <div className="text-center space-y-3">
-            <div className="inline-flex items-center gap-2 bg-brand-100 text-brand-700 px-4 py-1.5 rounded-full text-sm font-bold">
-              ⭐ Über 30.000 glückliche Kunden
-            </div>
-            <h2 className="text-3xl font-bold text-brand-800" style={{ fontFamily: "var(--font-display)" }}>
-              Was unsere Kunden sagen
+            <h2 className="font-display text-3xl md:text-4xl font-semibold text-[#1f1a2e]">
+              So einfach geht's
             </h2>
+            <p className="text-gray-500 text-lg">
+              Keine langen Texte, keine Zeichenkenntnisse – ein paar Stichpunkte genügen.
+            </p>
           </div>
-          <div className="grid md:grid-cols-2 gap-5">
-            {REVIEWS.map((r) => (
-              <motion.div
-                key={r.name}
-                whileHover={{ y: -3 }}
-                className="bg-white rounded-2xl p-6 shadow-sm border border-brand-50 space-y-3"
+          <div className="grid md:grid-cols-4 gap-6">
+            {STEPS.map((s) => (
+              <div
+                key={s.n}
+                className="bg-white rounded-2xl p-7 space-y-4 border border-purple-100 hover:-translate-y-1 transition-transform duration-200"
               >
-                <div className="flex items-center justify-between">
-                  <div className="flex gap-0.5">
-                    {Array.from({ length: r.stars }).map((_, i) => (
-                      <span key={i} className="text-yellow-400">★</span>
-                    ))}
-                  </div>
-                  <span className="text-xs text-brand-300 bg-brand-50 px-2 py-1 rounded-full">{r.occasion}</span>
+                <div className="w-9 h-9 rounded-full bg-purple-100 flex items-center justify-center">
+                  <span className="font-display text-purple-600 font-semibold text-sm">{s.n}</span>
                 </div>
-                <p className="text-gray-600 text-sm leading-relaxed italic">"{r.text}"</p>
-                <p className="text-brand-700 font-medium text-sm">— {r.name}</p>
-              </motion.div>
-            ))}
-          </div>
-          <div className="grid grid-cols-3 gap-6 max-w-lg mx-auto text-center">
-            {[
-              { number: "30.000+", label: "glückliche Kunden" },
-              { number: "4.9 ★", label: "Durchschnittsbewertung" },
-              { number: "5–7", label: "Werktage Lieferzeit" },
-            ].map((s) => (
-              <div key={s.label} className="space-y-1">
-                <div className="text-2xl font-bold text-brand-700">{s.number}</div>
-                <div className="text-xs text-gray-400">{s.label}</div>
+                <h3 className="font-display text-lg font-semibold text-[#1f1a2e]">{s.title}</h3>
+                <p className="text-gray-500 text-sm leading-relaxed">{s.body}</p>
               </div>
             ))}
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* CTA */}
-      <div className="py-20 text-center space-y-4 bg-gradient-to-r from-brand-500 to-warm-500">
-        <h2
-          className="text-3xl font-bold text-white"
-          style={{ fontFamily: "var(--font-display)" }}
-        >
-          Bereit für deinen persönlichen Comic?
-        </h2>
-        <p className="text-white/80 text-sm">Dauert nur wenige Minuten – Stichpunkte reichen.</p>
-        <Button
-          onClick={onStart}
-          size="lg"
-          className="bg-white text-brand-700 hover:bg-brand-50 shadow-xl"
-        >
-          Jetzt Comic erstellen 💥
-        </Button>
-      </div>
+      {/* ── BENEFITS ── */}
+      <section className="bg-[#fdfaf7] py-24">
+        <div ref={benefitRef} className="fade-up max-w-5xl mx-auto px-6">
+          <div className="grid md:grid-cols-3 gap-10">
+            {BENEFITS.map((b) => (
+              <div key={b.title} className="space-y-3 border-t-2 border-purple-200 pt-6">
+                <h3 className="font-display text-xl font-semibold text-[#1f1a2e]">{b.title}</h3>
+                <p className="text-gray-500 text-base leading-relaxed">{b.body}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── TESTIMONIALS ── */}
+      <section className="bg-white py-24">
+        <div ref={testiRef} className="fade-up max-w-5xl mx-auto px-6 space-y-12">
+          <div className="text-center space-y-3">
+            <div className="inline-flex items-center gap-1 text-purple-400 text-sm font-medium">
+              Über 30.000 glückliche Kunden
+            </div>
+            <h2 className="font-display text-3xl md:text-4xl font-semibold text-[#1f1a2e]">
+              Was unsere Kunden sagen
+            </h2>
+          </div>
+          <div className="grid md:grid-cols-2 gap-6">
+            {TESTIMONIALS.map((t) => (
+              <div
+                key={t.name}
+                className="bg-[#fdfaf7] rounded-2xl p-8 space-y-4 border border-gray-100 hover:-translate-y-1 transition-transform duration-200 relative overflow-hidden"
+              >
+                <div className="flex gap-0.5 mb-1">
+                  {[1,2,3,4,5].map((i) => (
+                    <svg key={i} width="14" height="14" viewBox="0 0 14 14" fill="#a855f7">
+                      <path d="M7 1l1.5 4h4l-3.3 2.4 1.3 4L7 9 3.5 11.4l1.3-4L1.5 5h4z"/>
+                    </svg>
+                  ))}
+                </div>
+                <p className="font-display italic text-[#1f1a2e] text-lg leading-relaxed">
+                  "{t.quote}"
+                </p>
+                <p className="text-sm text-gray-400">
+                  — {t.name} · {t.occasion}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── STATS ── */}
+      <section className="bg-[#1f1a2e] py-20">
+        <div className="max-w-5xl mx-auto px-6 grid md:grid-cols-3 gap-0 divide-y md:divide-y-0 md:divide-x divide-white/10">
+          {[
+            { value: "30.000+", label: "Bücher gedruckt" },
+            { value: "4,9",     label: "Durchschnittsbewertung" },
+            { value: "5–7",     label: "Werktage Lieferzeit" },
+          ].map((s) => (
+            <div key={s.label} className="text-center py-10 md:py-0 px-8 space-y-2">
+              <p className="font-display text-5xl font-semibold text-purple-400">{s.value}</p>
+              <p className="text-xs text-gray-500 uppercase tracking-widest">{s.label}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ── CTA ── */}
+      <section className="bg-purple-50 py-24">
+        <div ref={ctaRef} className="fade-up max-w-5xl mx-auto px-6 text-center space-y-6">
+          <h2 className="font-display text-3xl md:text-4xl font-semibold text-[#1f1a2e]">
+            Bereit für deinen persönlichen Comic?
+          </h2>
+          <p className="text-gray-500 text-lg">
+            Dauert nur wenige Minuten – Stichpunkte reichen.
+          </p>
+          <button
+            onClick={onStart}
+            className="bg-purple-600 text-white px-10 py-4 rounded-xl font-medium text-lg hover:bg-purple-700 transition-colors"
+          >
+            Jetzt Comic erstellen
+          </button>
+        </div>
+      </section>
+
       <Footer />
     </div>
   );
