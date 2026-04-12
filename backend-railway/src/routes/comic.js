@@ -151,8 +151,16 @@ router.post("/structure", async (req, res) => {
           { role: "system", content: `You are a comic book author. Create a ${numPages}-page comic structure in ${lang}.
 Tone: ${tone}. Visual mood: ${mood}. Comic style: ${comicMod}.
 ${mustHaveSentences ? `MUST include these moments: ${mustHaveSentences}` : ""}
-Each page: 4-5 panels with specific visual scenes and short dialogs.
-Respond ONLY with JSON: {"pages": [{"id":"page1","pageNumber":1,"title":"Title in ${lang}","location":"English location description","timeOfDay":"afternoon","panels":[{"nummer":1,"szene":"Very specific English scene: who does what, where, emotion, lighting","dialog":"Short ${lang} dialog max 8 words","speaker":"Character name or null","bubble_type":"speech"}]}]}` },
+
+IMPORTANT - Vary panel count per page to avoid monotony:
+- Page 1: 4 panels (2x2 grid)
+- Page 2: 3 panels (wide panoramic top + 2 bottom) — use for dramatic/scenic moments
+- Page 3: 5 panels (2 top + wide middle + 2 bottom)
+- Page 4: 4 panels (2x2 grid)
+- Additional pages: alternate 3, 4, 5
+
+Each panel needs a very specific visual scene and short dialog.
+Respond ONLY with JSON: {"pages": [{"id":"page1","pageNumber":1,"title":"Title in ${lang}","location":"English location description","timeOfDay":"afternoon","panels":[{"nummer":1,"szene":"Very specific English scene: who does what, where, emotion, camera angle, lighting","dialog":"Short ${lang} dialog max 8 words","speaker":"Character name or null","bubble_type":"speech"}]}]}` },
           { role: "user", content: ctx },
         ],
         response_format: { type: "json_object" },
@@ -222,7 +230,12 @@ router.post("/page", async (req, res) => {
       `[Panel ${p.nummer}]: ${p.szene}. Leave small empty space in upper corner for text overlay.`
     ).join("\n");
 
-    const layoutMap = { 3: "3-panel: wide panoramic top, two equal bottom", 4: "2x2 grid", 5: "two top, wide middle, two bottom", 6: "3x2 grid" };
+    const layoutMap = {
+      3: "3-panel layout: ONE wide panoramic panel spanning full width on top, TWO equal panels side by side on bottom",
+      4: "4-panel layout: 2x2 grid of equal panels",
+      5: "5-panel layout: TWO panels on top row, ONE wide panoramic panel spanning full width in middle, TWO panels on bottom row",
+      6: "6-panel layout: 3 columns x 2 rows grid",
+    };
     const layout = layoutMap[page.panels.length] || layoutMap[4];
 
     const flexPart = `Create ONE comic book page with ${page.panels.length} panels. Layout: ${layout}. Thick black borders (5px). Cream background (#F5EDE0) outside panels. Leave 80px header area at very top empty (for title overlay). ${page.location ? `Location: ${page.location}.` : ""} ${page.timeOfDay ? `Lighting: ${page.timeOfDay}.` : ""}\n\nPanels:\n${panelDescs}\n\nNO text, NO letters, NO captions in the image itself.`;
