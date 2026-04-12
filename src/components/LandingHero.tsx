@@ -76,7 +76,7 @@ export default function LandingHero({ onStart }: { onStart: () => void }) {
           </div>
         </div>
         <div className="relative h-[460px] rounded-2xl overflow-hidden shadow-xl">
-          <Image src="/image.png" alt="MyComicStory" fill className="object-cover object-top" priority />
+          <Image src="/familie.png" alt="MyComicStory" fill className="object-cover object-top" priority />
         </div>
       </section>
 

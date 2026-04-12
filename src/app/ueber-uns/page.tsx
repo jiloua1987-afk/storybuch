@@ -47,7 +47,7 @@ export default function UeberUns() {
             </p>
           </motion.div>
           <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.2 }} className="relative h-96 rounded-2xl overflow-hidden shadow-xl">
-            <Image src="/familie.png" alt="Familie mit Comic-Buch" fill className="object-cover object-top" />
+            <Image src="/Startseite_Bild.png" alt="MyComicStory Produkt" fill className="object-cover object-top" />
           </motion.div>
         </section>
 
