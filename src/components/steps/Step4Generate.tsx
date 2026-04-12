@@ -88,6 +88,7 @@ export default function Step4Generate() {
         design: "kinderbuch",
         characters: project?.characters || [],
         chapters,
+        coverImageUrl: data.coverImageUrl || undefined,
         status: "preview",
         createdAt: project?.createdAt || new Date().toISOString(),
       });
