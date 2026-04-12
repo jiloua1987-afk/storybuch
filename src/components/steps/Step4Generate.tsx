@@ -4,7 +4,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useBookStore } from "@/store/bookStore";
 import ProgressBar from "@/components/ui/ProgressBar";
 
-// Each step is a separate fast API call
+// Each step calls Railway backend for image generation (no timeout)
+const RAILWAY_URL = process.env.NEXT_PUBLIC_RAILWAY_URL || "";
+
 export default function Step4Generate() {
   const { setStep, project, updateProject } = useBookStore();
   const [stepLabel, setStepLabel] = useState("Wird vorbereitet…");
@@ -23,7 +25,11 @@ export default function Step4Generate() {
   }
 
   async function post(url: string, body: object): Promise<any> {
-    const res = await fetch(url, {
+    // Use Railway for image generation, Vercel for structure
+    const fullUrl = url.startsWith("/api/comic") && RAILWAY_URL
+      ? `${RAILWAY_URL}${url}`
+      : url;
+    const res = await fetch(fullUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
@@ -65,7 +71,7 @@ export default function Step4Generate() {
 
       let coverImageUrl = "";
       try {
-        const coverData = await post("/api/generate/comic-cover", {
+        const coverData = await post("/api/comic/cover", {
           title:            project?.title || "Mein Comic",
           characters,
           category:         project?.guidedAnswers?.category || "familie",
@@ -89,7 +95,7 @@ export default function Step4Generate() {
         setProgress(22 + i * progressPerPage);
 
         try {
-          const pageData = await post("/api/generate/comic-page", {
+          const pageData = await post("/api/comic/page", {
             page,
             characters,
             illustrationStyle: project?.illustrationStyle || "comic",
@@ -122,7 +128,7 @@ export default function Step4Generate() {
       setProgress(90);
 
       try {
-        const endData = await post("/api/generate/comic-ending", {
+        const endData = await post("/api/comic/ending", {
           storyInput:    project?.storyInput || "",
           guidedAnswers: project?.guidedAnswers || {},
           tone:          project?.tone || "humorvoll",
