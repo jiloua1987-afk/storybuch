@@ -306,11 +306,18 @@ router.post("/page", async (req, res) => {
 
     const comp = await sharp(buf)
       .composite([{ input: Buffer.from(svgStr), top: 0, left: 0 }])
-      .jpeg({ quality: 85 }) // JPEG statt PNG – viel kleiner
+      .jpeg({ quality: 85 })
       .toBuffer();
 
     const base64 = comp.toString("base64");
     console.log(`✓ Page "${page.title}" done, size: ${Math.round(base64.length / 1024)}KB`);
+
+    // Wenn zu groß für direkte Response → als URL zurückgeben
+    if (base64.length > 3 * 1024 * 1024) {
+      console.log("Image too large for base64, returning raw URL");
+      return res.json({ imageUrl: rawUrl });
+    }
+
     res.json({ imageUrl: `data:image/jpeg;base64,${base64}` });
   } catch (err) {
     console.error("Page error:", err.message);
