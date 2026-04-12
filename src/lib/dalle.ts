@@ -45,13 +45,15 @@ export async function generatePanelImage(
 
   try {
     const response = await openai.images.generate({
-      model: "dall-e-3",
+      model: "gpt-image-1",
       prompt,
       n: 1,
-      size: "1792x1024",
-      quality: "standard",
+      size: "1536x1024",
+      quality: "high",
     });
-    return response.data[0].url || "";
+    return response.data[0].url || response.data[0].b64_json
+      ? `data:image/png;base64,${response.data[0].b64_json}`
+      : "";
   } catch (err: any) {
     console.error("DALL-E error:", err.message);
     // Fallback to placeholder
