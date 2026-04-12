@@ -27,6 +27,7 @@ export default function Step4Generate() {
   const [stepIndex, setStepIndex] = useState(0);
   const [done, setDone] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [debugInfo, setDebugInfo] = useState<string>("");
 
   useEffect(() => {
     runGeneration();
@@ -38,6 +39,10 @@ export default function Step4Generate() {
       setGenerationProgress(STEPS[0].progress, STEPS[0].label);
       setStepIndex(0);
 
+      let chapters: any[] = [];
+      let characters: any[] = [];
+
+      setDebugInfo("Rufe API auf...");
       const structureRes = await fetch("/api/generate/structure", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -52,25 +57,17 @@ export default function Step4Generate() {
       setGenerationProgress(STEPS[1].progress, STEPS[1].label);
       setStepIndex(1);
 
-      let chapters: any[] = [];
-      let characters: any[] = [];
-
       if (structureRes.ok) {
         const data = await structureRes.json();
+        setDebugInfo(`API OK: ${data.chapters?.length || 0} Kapitel, ${data.characters?.length || 0} Figuren`);
         chapters = data.chapters || [];
         characters = data.characters || [];
+        if (chapters.length === 0) throw new Error("GPT hat keine Kapitel zurückgegeben. Bitte nochmal versuchen.");
       } else {
-        // Fallback to dummy data if no API key / quota
-        console.warn("API not available, using demo data");
-        chapters = DUMMY_PROJECT.chapters.map((c) => ({
-          id: c.id, nummer: 1, titel: c.title,
-          handlung: c.content, szene_beschreibung: c.content,
-          illustration_prompt: c.imagePrompt || "",
-        }));
-        characters = DUMMY_PROJECT.characters.map((c) => ({
-          name: c.name, age: 30, visual_anchor: c.name,
-          bubble_color: "#E8F4FF", style_lock: "comic",
-        }));
+        const errData = await structureRes.json().catch(() => ({}));
+        const msg = `API Fehler ${structureRes.status}: ${errData.error || structureRes.statusText}`;
+        setDebugInfo(msg);
+        throw new Error(msg);
       }
 
       setGenerationProgress(STEPS[2].progress, STEPS[2].label);
@@ -249,6 +246,12 @@ export default function Step4Generate() {
           </AnimatePresence>
         ))}
       </div>
+
+      {debugInfo && (
+        <div className="bg-purple-50 border border-purple-200 rounded-xl p-3 text-xs text-purple-700 text-left">
+          {debugInfo}
+        </div>
+      )}
 
       {done && (
         <motion.p
