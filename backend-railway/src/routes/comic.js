@@ -99,6 +99,75 @@ function buildPageSVG(pageTitle, panels, W, H) {
 // ── POST /api/comic/structure ─────────────────────────────────────────────────
 router.post("/structure", async (req, res) => {
   try {
+    const { storyInput, guidedAnswers, tone, comicStyle, mustHaveSentences,
+      language, category, numPages = 4, referenceImages = [] } = req.body;
+
+    const langMap = { de: "German", en: "English", fr: "French", es: "Spanish" };
+    const lang = langMap[language] || "German";
+
+    let ctx = storyInput || "";
+    for (const [k, v] of Object.entries(guidedAnswers || {})) {
+      if (v) ctx += `\n${k}: ${v}`;
+    }
+
+    const [structRes, charRes] = await Promise.all([
+      openai.chat.completions.create({
+        model: "gpt-4o",
+        messages: [
+          { role: "system", content: `Create a ${numPages}-page comic structure in ${lang}. Tone: ${tone}. Category: ${category}. ${mustHaveSentences ? `Must include: ${mustHaveSentences}` : ""}\nRespond ONLY with JSON: {"pages": [{"id":"page1","pageNumber":1,"title":"Title","location":"English location","timeOfDay":"afternoon","panels":[{"nummer":1,"szene":"English scene description","dialog":"Short ${lang} dialog max 8 words","speaker":"Name or null","bubble_type":"speech"}]}]}` },
+          { role: "user", content: ctx },
+        ],
+        response_format: { type: "json_object" },
+        temperature: 0.85,
+      }),
+      openai.chat.completions.create({
+        model: "gpt-4o",
+        messages: [
+          { role: "system", content: `Extract main characters. Respond ONLY with JSON: {"characters":[{"name":"Name","age":30,"visual_anchor":"Precise English description: age, hair color and style, clothing colors, distinctive features"}]}` },
+          { role: "user", content: ctx },
+        ],
+        response_format: { type: "json_object" },
+        temperature: 0.3,
+      }),
+    ]);
+
+    const pages = JSON.parse(structRes.choices[0].message.content || "{}").pages || [];
+    let characters = JSON.parse(charRes.choices[0].message.content || "{}").characters || [];
+
+    // Analyze reference photos with GPT-4o Vision → precise descriptions
+    if (referenceImages.length > 0) {
+      console.log(`Analyzing ${referenceImages.length} reference photo(s)...`);
+      characters = await Promise.all(characters.map(async (char, i) => {
+        const ref = referenceImages[i] || referenceImages[0];
+        if (!ref) return char;
+        try {
+          const r = await openai.chat.completions.create({
+            model: "gpt-4o",
+            messages: [{ role: "user", content: [
+              { type: "image_url", image_url: { url: `data:image/jpeg;base64,${ref}`, detail: "high" } },
+              { type: "text", text: `Describe ${char.name} from this photo for a comic artist. Be very precise: exact hair color and style, eye color, skin tone, age (estimate), face shape, any distinctive features (beard, glasses, freckles etc.), clothing colors. English, max 60 words.` },
+            ]}],
+            max_tokens: 120,
+          });
+          const desc = r.choices[0].message.content || "";
+          console.log(`Character ${char.name} description: ${desc}`);
+          return { ...char, visual_anchor: desc, refBase64: ref };
+        } catch (e) {
+          console.error("Photo analysis error:", e.message);
+          return char;
+        }
+      }));
+    }
+
+    res.json({ pages, characters });
+  } catch (err) {
+    console.error("Structure error:", err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── POST /api/comic/page ──────────────────────────────────────────────────────
+  try {
     const { storyInput, guidedAnswers, tone, comicStyle, mustHaveSentences, language, category, numPages = 4, referenceImages = [] } = req.body;
 
     const langMap = { de: "German", en: "English", fr: "French", es: "Spanish" };

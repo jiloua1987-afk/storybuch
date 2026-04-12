@@ -48,7 +48,7 @@ export default function Step4Generate() {
       setProgress(5);
       addLog("Geschichte wird analysiert…");
 
-      const { pages, characters } = await post("/api/generate/comic-structure", {
+      const { pages, characters } = await post("/api/comic/structure", {
         storyInput:        project?.storyInput || "",
         guidedAnswers:     project?.guidedAnswers || {},
         tone:              project?.tone || "humorvoll",
