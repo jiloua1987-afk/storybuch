@@ -366,16 +366,65 @@ router.post("/cover", async (req, res) => {
 
     const meta = await sharp(buf).metadata();
     const W = meta.width || 1024, H = meta.height || 1536;
-    const lines = title.length > 22 ? [title.substring(0, 22), title.substring(22)] : [title];
-    const overlayH = Math.round(H * 0.38);
+
+    // Dynamischer Titelumbruch
+    const titleWords = title.split(" ");
+    const titleLines = [];
+    let currentLine = "";
+    for (const word of titleWords) {
+      if ((currentLine + " " + word).trim().length > 18) {
+        if (currentLine) titleLines.push(currentLine.trim());
+        currentLine = word;
+      } else {
+        currentLine = (currentLine + " " + word).trim();
+      }
+    }
+    if (currentLine) titleLines.push(currentLine.trim());
+
+    const overlayH = Math.round(H * 0.42);
+    const titleFontSize = titleLines.length > 2 ? 42 : 52;
+    const titleLineHeight = titleFontSize + 12;
+    const totalTitleH = titleLines.length * titleLineHeight;
+    const titleStartY = H - overlayH * 0.55 - totalTitleH / 2;
 
     let svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}">`;
-    svg += `<defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="rgba(0,0,0,0)"/><stop offset="100%" stop-color="rgba(15,8,3,0.9)"/></linearGradient></defs>`;
-    svg += `<rect x="0" y="${H-overlayH}" width="${W}" height="${overlayH}" fill="url(#g)"/>`;
-    lines.forEach((line, i) => {
-      svg += `<text x="${W/2}" y="${H-overlayH*0.5+i*54}" text-anchor="middle" font-family="Georgia,serif" font-size="52" font-weight="bold" fill="white">${escXml(line)}</text>`;
+    svg += `<defs>
+      <linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="rgba(0,0,0,0)"/>
+        <stop offset="60%" stop-color="rgba(10,5,2,0.75)"/>
+        <stop offset="100%" stop-color="rgba(10,5,2,0.95)"/>
+      </linearGradient>
+    </defs>`;
+    svg += `<rect x="0" y="${H - overlayH}" width="${W}" height="${overlayH}" fill="url(#g)"/>`;
+
+    // Titel-Zeilen
+    titleLines.forEach((line, i) => {
+      svg += `<text x="${W / 2}" y="${titleStartY + i * titleLineHeight}"
+        text-anchor="middle"
+        font-family="Georgia, serif"
+        font-size="${titleFontSize}"
+        font-weight="bold"
+        fill="white"
+        filter="drop-shadow(0px 2px 4px rgba(0,0,0,0.8))"
+      >${escXml(line)}</text>`;
     });
-    svg += `<rect x="${W/2-40}" y="${H-overlayH*0.18}" width="80" height="3" fill="#C9963A" rx="1"/>`;
+
+    // Goldene Linie unter Titel
+    const lineY = titleStartY + totalTitleH + 16;
+    svg += `<rect x="${W / 2 - 50}" y="${lineY}" width="100" height="3" fill="#C9963A" rx="1"/>`;
+
+    // Untertitel (Ort/Kategorie) wenn vorhanden
+    if (location || category) {
+      const subtitle = location || category;
+      svg += `<text x="${W / 2}" y="${lineY + 32}"
+        text-anchor="middle"
+        font-family="Georgia, serif"
+        font-size="18"
+        fill="rgba(255,255,255,0.75)"
+        letter-spacing="2"
+      >${escXml(subtitle.toUpperCase())}</text>`;
+    }
+
     svg += `</svg>`;
 
     const comp = await sharp(buf).composite([{ input: Buffer.from(svg), top: 0, left: 0 }]).jpeg({ quality: 85 }).toBuffer();
