@@ -115,6 +115,7 @@ export default function Step1Story() {
         characters: answers.personen || "",
         location: answers.ort || "",
         timeframe: answers.zeitraum || "",
+        category: category || "familie",
       },
       tone: (selectedCat?.tone as any) || "kindgerecht",
       comicStyle,

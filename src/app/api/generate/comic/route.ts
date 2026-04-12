@@ -11,6 +11,7 @@ export async function POST(req: NextRequest) {
       mustHaveSentences,
       language,
       illustrationStyle,
+      category = "familie",
       numPages = 4,
     } = await req.json();
 
@@ -27,7 +28,8 @@ export async function POST(req: NextRequest) {
         comicStyle || "emotional",
         mustHaveSentences || "",
         language || "de",
-        numPages
+        numPages,
+        category
       ),
       buildCharacterAnchors(storyInput || "", guidedAnswers || {}),
     ]);
@@ -44,7 +46,8 @@ export async function POST(req: NextRequest) {
         page,
         characters,
         illustrationStyle || "comic",
-        comicStyle || "emotional"
+        comicStyle || "emotional",
+        category
       );
       comicPages.push({ ...page, imageUrl });
     }

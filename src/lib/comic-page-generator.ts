@@ -21,14 +21,15 @@ export async function buildComicStructure(
   comicStyle: string,
   mustHaveSentences: string,
   language: string,
-  numPages: number = 4
+  numPages: number = 4,
+  category: string = "familie"
 ): Promise<StoryPage[]> {
   const langMap: Record<string, string> = {
     de: "German", en: "English", fr: "French", es: "Spanish"
   };
   const lang = langMap[language] || "German";
   const context = buildContext(storyInput, guidedAnswers);
-  const systemPrompt = buildGPTStructurePrompt(lang, tone, comicStyle, mustHaveSentences, numPages);
+  const systemPrompt = buildGPTStructurePrompt(lang, tone, comicStyle, mustHaveSentences, numPages, category);
 
   const response = await openai.chat.completions.create({
     model: "gpt-4o",
@@ -92,7 +93,8 @@ export async function generateComicPage(
   page: StoryPage,
   characters: Character[],
   illustrationStyle: string,
-  comicStyle: string
+  comicStyle: string,
+  category: string = "familie"
 ): Promise<string> {
   const prompt = buildComicPagePrompt({
     title: page.title,
@@ -100,6 +102,7 @@ export async function generateComicPage(
     characters,
     illustrationStyle,
     comicStyle,
+    category,
     location: page.location,
     timeOfDay: page.timeOfDay,
   });
