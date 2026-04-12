@@ -346,7 +346,11 @@ router.post("/cover", async (req, res) => {
         });
         const item = (editRes.data || [])[0];
         if (item?.url) rawUrl = item.url;
-        else if (item?.b64_json) rawUrl = `data:image/png;base64,${item.b64_json}`;
+        else if (item?.b64_json) {
+          const imgBuf2 = Buffer.from(item.b64_json, "base64");
+          const small = await sharp(imgBuf2).resize(600, null).jpeg({ quality: 85 }).toBuffer();
+          rawUrl = `data:image/jpeg;base64,${small.toString("base64")}`;
+        }
       } catch (e) {
         console.error("Cover edit API failed:", e.message);
       }
