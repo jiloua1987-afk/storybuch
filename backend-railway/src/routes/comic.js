@@ -293,31 +293,32 @@ router.post("/page", async (req, res) => {
 
     console.log(`Raw image URL type: ${rawUrl.startsWith("data:") ? "base64" : "url"}, length: ${rawUrl.length}`);
 
-    // Sharp: Text-Overlay (Titel + Caption-Boxen)
-    const buf = await fetchBuf(rawUrl);
-    if (!buf) {
-      console.error("Could not fetch image buffer");
-      return res.json({ imageUrl: rawUrl }); // Return raw URL as fallback
+    // Wenn das Rohbild eine externe URL ist → direkt zurückgeben
+    // Browser kann es direkt laden, kein base64 Transfer nötig
+    if (!rawUrl.startsWith("data:")) {
+      console.log(`✓ Page "${page.title}" done (URL, no overlay needed)`);
+      return res.json({ imageUrl: rawUrl, title: page.title, panels: page.panels });
     }
 
-    const meta = await sharp(buf).metadata();
-    const W = meta.width || 1536, H = meta.height || 1024;
+    // Für base64 Bilder: auf 800px skalieren vor Overlay
+    const buf = await fetchBuf(rawUrl);
+    if (!buf) return res.json({ imageUrl: rawUrl });
+
+    const resized = await sharp(buf)
+      .resize(800, null, { withoutEnlargement: true })
+      .toBuffer();
+
+    const meta = await sharp(resized).metadata();
+    const W = meta.width || 800, H = meta.height || 533;
     const svgStr = buildPageSVG(page.title, page.panels, W, H);
 
-    const comp = await sharp(buf)
+    const comp = await sharp(resized)
       .composite([{ input: Buffer.from(svgStr), top: 0, left: 0 }])
-      .jpeg({ quality: 85 })
+      .jpeg({ quality: 80 })
       .toBuffer();
 
     const base64 = comp.toString("base64");
     console.log(`✓ Page "${page.title}" done, size: ${Math.round(base64.length / 1024)}KB`);
-
-    // Wenn zu groß für direkte Response → als URL zurückgeben
-    if (base64.length > 3 * 1024 * 1024) {
-      console.log("Image too large for base64, returning raw URL");
-      return res.json({ imageUrl: rawUrl });
-    }
-
     res.json({ imageUrl: `data:image/jpeg;base64,${base64}` });
   } catch (err) {
     console.error("Page error:", err.message);
