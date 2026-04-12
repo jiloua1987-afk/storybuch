@@ -260,12 +260,18 @@ router.post("/page", async (req, res) => {
           image: file,
           prompt: `Use the people from this reference photo as the main characters. ${fullPrompt}`,
           n: 1,
-          size: "1536x1024",
+          size: "1024x768", // Kleinere Größe → kleinere base64
         });
         const item = (editRes.data || [])[0];
-        if (item?.url) rawUrl = item.url;
-        else if (item?.b64_json) rawUrl = `data:image/png;base64,${item.b64_json}`;
-        if (rawUrl) console.log("✓ Edit API success");
+        if (item?.url) {
+          rawUrl = item.url;
+        } else if (item?.b64_json) {
+          // Sofort auf kleine Größe komprimieren
+          const imgBuf2 = Buffer.from(item.b64_json, "base64");
+          const small = await sharp(imgBuf2).resize(900, null).jpeg({ quality: 75 }).toBuffer();
+          rawUrl = `data:image/jpeg;base64,${small.toString("base64")}`;
+        }
+        if (rawUrl) console.log("✓ Edit API success, size:", Math.round(rawUrl.length / 1024), "KB");
       } catch (e) {
         console.error("Edit API failed:", e.message, "→ falling back to generate");
       }
@@ -278,12 +284,17 @@ router.post("/page", async (req, res) => {
         model: "gpt-image-1",
         prompt: fullPrompt,
         n: 1,
-        size: "1536x1024",
+        size: "1024x768",
         quality: "high",
       });
       const item = (genRes.data || [])[0];
-      if (item?.url) rawUrl = item.url;
-      else if (item?.b64_json) rawUrl = `data:image/png;base64,${item.b64_json}`;
+      if (item?.url) {
+        rawUrl = item.url;
+      } else if (item?.b64_json) {
+        const imgBuf2 = Buffer.from(item.b64_json, "base64");
+        const small = await sharp(imgBuf2).resize(900, null).jpeg({ quality: 75 }).toBuffer();
+        rawUrl = `data:image/jpeg;base64,${small.toString("base64")}`;
+      }
     }
 
     if (!rawUrl) {
@@ -291,35 +302,16 @@ router.post("/page", async (req, res) => {
       return res.json({ imageUrl: "" });
     }
 
-    console.log(`Raw image URL type: ${rawUrl.startsWith("data:") ? "base64" : "url"}, length: ${rawUrl.length}`);
-
-    // Wenn das Rohbild eine externe URL ist → direkt zurückgeben
-    // Browser kann es direkt laden, kein base64 Transfer nötig
+    // Wenn URL → direkt zurückgeben
     if (!rawUrl.startsWith("data:")) {
-      console.log(`✓ Page "${page.title}" done (URL, no overlay needed)`);
-      return res.json({ imageUrl: rawUrl, title: page.title, panels: page.panels });
+      console.log(`✓ Page "${page.title}" done (URL)`);
+      return res.json({ imageUrl: rawUrl });
     }
 
-    // Für base64 Bilder: auf 800px skalieren vor Overlay
-    const buf = await fetchBuf(rawUrl);
-    if (!buf) return res.json({ imageUrl: rawUrl });
-
-    const resized = await sharp(buf)
-      .resize(800, null, { withoutEnlargement: true })
-      .toBuffer();
-
-    const meta = await sharp(resized).metadata();
-    const W = meta.width || 800, H = meta.height || 533;
-    const svgStr = buildPageSVG(page.title, page.panels, W, H);
-
-    const comp = await sharp(resized)
-      .composite([{ input: Buffer.from(svgStr), top: 0, left: 0 }])
-      .jpeg({ quality: 80 })
-      .toBuffer();
-
-    const base64 = comp.toString("base64");
-    console.log(`✓ Page "${page.title}" done, size: ${Math.round(base64.length / 1024)}KB`);
-    res.json({ imageUrl: `data:image/jpeg;base64,${base64}` });
+    // Wenn bereits komprimiertes base64 → direkt zurückgeben (schon klein genug)
+    const sizeKB = Math.round(rawUrl.length / 1024);
+    console.log(`✓ Page "${page.title}" done (base64, ${sizeKB}KB)`);
+    res.json({ imageUrl: rawUrl });
   } catch (err) {
     console.error("Page error:", err.message);
     res.status(500).json({ error: err.message, imageUrl: "" });
