@@ -77,13 +77,15 @@ function wrapText(text, maxChars) {
 }
 
 function getPanelLayouts(panelCount, W, H) {
-  const b = 12, titleH = 80;
+  const b = 10, titleH = 70;
   const uH = H - titleH - b, uW = W - b * 2;
+
   if (panelCount === 3) return [
-    { x: b, y: titleH, width: uW, height: uH * 0.5 },
-    { x: b, y: titleH + uH * 0.5 + b, width: uW / 2 - b / 2, height: uH * 0.5 - b },
-    { x: b + uW / 2 + b / 2, y: titleH + uH * 0.5 + b, width: uW / 2 - b / 2, height: uH * 0.5 - b },
+    { x: b, y: titleH, width: uW, height: uH * 0.45 },
+    { x: b, y: titleH + uH * 0.45 + b, width: uW / 2 - b / 2, height: uH * 0.55 - b },
+    { x: b + uW / 2 + b / 2, y: titleH + uH * 0.45 + b, width: uW / 2 - b / 2, height: uH * 0.55 - b },
   ];
+
   if (panelCount === 5) {
     const rH = uH / 3;
     return [
@@ -94,11 +96,24 @@ function getPanelLayouts(panelCount, W, H) {
       { x: b + uW / 2 + b / 2, y: titleH + rH * 2 + b, width: uW / 2 - b / 2, height: rH - b / 2 },
     ];
   }
+
+  if (panelCount === 6) {
+    const rH = uH / 3, cW = uW / 2;
+    return [0,1,2,3,4,5].map(i => ({
+      x: b + (i % 2) * (cW + b / 2),
+      y: titleH + Math.floor(i / 2) * (rH + b / 3),
+      width: cW - b / 2,
+      height: rH - b / 3,
+    }));
+  }
+
+  // Default 2x2
+  const rH = uH / 2;
   return [
-    { x: b, y: titleH, width: uW / 2 - b / 2, height: uH / 2 - b / 2 },
-    { x: b + uW / 2 + b / 2, y: titleH, width: uW / 2 - b / 2, height: uH / 2 - b / 2 },
-    { x: b, y: titleH + uH / 2 + b / 2, width: uW / 2 - b / 2, height: uH / 2 - b / 2 },
-    { x: b + uW / 2 + b / 2, y: titleH + uH / 2 + b / 2, width: uW / 2 - b / 2, height: uH / 2 - b / 2 },
+    { x: b, y: titleH, width: uW / 2 - b / 2, height: rH - b / 2 },
+    { x: b + uW / 2 + b / 2, y: titleH, width: uW / 2 - b / 2, height: rH - b / 2 },
+    { x: b, y: titleH + rH + b / 2, width: uW / 2 - b / 2, height: rH - b / 2 },
+    { x: b + uW / 2 + b / 2, y: titleH + rH + b / 2, width: uW / 2 - b / 2, height: rH - b / 2 },
   ];
 }
 
@@ -234,9 +249,16 @@ ${style}, ${comicMod}, ${mood}
 cinematic lighting, clean, professional illustration quality`;
 
   const layoutBlock = `COMIC PAGE LAYOUT:
-Create a single comic page with ${scenes.length} panels.
-Clean white borders between panels.
-Layout: ${scenes.length <= 3 ? "2 panels top, 1 wide bottom" : scenes.length === 5 ? "2 panels top, 1 wide middle, 2 panels bottom" : "2x2 grid"}
+Create a single A4 portrait comic page (tall format, like a classic comic book).
+${scenes.length} panels with clean white borders between them.
+Layout: ${scenes.length <= 3 ? "1 wide panel top, 2 panels bottom" : scenes.length === 5 ? "2 panels top row, 1 wide panel middle, 2 panels bottom row" : "2 panels top row, 2 panels bottom row"}
+
+CAMERA ANGLES - vary between panels for dynamic storytelling:
+- Use WIDE SHOTS and FULL BODY shots for action/scene panels
+- Use MEDIUM SHOTS (waist up) for conversation panels  
+- Use CLOSE-UPS sparingly, only for emotional moments
+- AVOID cutting off heads or bodies at panel edges
+- Show full figures whenever possible
 
 IMPORTANT:
 NO text, NO speech bubbles, NO captions in the image.
@@ -299,7 +321,7 @@ router.post("/page", async (req, res) => {
           image: file,
           prompt: `Use the reference image as the PRIMARY identity source for all characters. ${fullPrompt}`,
           n: 1,
-          size: "1536x1024",
+          size: "1024x1536",
         });
         const item = (editRes.data || [])[0];
         if (item?.url) {
@@ -322,7 +344,7 @@ router.post("/page", async (req, res) => {
         model: "gpt-image-1",
         prompt: fullPrompt,
         n: 1,
-        size: "1536x1024",
+        size: "1024x1536",
         quality: "high",
       });
       const item = (genRes.data || [])[0];
@@ -365,10 +387,10 @@ router.post("/page", async (req, res) => {
     const buf = await fetchBuf(rawUrl);
     if (!buf) return res.json({ imageUrl: rawUrl });
 
-    // Auf 1200px skalieren
-    const resized = await sharp(buf).resize(1200, null, { withoutEnlargement: true }).toBuffer();
+    // Auf 900px Breite skalieren (A4 Hochformat)
+    const resized = await sharp(buf).resize(900, null, { withoutEnlargement: true }).toBuffer();
     const meta = await sharp(resized).metadata();
-    const W = meta.width || 1200, H = meta.height || 800;
+    const W = meta.width || 900, H = meta.height || 1273; // A4 ratio
     const svgStr = buildPageSVG(page.title, page.panels, W, H);
 
     const comp = await sharp(resized)

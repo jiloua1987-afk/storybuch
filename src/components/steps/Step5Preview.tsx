@@ -76,7 +76,7 @@ export default function Step5Preview() {
               </div>
             ) : page ? (
               /* Comic Page */
-              <div className="relative w-full" style={{ aspectRatio: "1536/1024" }}>
+              <div className="relative w-full" style={{ aspectRatio: "1024/1536" }}>
                 {regenerating === page.id ? (
                   <div className="absolute inset-0 bg-purple-50 flex flex-col items-center justify-center gap-3">
                     <div className="text-4xl animate-pulse">🎨</div>
@@ -157,7 +157,7 @@ export default function Step5Preview() {
           {pages.map((p, i) => (
             <button key={p.id} onClick={() => setCurrentPage(i)}
               className={`relative rounded-xl overflow-hidden border-2 transition-all ${i === currentPage ? "border-purple-500 shadow-md" : "border-transparent hover:border-purple-200"}`}
-              style={{ aspectRatio: "3/2" }}>
+              style={{ aspectRatio: "2/3" }}>
               {p.imageUrl ? (
                 p.imageUrl.startsWith("data:") ? (
                   <img src={p.imageUrl} alt={p.title} className="w-full h-full object-cover" />
