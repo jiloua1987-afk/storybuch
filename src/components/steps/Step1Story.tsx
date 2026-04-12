@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useBookStore, ComicStyle } from "@/store/bookStore";
+import { useBookStore, ComicStyle, DialogMode, CustomDialog } from "@/store/bookStore";
 import Button from "@/components/ui/Button";
 import toast from "react-hot-toast";
 
@@ -71,6 +71,16 @@ export default function Step1Story() {
   const [storyInput, setStoryInput] = useState("");
   const [answers, setAnswers]       = useState<Record<string, string>>({});
   const [moments, setMoments]       = useState<Moment[]>([{ id: "m1", title: "", description: "" }]);
+  const [dialogMode, setDialogMode] = useState<DialogMode>("auto");
+  const [customDialogs, setCustomDialogs] = useState<CustomDialog[]>([{ id: "d1", speaker: "", text: "" }]);
+  const [mustHaveSentences, setMustHaveSentences] = useState("");
+
+  const addDialog = () =>
+    setCustomDialogs((prev) => [...prev, { id: `d${Date.now()}`, speaker: "", text: "" }]);
+  const updateDialog = (id: string, field: "speaker" | "text", value: string) =>
+    setCustomDialogs((prev) => prev.map((d) => (d.id === id ? { ...d, [field]: value } : d)));
+  const removeDialog = (id: string) =>
+    setCustomDialogs((prev) => prev.filter((d) => d.id !== id));
 
   const selectedCat = CATEGORIES.find((c) => c.id === category);
   const questions   = category ? GUIDED_QUESTIONS[category] : [];
@@ -108,6 +118,9 @@ export default function Step1Story() {
       },
       tone: (selectedCat?.tone as any) || "kindgerecht",
       comicStyle,
+      dialogMode,
+      customDialogs: dialogMode === "custom" ? customDialogs : [],
+      mustHaveSentences,
       design: "kinderbuch",
       characters: [],
       chapters: [],
@@ -256,6 +269,84 @@ export default function Step1Story() {
                 >
                   <span className="text-xl">+</span> Weiteren Moment hinzufügen
                 </button>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* 5. Dialoge & Wichtige Sätze */}
+          <AnimatePresence>
+            {category && (
+              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4 border-t border-brand-100 pt-6">
+                <label className="text-sm font-semibold text-brand-700">
+                  5. Dialoge <span className="font-normal text-gray-400">(optional)</span>
+                </label>
+                <div className="flex gap-3 bg-brand-50 p-1 rounded-2xl">
+                  <button
+                    onClick={() => setDialogMode("auto")}
+                    className={`flex-1 py-2 rounded-xl text-sm font-medium transition-all ${dialogMode === "auto" ? "bg-white shadow text-brand-700" : "text-gray-500"}`}
+                  >
+                    ✨ Automatisch vorschlagen
+                  </button>
+                  <button
+                    onClick={() => setDialogMode("custom")}
+                    className={`flex-1 py-2 rounded-xl text-sm font-medium transition-all ${dialogMode === "custom" ? "bg-white shadow text-brand-700" : "text-gray-500"}`}
+                  >
+                    ✍️ Eigene Dialoge
+                  </button>
+                </div>
+                <p className="text-xs text-gray-400">
+                  {dialogMode === "auto"
+                    ? "Wir schlagen passende Dialoge vor – du kannst sie in der Vorschau anpassen."
+                    : "Gib eigene Dialoge ein – fehlende werden automatisch ergänzt."}
+                </p>
+
+                <AnimatePresence>
+                  {dialogMode === "custom" && (
+                    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-3">
+                      {customDialogs.map((d, i) => (
+                        <motion.div key={d.id} initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} className="bg-brand-50 rounded-2xl p-4 space-y-2">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-bold text-brand-400 w-5">#{i + 1}</span>
+                            <input
+                              value={d.speaker}
+                              onChange={(e) => updateDialog(d.id, "speaker", e.target.value)}
+                              placeholder="Sprecher, z. B. Max"
+                              className="w-36 p-2 rounded-xl border-2 border-brand-100 focus:border-brand-400 focus:outline-none text-sm text-gray-700 bg-white"
+                            />
+                            {customDialogs.length > 1 && (
+                              <button onClick={() => removeDialog(d.id)} className="ml-auto text-gray-300 hover:text-red-400 text-xl">×</button>
+                            )}
+                          </div>
+                          <input
+                            value={d.text}
+                            onChange={(e) => updateDialog(d.id, "text", e.target.value)}
+                            placeholder="Dialog, z. B. Warte, kennst du mich?"
+                            className="w-full p-2 rounded-xl border-2 border-brand-100 focus:border-brand-400 focus:outline-none text-sm text-gray-700 bg-white"
+                          />
+                        </motion.div>
+                      ))}
+                      <button
+                        onClick={addDialog}
+                        className="w-full py-3 rounded-2xl border-2 border-dashed border-brand-200 text-brand-500 text-sm font-medium hover:bg-brand-50 hover:border-brand-400 transition-all flex items-center justify-center gap-2"
+                      >
+                        <span className="text-xl">+</span> Dialog hinzufügen
+                      </button>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-semibold text-brand-700">
+                    ⭐ Wichtige Sätze <span className="font-normal text-gray-400">(optional)</span>
+                  </label>
+                  <textarea
+                    value={mustHaveSentences}
+                    onChange={(e) => setMustHaveSentences(e.target.value)}
+                    placeholder="Gibt es Sätze die unbedingt vorkommen sollen? z. B. 'Ich liebe dich mehr als Pizza'"
+                    rows={2}
+                    className="w-full p-3 rounded-xl border-2 border-brand-100 focus:border-brand-400 focus:outline-none text-gray-700 bg-white resize-none transition-all"
+                  />
+                </div>
               </motion.div>
             )}
           </AnimatePresence>
