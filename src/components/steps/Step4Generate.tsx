@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useBookStore } from "@/store/bookStore";
 import ProgressBar from "@/components/ui/ProgressBar";
 
+// Each step is a separate fast API call
 export default function Step4Generate() {
   const { setStep, project, updateProject } = useBookStore();
   const [stepLabel, setStepLabel] = useState("Wird vorbereitet…");
@@ -11,136 +12,150 @@ export default function Step4Generate() {
   const [done, setDone] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [log, setLog] = useState<{ text: string; done: boolean }[]>([]);
-  const stateRef = useRef<{
-    pages: any[];
-    characters: any[];
-    coverImageUrl: string;
-    chapters: any[];
-  }>({ pages: [], characters: [], coverImageUrl: "", chapters: [] });
+  const running = useRef(false);
 
-  useEffect(() => { runGeneration(); }, []);
+  useEffect(() => {
+    if (!running.current) { running.current = true; runGeneration(); }
+  }, []);
 
   function addLog(text: string, isDone = false) {
-    setLog((prev) => {
-      const last = prev[prev.length - 1];
-      if (last && !last.done && last.text.startsWith(text.split(":")[0])) {
-        return [...prev.slice(0, -1), { text, done: isDone }];
-      }
-      return [...prev, { text, done: isDone }];
+    setLog((prev) => [...prev, { text, done: isDone }]);
+  }
+
+  async function post(url: string, body: object): Promise<any> {
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
     });
+    if (!res.ok) {
+      const e = await res.json().catch(() => ({}));
+      throw new Error(e.error || `HTTP ${res.status}`);
+    }
+    return res.json();
   }
 
   async function runGeneration() {
     try {
-      addLog("Verbinde mit Server…");
+      // ── Step 1: Story-Struktur ──────────────────────────────────────────────
+      setStepLabel("Geschichte wird analysiert…");
+      setProgress(5);
+      addLog("Geschichte wird analysiert…");
 
-      const res = await fetch("/api/generate/comic-stream", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          storyInput:        project?.storyInput || "",
-          guidedAnswers:     project?.guidedAnswers || {},
-          tone:              project?.tone || "humorvoll",
-          comicStyle:        project?.comicStyle || "emotional",
-          mustHaveSentences: project?.mustHaveSentences || "",
-          language:          project?.language || "de",
-          illustrationStyle: project?.illustrationStyle || "comic",
-          category:          project?.guidedAnswers?.category || "familie",
-          numPages:          4,
-          referenceImages:   project?.referenceImages || [],
-          dedication:        project?.dedication || "",
-        }),
+      const { pages, characters } = await post("/api/generate/comic-structure", {
+        storyInput:        project?.storyInput || "",
+        guidedAnswers:     project?.guidedAnswers || {},
+        tone:              project?.tone || "humorvoll",
+        comicStyle:        project?.comicStyle || "emotional",
+        mustHaveSentences: project?.mustHaveSentences || "",
+        language:          project?.language || "de",
+        category:          project?.guidedAnswers?.category || "familie",
+        numPages:          4,
+        referenceImages:   project?.referenceImages || [],
       });
 
-      if (!res.ok || !res.body) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.error || `HTTP ${res.status}`);
-      }
+      if (!pages?.length) throw new Error("Keine Seiten generiert.");
+      addLog(`${pages.length} Seiten geplant`, true);
+      setProgress(15);
 
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = "";
+      // ── Step 2: Cover ───────────────────────────────────────────────────────
+      setStepLabel("Cover wird erstellt…");
+      addLog("Cover wird erstellt…");
+      setProgress(18);
 
-      while (true) {
-        const { done: streamDone, value } = await reader.read();
-        if (streamDone) break;
+      let coverImageUrl = "";
+      try {
+        const coverData = await post("/api/generate/comic-cover", {
+          title:            project?.title || "Mein Comic",
+          characters,
+          category:         project?.guidedAnswers?.category || "familie",
+          illustrationStyle: project?.illustrationStyle || "comic",
+          location:         project?.guidedAnswers?.ort || project?.guidedAnswers?.location || "",
+        });
+        coverImageUrl = coverData.coverImageUrl || "";
+        updateProject({ coverImageUrl: coverImageUrl || undefined });
+        addLog("Cover fertig", true);
+      } catch { addLog("Cover übersprungen", true); }
+      setProgress(22);
 
-        buffer += decoder.decode(value, { stream: true });
-        const parts = buffer.split("\n\n");
-        buffer = parts.pop() || "";
+      // ── Step 3: Seiten einzeln ──────────────────────────────────────────────
+      const chapters: any[] = [];
+      const progressPerPage = 65 / pages.length;
 
-        for (const part of parts) {
-          if (!part.trim()) continue;
-          const eventMatch = part.match(/^event: (.+)$/m);
-          const dataMatch = part.match(/^data: (.+)$/m);
-          if (!eventMatch || !dataMatch) continue;
+      for (let i = 0; i < pages.length; i++) {
+        const page = pages[i];
+        setStepLabel(`Seite ${i + 1} von ${pages.length}: "${page.title}"…`);
+        addLog(`Seite ${i + 1}: "${page.title}"…`);
+        setProgress(22 + i * progressPerPage);
 
-          const event = eventMatch[1];
-          const data = JSON.parse(dataMatch[1]);
+        try {
+          const pageData = await post("/api/generate/comic-page", {
+            page,
+            characters,
+            illustrationStyle: project?.illustrationStyle || "comic",
+            comicStyle:        project?.comicStyle || "emotional",
+            category:          project?.guidedAnswers?.category || "familie",
+            referenceImages:   project?.referenceImages || [],
+          });
 
-          switch (event) {
-            case "progress":
-              setStepLabel(data.label);
-              setProgress(data.progress);
-              addLog(data.label, data.step?.endsWith("_done") || data.step?.endsWith("_error"));
-              break;
-
-            case "structure":
-              stateRef.current.pages = data.pages;
-              stateRef.current.characters = data.characters;
-              break;
-
-            case "cover":
-              stateRef.current.coverImageUrl = data.coverImageUrl || "";
-              // Update project with cover immediately
-              updateProject({ coverImageUrl: data.coverImageUrl || undefined });
-              break;
-
-            case "page": {
-              const chapter = {
-                id: data.pageId || `page-${data.pageIndex}`,
-                title: data.title,
-                content: "",
-                imageUrl: data.imageUrl || "",
-                imagePrompt: "",
-              };
-              stateRef.current.chapters[data.pageIndex] = chapter;
-
-              // Update project chapters progressively
-              const currentChapters = [...stateRef.current.chapters].filter(Boolean);
-              updateProject({ chapters: currentChapters });
-              addLog(`Seite ${data.pageIndex + 1}: "${data.title}"`, true);
-              break;
-            }
-
-            case "done":
-              // Final update
-              updateProject({
-                id: project?.id || `proj-${Date.now()}`,
-                title: project?.title || "Mein Comic",
-                storyInput: project?.storyInput || "",
-                guidedAnswers: project?.guidedAnswers || { characters: "", location: "", timeframe: "", specialMoments: "" },
-                tone: project?.tone || "humorvoll",
-                design: "kinderbuch",
-                characters: stateRef.current.characters.map((c: any, i: number) => ({
-                  id: `c${i}`, name: c.name, role: "Hauptfigur",
-                })),
-                chapters: stateRef.current.chapters.filter(Boolean),
-                coverImageUrl: stateRef.current.coverImageUrl || undefined,
-                status: "preview",
-                createdAt: project?.createdAt || new Date().toISOString(),
-              });
-              setProgress(100);
-              setStepLabel("Dein Comic ist fertig!");
-              setDone(true);
-              setTimeout(() => setStep(4), 1200);
-              break;
-
-            case "error":
-              throw new Error(data.message);
-          }
+          const chapter = {
+            id: page.id || `page-${i}`,
+            title: page.title,
+            content: page.panels?.map((p: any) => p.dialog || "").filter(Boolean).join(" ") || "",
+            imageUrl: pageData.imageUrl || "",
+            imagePrompt: "",
+          };
+          chapters.push(chapter);
+          updateProject({ chapters: [...chapters] });
+          addLog(`Seite ${i + 1} fertig`, true);
+        } catch (e: any) {
+          chapters.push({ id: page.id || `page-${i}`, title: page.title, content: "", imageUrl: "", imagePrompt: "" });
+          addLog(`Seite ${i + 1}: Fehler`, true);
         }
+
+        setProgress(22 + (i + 1) * progressPerPage);
       }
+
+      // ── Step 4: Endseite ────────────────────────────────────────────────────
+      setStepLabel("Abschlussseite wird erstellt…");
+      addLog("Abschlussseite wird erstellt…");
+      setProgress(90);
+
+      try {
+        const endData = await post("/api/generate/comic-ending", {
+          storyInput:    project?.storyInput || "",
+          guidedAnswers: project?.guidedAnswers || {},
+          tone:          project?.tone || "humorvoll",
+          language:      project?.language || "de",
+          dedication:    project?.dedication || "",
+        });
+        if (endData.imageUrl) {
+          chapters.push({ id: "ending", title: "Das Ende", content: "", imageUrl: endData.imageUrl, imagePrompt: "" });
+          updateProject({ chapters: [...chapters] });
+        }
+        addLog("Abschlussseite fertig", true);
+      } catch { addLog("Abschlussseite übersprungen", true); }
+
+      // ── Finalisieren ────────────────────────────────────────────────────────
+      updateProject({
+        id: project?.id || `proj-${Date.now()}`,
+        title: project?.title || "Mein Comic",
+        storyInput: project?.storyInput || "",
+        guidedAnswers: project?.guidedAnswers || { characters: "", location: "", timeframe: "", specialMoments: "" },
+        tone: project?.tone || "humorvoll",
+        design: "kinderbuch",
+        characters: characters.map((c: any, i: number) => ({ id: `c${i}`, name: c.name, role: "Hauptfigur" })),
+        chapters,
+        coverImageUrl: coverImageUrl || undefined,
+        status: "preview",
+        createdAt: project?.createdAt || new Date().toISOString(),
+      });
+
+      setProgress(100);
+      setStepLabel("Dein Comic ist fertig!");
+      setDone(true);
+      setTimeout(() => setStep(4), 1200);
+
     } catch (err: any) {
       setError(err.message);
     }
@@ -152,7 +167,7 @@ export default function Step4Generate() {
         <div className="text-5xl">⚠️</div>
         <h2 className="font-display text-2xl text-[#1f1a2e]">Fehler bei der Generierung</h2>
         <p className="text-sm bg-red-50 border border-red-100 rounded-xl p-4 text-red-700">{error}</p>
-        <button onClick={() => { setError(null); runGeneration(); }}
+        <button onClick={() => { setError(null); running.current = false; runGeneration(); }}
           className="bg-purple-600 text-white px-6 py-3 rounded-xl hover:bg-purple-700 transition-colors">
           Nochmal versuchen
         </button>
