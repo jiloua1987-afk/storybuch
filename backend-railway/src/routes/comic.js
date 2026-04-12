@@ -217,30 +217,58 @@ router.post("/page", async (req, res) => {
   try {
     const { page, characters = [], illustrationStyle = "comic", comicStyle = "emotional", category = "familie" } = req.body;
 
+    // FIXER ANTEIL: Konsistenz + Character Anchors + Stil
+    const charAnchors = characters.map(c => `[${c.name}: ${c.visual_anchor}]`).join(" ");
+
+    const layoutMap = {
+      3: "2 panels top row, 1 wide panel bottom",
+      4: "2 panels top row, 2 panels bottom row",
+      5: "2 panels top row, 1 wide panel middle, 2 panels bottom row",
+      6: "3 panels top row, 3 panels bottom row",
+    };
+    const layout = layoutMap[page.panels.length] || layoutMap[4];
+
+    const panelDescs = page.panels.map(p =>
+      `Panel ${p.nummer}: ${p.szene}`
+    ).join("\n");
+
     const style = ILLUS_STYLE[illustrationStyle] || ILLUS_STYLE.comic;
     const comicMod = COMIC_STYLE_MOD[comicStyle] || COMIC_STYLE_MOD.emotional;
     const mood = CATEGORY_MOOD[category] || CATEGORY_MOOD.familie;
 
-    // FIXER ANTEIL: Konsistenz + Character Anchors + Stil
-    const charAnchors = characters.map(c => `[${c.name}: ${c.visual_anchor}]`).join(" ");
-    const fixedPart = `CRITICAL: Keep ALL characters visually 100% consistent across every panel — same faces, same hair color and style, same clothing, same body proportions. ${charAnchors ? `Characters: ${charAnchors}.` : ""} Art style: ${style}. Mood: ${comicMod}. Atmosphere: ${mood}. NEVER add random text, logos, or watermarks.`;
+    const fullPrompt = `Create a high-quality illustrated comic page based on the provided reference image.
 
-    // FLEXIBLER ANTEIL: Seiten-Layout + Panel-Szenen
-    const panelDescs = page.panels.map(p =>
-      `[Panel ${p.nummer}]: ${p.szene}. Leave small empty space in upper corner for text overlay.`
-    ).join("\n");
+CRITICAL CHARACTER REQUIREMENT:
+The people in the generated image MUST closely match the faces, hair, body proportions, and overall appearance of the people in the reference photo.
+Use the reference image as the primary identity source for all characters.
+Do NOT invent new faces. Do NOT change hairstyles, hair color, or age.
+Maintain strong visual similarity to the reference image.
+${charAnchors ? `Character descriptions: ${charAnchors}` : ""}
 
-    const layoutMap = {
-      3: "3-panel layout: ONE wide panoramic panel spanning full width on top, TWO equal panels side by side on bottom",
-      4: "4-panel layout: 2x2 grid of equal panels",
-      5: "5-panel layout: TWO panels on top row, ONE wide panoramic panel spanning full width in middle, TWO panels on bottom row",
-      6: "6-panel layout: 3 columns x 2 rows grid",
-    };
-    const layout = layoutMap[page.panels.length] || layoutMap[4];
+CONSISTENCY REQUIREMENT:
+All characters must look identical across ALL panels:
+- same faces, same proportions, same clothing style, same colors, same visual identity
 
-    const flexPart = `Create ONE comic book page with ${page.panels.length} panels. Layout: ${layout}. Thick black borders (5px). Cream background (#F5EDE0) outside panels. Leave 80px header area at very top empty (for title overlay). ${page.location ? `Location: ${page.location}.` : ""} ${page.timeOfDay ? `Lighting: ${page.timeOfDay}.` : ""}\n\nPanels:\n${panelDescs}\n\nNO text, NO letters, NO captions in the image itself.`;
+COMIC PAGE LAYOUT:
+Generate a single comic page with ${page.panels.length} panels.
+Panels cleanly separated with white borders.
+Layout: ${layout}
 
-    const fullPrompt = `${fixedPart}\n\n${flexPart}`;
+STYLE:
+${style}, ${comicMod}, ${mood}, cinematic lighting, detailed but clean.
+
+IMPORTANT:
+NO text inside the image. NO speech bubbles. NO captions.
+Leave empty space in top-left or top-right corner of each panel for later text overlay.
+
+SCENES:
+${panelDescs}
+
+ENVIRONMENT: ${page.location || "beautiful scenic location"}, ${page.timeOfDay || "warm daylight"}.
+
+DETAIL LEVEL: high detail, professional illustration quality.
+
+NEGATIVE: text, speech bubbles, captions, watermark, distorted faces, inconsistent characters, extra fingers, unrealistic anatomy.`;
 
     console.log(`Generating page "${page.title}" (${page.panels.length} panels, style: ${illustrationStyle}, category: ${category})`);
 
@@ -258,7 +286,7 @@ router.post("/page", async (req, res) => {
         const editRes = await openai.images.edit({
           model: "gpt-image-1",
           image: file,
-          prompt: `Use the people from this reference photo as the main characters. ${fullPrompt}`,
+          prompt: `Use the reference image as the PRIMARY identity source for all characters. ${fullPrompt}`,
           n: 1,
           size: "1536x1024",
         });
