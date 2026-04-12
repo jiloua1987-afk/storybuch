@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { buildComicStructure, buildCharacterAnchors, generateComicPage } from "@/lib/comic-page-generator";
+import { buildPageSVG, getPanelLayouts } from "@/lib/sharp-compositor";
 
 export async function POST(req: NextRequest) {
   try {
@@ -21,16 +22,8 @@ export async function POST(req: NextRequest) {
 
     // Step 1: Character Builder + Story Structure (parallel)
     const [pages, characters] = await Promise.all([
-      buildComicStructure(
-        storyInput || "",
-        guidedAnswers || {},
-        tone || "humorvoll",
-        comicStyle || "emotional",
-        mustHaveSentences || "",
-        language || "de",
-        numPages,
-        category
-      ),
+      buildComicStructure(storyInput || "", guidedAnswers || {}, tone || "humorvoll",
+        comicStyle || "emotional", mustHaveSentences || "", language || "de", numPages, category),
       buildCharacterAnchors(storyInput || "", guidedAnswers || {}),
     ]);
 
@@ -38,18 +31,59 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Keine Seiten generiert." }, { status: 500 });
     }
 
-    // Step 2: Generate each page with Fix+Flex Prompt Builder
-    // Sequential to avoid rate limits
+    // Step 2: Generate raw images (NO text) + composite text overlay
+    const sharp = (await import("sharp")).default;
     const comicPages = [];
+
     for (const page of pages) {
-      const imageUrl = await generateComicPage(
-        page,
-        characters,
-        illustrationStyle || "comic",
-        comicStyle || "emotional",
-        category
-      );
-      comicPages.push({ ...page, imageUrl });
+      // Generate raw image without text
+      const rawImageUrl = await generateComicPage(page, characters, illustrationStyle || "comic", comicStyle || "emotional", category);
+
+      // Fetch raw image
+      let finalImageUrl = rawImageUrl;
+      try {
+        const imgRes = await fetch(rawImageUrl);
+        if (imgRes.ok) {
+          const imgBuffer = Buffer.from(await imgRes.arrayBuffer());
+          const meta = await sharp(imgBuffer).metadata();
+          const W = meta.width || 1536;
+          const H = meta.height || 1024;
+
+          // Build panel layouts
+          const layouts = getPanelLayouts(page.panels.length, W, H);
+
+          // Build SVG overlay with title + dialogs
+          const overlayData = {
+            pageTitle: page.title,
+            pageSubtitle: page.location || undefined,
+            imageWidth: W,
+            imageHeight: H,
+            panels: page.panels.map((p: any, i: number) => ({
+              nummer: p.nummer,
+              dialog: p.dialog,
+              speaker: p.speaker,
+              position: (i % 2 === 0 ? "top-left" : "top-right") as "top-left" | "top-right",
+              layout: layouts[i] || layouts[0],
+            })),
+          };
+
+          const svgString = buildPageSVG(overlayData);
+          const svgBuffer = Buffer.from(svgString);
+
+          // Composite SVG over raw image
+          const composited = await sharp(imgBuffer)
+            .composite([{ input: svgBuffer, top: 0, left: 0 }])
+            .png()
+            .toBuffer();
+
+          finalImageUrl = `data:image/png;base64,${composited.toString("base64")}`;
+        }
+      } catch (compositeErr: any) {
+        console.error("Composite error:", compositeErr.message);
+        // Fall back to raw image
+      }
+
+      comicPages.push({ ...page, imageUrl: finalImageUrl });
     }
 
     return NextResponse.json({ pages: comicPages, characters });

@@ -77,36 +77,34 @@ function buildFlex(input: PagePromptInput): string {
   const { title, panels, location, timeOfDay } = input;
   const panelCount = panels.length;
 
+  // Variable Layouts
   const layoutMap: Record<number, string> = {
-    3: "3-panel layout: ONE wide panoramic panel on top (full width), TWO equal panels side by side on bottom row",
+    3: "3-panel layout: ONE wide panoramic panel on top spanning full width, TWO equal panels side by side on bottom row",
     4: "4-panel layout: 2x2 grid of equal panels",
-    5: "5-panel layout: TWO panels on top row, ONE wide panel in middle (full width), TWO panels on bottom row",
+    5: "5-panel layout: TWO panels on top row, ONE wide panoramic panel in middle spanning full width, TWO panels on bottom row",
     6: "6-panel layout: 3 columns x 2 rows grid",
   };
   const layout = layoutMap[panelCount] || layoutMap[4];
 
-  const panelDescs = panels.map((p) => {
-    const captionText = p.dialog
-      ? p.speaker ? `"${p.speaker}: ${p.dialog}"` : `"${p.dialog}"`
-      : null;
-    const captionInstruction = captionText
-      ? `White rectangle caption box with thin black border in upper-left corner containing text: ${captionText}`
-      : "No caption box needed";
-    return `[Panel ${p.nummer}]: ${p.szene}. ${captionInstruction}.`;
-  }).join("\n");
+  // Panel scenes ONLY – no text instructions
+  const panelDescs = panels.map((p) =>
+    `[Panel ${p.nummer}]: ${p.szene}. Leave empty space in upper-left corner for text overlay.`
+  ).join("\n");
 
   return `Create ONE single comic book page image with ${panelCount} panels.
 Layout: ${layout}.
 Thick black panel borders (5px) between all panels.
-Cream/warm beige background (#F5EDE0) visible outside panels and as page border.
-BOLD BLACK page title at very top center: "${title.toUpperCase()}" — large comic font, black text on cream background.
+Cream/warm beige background (#F5EDE0) visible outside panels as page border (about 12px).
+Leave a 80px tall cream-colored header area at the very top for title text (DO NOT draw anything there).
 ${location ? `Location: ${location}.` : ""} ${timeOfDay ? `Lighting: ${timeOfDay} light.` : ""}
 
-Panel descriptions:
+CRITICAL: NO TEXT, NO LETTERS, NO WORDS, NO CAPTIONS anywhere in the image.
+Leave small empty space in upper-left corner of each panel for caption box overlay.
+
+Panel scenes:
 ${panelDescs}
 
-Caption box style: white fill, 1px black border, rounded corners, black readable text, positioned in corner of panel.
-Overall: professional comic book page, print-ready quality, warm and inviting.`;
+Overall: professional comic book page, warm and inviting, print-ready quality.`;
 }
 
 // ── HAUPT-FUNKTION ────────────────────────────────────────────────────────────
