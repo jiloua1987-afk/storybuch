@@ -1,237 +1,297 @@
 "use client";
-import { motion } from "framer-motion";
-import Button from "@/components/ui/Button";
+import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Footer from "@/components/Footer";
 
-const REVIEWS = [
-  { name: "Sandra M.", stars: 5, text: "Unser Sardinien-Urlaub als Comic – die Kinder wollen es jeden Abend lesen. Jedes Panel bringt sie zum Lachen!", occasion: "Familienurlaub" },
-  { name: "Julia & Marc", stars: 5, text: "Unsere Liebesgeschichte als Comic bis zur Hochzeit. Die Dialoge treffen uns so genau – wir haben geweint und gelacht.", occasion: "Jahrestag" },
-  { name: "Thomas K.", stars: 5, text: "Zum 40. Geburtstag meines besten Freundes – unser Freundschafts-Comic. Absoluter Wahnsinn wie persönlich das ist.", occasion: "Geburtstag" },
-  { name: "Petra W.", stars: 5, text: "Das persönlichste Geschenk, das ich je gemacht habe. Kein Gutschein der Welt kommt da ran.", occasion: "Muttertag" },
+// ── Scroll fade-in hook ───────────────────────────────────────────────────────
+function useFadeUp() {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(
+      ([entry]) => { if (entry.isIntersecting) { el.classList.add("visible"); obs.disconnect(); } },
+      { threshold: 0.15 }
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
+  return ref;
+}
+
+// ── Animated counter ─────────────────────────────────────────────────────────
+function Counter({ target, suffix = "" }: { target: number; suffix?: string }) {
+  const [val, setVal] = useState(0);
+  const ref = useRef<HTMLSpanElement>(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(([entry]) => {
+      if (!entry.isIntersecting) return;
+      obs.disconnect();
+      const start = performance.now();
+      const dur = 1800;
+      const tick = (now: number) => {
+        const p = Math.min((now - start) / dur, 1);
+        const ease = 1 - Math.pow(1 - p, 3);
+        setVal(Math.round(ease * target));
+        if (p < 1) requestAnimationFrame(tick);
+      };
+      requestAnimationFrame(tick);
+    }, { threshold: 0.5 });
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, [target]);
+  return <span ref={ref}>{val.toLocaleString("de-DE")}{suffix}</span>;
+}
+
+const STEPS = [
+  { n: "1", title: "Geschichte eingeben",    body: "Stichpunkte reichen. Wer, wo, wann – mehr brauchen wir nicht. Alles andere ist optional." },
+  { n: "2", title: "Dialoge vorschlagen",     body: "Wir schlagen passende Dialoge vor – du kannst sie anpassen oder einfach übernehmen." },
+  { n: "3", title: "Comic wird erstellt",     body: "Panels, Illustrationen und Sprechblasen werden vollautomatisch für dich erstellt." },
+  { n: "4", title: "Bearbeiten & bestellen",  body: "Alles anpassbar in der Vorschau – Texte, Dialoge, Bilder. Erst dann bestellst du." },
+];
+
+const BENEFITS = [
+  { title: "Kein Schreibtalent nötig",    body: "Stichpunkte reichen – wir kümmern uns um Text, Illustrationen und Layout." },
+  { title: "Vorschau vor der Bestellung", body: "Du siehst jede Seite bevor du bestellst. Alles ist bearbeitbar." },
+  { title: "Gedruckt und geliefert",      body: "Hard- oder Softcover, hochwertig gedruckt, in 5–7 Werktagen bei dir." },
+];
+
+const TESTIMONIALS = [
+  { quote: "Unser Sardinien-Urlaub als Comic – die Kinder wollen es jeden Abend lesen. Jedes Panel bringt sie zum Lachen!", name: "Sandra M.", occasion: "Familienurlaub" },
+  { quote: "Unsere Liebesgeschichte als Comic bis zur Hochzeit. Die Dialoge treffen uns so genau – wir haben geweint und gelacht.", name: "Julia & Marc", occasion: "Jahrestag" },
+  { quote: "Zum 40. Geburtstag meines besten Freundes – unser Freundschafts-Comic. Absoluter Wahnsinn wie persönlich das ist.", name: "Thomas K.", occasion: "Geburtstag" },
+  { quote: "Das persönlichste Geschenk, das ich je gemacht habe. Kein Gutschein der Welt kommt da ran.", name: "Petra W.", occasion: "Muttertag" },
+];
+
+const STATS = [
+  { value: 30000, suffix: "+", label: "Bücher gedruckt" },
+  { value: 4.9,   suffix: "",  label: "Durchschnittsbewertung", isDecimal: true },
+  { value: 7,     suffix: "",  label: "Werktage Lieferzeit" },
 ];
 
 export default function LandingHero({ onStart }: { onStart: () => void }) {
+  const heroRef    = useRef<HTMLDivElement>(null);
+  const previewRef = useFadeUp();
+  const stepsRef   = useFadeUp();
+  const benefitRef = useFadeUp();
+  const testiRef   = useFadeUp();
+  const statsRef   = useFadeUp();
+  const ctaRef     = useFadeUp();
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-brand-50 via-white to-warm-50">
+    <div style={{ background: "#FDF8F2" }}>
 
-      {/* Hero – Familie liest Buch */}
-      <div className="relative overflow-hidden">
-        <div className="max-w-5xl mx-auto px-4 pt-16 pb-0 grid md:grid-cols-2 gap-12 items-center">
-          {/* Text links */}
-          <motion.div
-            initial={{ opacity: 0, x: -30 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.6 }}
-            className="space-y-6 pb-16"
-          >
-            <div className="inline-flex items-center gap-2 bg-brand-100 text-brand-700 px-4 py-1.5 rounded-full text-sm font-medium">
-              💥 Deine Erinnerungen. Als Comic.
-            </div>
-            <h1
-              className="text-4xl md:text-5xl font-bold text-brand-900 leading-tight"
-              style={{ fontFamily: "var(--font-display)" }}
+      {/* ── HERO ─────────────────────────────────────────────────────────── */}
+      <section ref={heroRef} className="hero-grain relative overflow-hidden" style={{ paddingTop: "100px", paddingBottom: "120px" }}>
+        <div className="relative z-10 max-w-[1120px] mx-auto px-6 grid md:grid-cols-2 gap-16 items-center">
+
+          {/* Left */}
+          <div className="space-y-8">
+            <div
+              style={{ border: "1px solid #E8D9C0", display: "inline-flex", alignItems: "center", padding: "6px 16px", borderRadius: "100px" }}
             >
-              Deine Geschichte –
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-500 to-warm-500"> als personalisierter Comic.</span>
+              <span style={{ fontSize: "13px", color: "#8B7355", fontFamily: "'DM Sans', sans-serif" }}>
+                Über 30.000 Bücher gedruckt
+              </span>
+            </div>
+
+            <h1 className="font-display" style={{ fontSize: "clamp(42px, 5vw, 62px)", fontWeight: 600, lineHeight: 1.15, color: "#1A1410" }}>
+              Deine Geschichte.<br />
+              Als <em style={{ fontStyle: "italic" }}>Comic.</em>
             </h1>
-            <p className="text-lg text-gray-500 leading-relaxed">
-              Urlaub, Liebe, Familie, Freundschaft – wir verwandeln deine echten Erinnerungen in einen Comic mit Illustrationen und echten Dialogen. Gedruckt und geliefert.
+
+            <p style={{ fontSize: "18px", color: "#8B7355", lineHeight: 1.75, maxWidth: "520px", fontFamily: "'DM Sans', sans-serif" }}>
+              Verwandle deine Erinnerungen in einen illustrierten Comic mit echten Dialogen –
+              gedruckt und direkt zu dir nach Hause geliefert.
             </p>
-            <div className="inline-flex items-center gap-2 bg-green-50 text-green-700 border border-green-200 px-4 py-2 rounded-full text-sm">
-              💡 Stichpunkte reichen – Dialoge schlagen wir dir vor
-            </div>
+
+            <p style={{ fontSize: "14px", color: "#8B7355", fontFamily: "'DM Sans', sans-serif" }}>
+              Stichpunkte reichen – wir kümmern uns um den Rest.
+            </p>
+
             <div className="flex flex-col sm:flex-row gap-4">
-              <Button onClick={onStart} size="lg">
-                Jetzt Comic erstellen 💥
-              </Button>
-              <Button variant="secondary" size="lg">
+              <button
+                onClick={onStart}
+                style={{ background: "#1A1410", color: "white", padding: "14px 32px", borderRadius: "8px", fontSize: "15px", fontFamily: "'DM Sans', sans-serif", fontWeight: 500 }}
+                className="hover:opacity-85 transition-opacity duration-200"
+              >
+                Jetzt Comic erstellen
+              </button>
+              <button
+                style={{ border: "1px solid #E8D9C0", color: "#1A1410", padding: "14px 32px", borderRadius: "8px", fontSize: "15px", fontFamily: "'DM Sans', sans-serif", background: "transparent" }}
+                className="hover:border-[#1A1410] transition-colors duration-200"
+              >
                 Beispiele ansehen
-              </Button>
+              </button>
             </div>
-          </motion.div>
+          </div>
 
-          {/* Bild rechts – image.png (neues Bild) */}
-          <motion.div
-            initial={{ opacity: 0, x: 30 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.6, delay: 0.2 }}
-            className="relative h-[500px] rounded-3xl overflow-hidden shadow-2xl"
+          {/* Right – hero image */}
+          <div
+            style={{ borderRadius: "12px", overflow: "hidden", boxShadow: "0 20px 60px rgba(26,20,16,0.12)" }}
+            className="relative h-[480px]"
           >
-            <Image
-              src="/familie.png"
-              alt="Familie liest ihr persönliches Bilderbuch"
-              fill
-              className="object-cover object-top"
-              priority
-            />
-          </motion.div>
+            <Image src="/image.png" alt="MyComicStory" fill className="object-cover object-top" priority />
+          </div>
         </div>
-      </div>
+      </section>
 
-      {/* Beispiel Buchseite */}
-      <div className="bg-white py-20">
-        <div className="max-w-5xl mx-auto px-4 space-y-12">
-          <div className="text-center space-y-3">
-            <h2
-              className="text-3xl font-bold text-brand-800"
-              style={{ fontFamily: "var(--font-display)" }}
-            >
+      {/* ── COMIC PREVIEW ────────────────────────────────────────────────── */}
+      <section style={{ paddingTop: "120px", paddingBottom: "120px", background: "#FDF8F2" }}>
+        <div ref={previewRef} className="fade-up max-w-[1120px] mx-auto px-6 space-y-12">
+          <div className="text-center space-y-4">
+            <div className="gold-line flex justify-center">
+              <div style={{ width: "48px", height: "2px", background: "#C9963A", marginBottom: "16px" }} />
+            </div>
+            <h2 className="font-display" style={{ fontSize: "clamp(28px, 3.5vw, 40px)", fontWeight: 500, color: "#1A1410" }}>
               So sieht dein Comic aus
             </h2>
-            <p className="text-gray-400 text-sm">
-              Echte Illustrationen, echte Dialoge – jede Erinnerung wird ein Panel
+            <p style={{ fontSize: "17px", color: "#8B7355", fontFamily: "'DM Sans', sans-serif" }}>
+              Echte Illustrationen, echte Dialoge – jede Erinnerung wird ein Panel.
             </p>
           </div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6 }}
-            className="relative rounded-3xl overflow-hidden shadow-2xl border border-gray-100 max-w-3xl mx-auto bg-white"
+          <div
+            style={{ borderRadius: "12px", overflow: "hidden", boxShadow: "0 8px 40px rgba(26,20,16,0.10)", border: "1px solid #E8D9C0", maxWidth: "860px", margin: "0 auto" }}
           >
-            <Image
-              src="/Comic.png"
-              alt="Beispiel Buchseite im Comic-Stil"
-              width={900}
-              height={650}
-              className="w-full h-auto"
-            />
-          </motion.div>
-
-          {/* Startseite_Bild als zweites Beispiel – nur auf Über-uns */}
-        </div>
-      </div>
-
-      {/* So einfach geht's */}
-      <div className="bg-brand-50 py-20">
-        <div className="max-w-5xl mx-auto px-4">
-          <h2
-            className="text-3xl font-bold text-center text-brand-800 mb-4"
-            style={{ fontFamily: "var(--font-display)" }}
-          >
-            So einfach wird deine Erinnerung zum Comic
-          </h2>
-          <p className="text-center text-gray-400 text-sm mb-12">
-            Keine langen Texte, keine Zeichenkenntnisse – ein paar Stichpunkte genügen.
-          </p>
-          <div className="grid md:grid-cols-4 gap-6">
-            {[
-              {
-                emoji: "✍️",
-                title: "Geschichte eingeben",
-                desc: "Stichpunkte reichen! Wer, wo, wann – mehr brauchen wir nicht.",
-              },
-              {
-                emoji: "💬",
-                title: "Dialoge vorschlagen",
-                desc: "Wir schlagen passende Dialoge vor – du kannst sie anpassen oder übernehmen.",
-              },
-              {
-                emoji: "💥",
-                title: "Comic wird erstellt",
-                desc: "Panels, Illustrationen und Sprechblasen werden vollautomatisch erstellt.",
-              },
-              {
-                emoji: "✏️",
-                title: "Bearbeiten & bestellen",
-                desc: "Alles anpassbar in der Vorschau – Texte, Dialoge, Bilder. Erst dann bestellst du.",
-              },
-            ].map((f) => (
-              <motion.div
-                key={f.title}
-                whileHover={{ y: -4 }}
-                className="text-center p-6 rounded-2xl bg-white shadow-sm space-y-3"
-              >
-                <div className="text-4xl">{f.emoji}</div>
-                <h3 className="font-bold text-brand-800">{f.title}</h3>
-                <p className="text-gray-500 text-sm leading-relaxed">{f.desc}</p>
-              </motion.div>
-            ))}
+            <Image src="/Comic.png" alt="Beispiel Comic-Seite" width={860} height={620} className="w-full h-auto" />
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* Reassurance bar */}
-      <div className="bg-white py-10 border-t border-brand-50">
-        <div className="max-w-4xl mx-auto px-4 grid md:grid-cols-3 gap-6 text-center">
-          {[
-            { emoji: "🖊️", text: "Stichpunkte reichen – kein Aufsatz nötig" },
-            { emoji: "💬", text: "Dialoge werden vorgeschlagen – du entscheidest" },
-            { emoji: "🔄", text: "Alles bearbeitbar – Panels, Dialoge, Reihenfolge" },
-          ].map((item) => (
-            <div key={item.text} className="flex items-center justify-center gap-3">
-              <span className="text-2xl">{item.emoji}</span>
-              <span className="text-sm text-brand-700 font-medium">{item.text}</span>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Referenzen */}
-      <div className="bg-brand-50 py-20">
-        <div className="max-w-5xl mx-auto px-4 space-y-10">
-          <div className="text-center space-y-3">
-            <div className="inline-flex items-center gap-2 bg-brand-100 text-brand-700 px-4 py-1.5 rounded-full text-sm font-bold">
-              ⭐ Über 30.000 glückliche Kunden
-            </div>
-            <h2 className="text-3xl font-bold text-brand-800" style={{ fontFamily: "var(--font-display)" }}>
-              Was unsere Kunden sagen
+      {/* ── HOW IT WORKS ─────────────────────────────────────────────────── */}
+      <section style={{ paddingTop: "120px", paddingBottom: "120px", background: "#F5EDE0" }}>
+        <div ref={stepsRef} className="fade-up max-w-[1120px] mx-auto px-6 space-y-14">
+          <div className="text-center space-y-4">
+            <div style={{ width: "48px", height: "2px", background: "#C9963A", margin: "0 auto 16px" }} />
+            <h2 className="font-display" style={{ fontSize: "clamp(28px, 3.5vw, 40px)", fontWeight: 500, color: "#1A1410" }}>
+              So einfach geht's
             </h2>
+            <p style={{ fontSize: "17px", color: "#8B7355", fontFamily: "'DM Sans', sans-serif" }}>
+              Keine langen Texte, keine Zeichenkenntnisse – ein paar Stichpunkte genügen.
+            </p>
           </div>
-          <div className="grid md:grid-cols-2 gap-5">
-            {REVIEWS.map((r) => (
-              <motion.div
-                key={r.name}
-                whileHover={{ y: -3 }}
-                className="bg-white rounded-2xl p-6 shadow-sm border border-brand-50 space-y-3"
+          <div className="grid md:grid-cols-4 gap-8">
+            {STEPS.map((s) => (
+              <div
+                key={s.n}
+                style={{ background: "white", border: "1px solid #E8D9C0", borderRadius: "12px", padding: "32px 28px" }}
+                className="space-y-4 hover:-translate-y-1 transition-transform duration-250"
               >
-                <div className="flex items-center justify-between">
-                  <div className="flex gap-0.5">
-                    {Array.from({ length: r.stars }).map((_, i) => (
-                      <span key={i} className="text-yellow-400">★</span>
-                    ))}
-                  </div>
-                  <span className="text-xs text-brand-300 bg-brand-50 px-2 py-1 rounded-full">{r.occasion}</span>
+                <div
+                  style={{ width: "36px", height: "36px", border: "1.5px solid #C9963A", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center" }}
+                >
+                  <span className="font-display" style={{ fontSize: "16px", color: "#C9963A", fontWeight: 500 }}>{s.n}</span>
                 </div>
-                <p className="text-gray-600 text-sm leading-relaxed italic">"{r.text}"</p>
-                <p className="text-brand-700 font-medium text-sm">— {r.name}</p>
-              </motion.div>
-            ))}
-          </div>
-          <div className="grid grid-cols-3 gap-6 max-w-lg mx-auto text-center">
-            {[
-              { number: "30.000+", label: "glückliche Kunden" },
-              { number: "4.9 ★", label: "Durchschnittsbewertung" },
-              { number: "5–7", label: "Werktage Lieferzeit" },
-            ].map((s) => (
-              <div key={s.label} className="space-y-1">
-                <div className="text-2xl font-bold text-brand-700">{s.number}</div>
-                <div className="text-xs text-gray-400">{s.label}</div>
+                <h3 className="font-display" style={{ fontSize: "20px", fontWeight: 500, color: "#1A1410" }}>{s.title}</h3>
+                <p style={{ fontSize: "16px", color: "#8B7355", lineHeight: 1.65, fontFamily: "'DM Sans', sans-serif" }}>{s.body}</p>
               </div>
             ))}
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* CTA */}
-      <div className="py-20 text-center space-y-4 bg-gradient-to-r from-brand-500 to-warm-500">
-        <h2
-          className="text-3xl font-bold text-white"
-          style={{ fontFamily: "var(--font-display)" }}
-        >
-          Bereit für deinen persönlichen Comic?
-        </h2>
-        <p className="text-white/80 text-sm">Dauert nur wenige Minuten – Stichpunkte reichen.</p>
-        <Button
-          onClick={onStart}
-          size="lg"
-          className="bg-white text-brand-700 hover:bg-brand-50 shadow-xl"
-        >
-          Jetzt Comic erstellen 💥
-        </Button>
-      </div>
+      {/* ── BENEFITS ─────────────────────────────────────────────────────── */}
+      <section style={{ paddingTop: "120px", paddingBottom: "120px", background: "#FDF8F2" }}>
+        <div ref={benefitRef} className="fade-up max-w-[1120px] mx-auto px-6">
+          <div className="grid md:grid-cols-3 gap-12">
+            {BENEFITS.map((b) => (
+              <div key={b.title} className="space-y-4" style={{ borderTop: "2px solid #C9963A", paddingTop: "24px" }}>
+                <h3 className="font-display" style={{ fontSize: "22px", fontWeight: 500, color: "#1A1410" }}>{b.title}</h3>
+                <p style={{ fontSize: "16px", color: "#8B7355", lineHeight: 1.75, fontFamily: "'DM Sans', sans-serif" }}>{b.body}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── TESTIMONIALS ─────────────────────────────────────────────────── */}
+      <section style={{ paddingTop: "120px", paddingBottom: "120px", background: "#F5EDE0" }}>
+        <div ref={testiRef} className="fade-up max-w-[1120px] mx-auto px-6 space-y-14">
+          <div className="text-center space-y-4">
+            <div style={{ width: "48px", height: "2px", background: "#C9963A", margin: "0 auto 16px" }} />
+            <h2 className="font-display" style={{ fontSize: "clamp(28px, 3.5vw, 40px)", fontWeight: 500, color: "#1A1410" }}>
+              Was unsere Kunden sagen
+            </h2>
+          </div>
+          <div className="grid md:grid-cols-2 gap-8">
+            {TESTIMONIALS.map((t) => (
+              <div
+                key={t.name}
+                style={{ background: "white", border: "1px solid #E8D9C0", borderRadius: "12px", padding: "40px 36px", position: "relative", overflow: "hidden" }}
+                className="hover:-translate-y-1 transition-transform duration-250"
+              >
+                {/* Decorative quote */}
+                <span
+                  className="font-display"
+                  style={{ position: "absolute", top: "12px", left: "24px", fontSize: "72px", color: "#C9963A", opacity: 0.25, lineHeight: 1, pointerEvents: "none", userSelect: "none" }}
+                >
+                  "
+                </span>
+                <div className="space-y-5 relative z-10">
+                  {/* Stars */}
+                  <div className="flex gap-1">
+                    {[1,2,3,4,5].map((i) => (
+                      <svg key={i} width="14" height="14" viewBox="0 0 14 14" fill="#C9963A">
+                        <path d="M7 1l1.5 4h4l-3.3 2.4 1.3 4L7 9 3.5 11.4l1.3-4L1.5 5h4z"/>
+                      </svg>
+                    ))}
+                  </div>
+                  <p className="font-display" style={{ fontSize: "18px", fontStyle: "italic", color: "#1A1410", lineHeight: 1.7 }}>
+                    {t.quote}
+                  </p>
+                  <p style={{ fontSize: "13px", color: "#9E8C75", fontFamily: "'DM Sans', sans-serif" }}>
+                    — {t.name} · {t.occasion}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── STATS ────────────────────────────────────────────────────────── */}
+      <section style={{ background: "#1A1410", paddingTop: "100px", paddingBottom: "100px" }}>
+        <div ref={statsRef} className="fade-up max-w-[1120px] mx-auto px-6">
+          <div className="grid md:grid-cols-3 divide-y md:divide-y-0 md:divide-x" style={{ borderColor: "rgba(255,255,255,0.08)" }}>
+            {STATS.map((s, i) => (
+              <div key={i} className="text-center py-10 md:py-0 px-8 space-y-2">
+                <p className="font-display" style={{ fontSize: "52px", fontWeight: 500, color: "#C9963A", lineHeight: 1 }}>
+                  {s.isDecimal
+                    ? <>{s.value}{s.suffix}</>
+                    : <Counter target={s.value} suffix={s.suffix} />
+                  }
+                </p>
+                <p style={{ fontSize: "13px", color: "#8B7355", fontFamily: "'DM Sans', sans-serif", letterSpacing: "0.08em", textTransform: "uppercase" }}>
+                  {s.label}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── CLOSING CTA ──────────────────────────────────────────────────── */}
+      <section style={{ background: "#F5EDE0", paddingTop: "120px", paddingBottom: "120px" }}>
+        <div ref={ctaRef} className="fade-up max-w-[1120px] mx-auto px-6 text-center space-y-8">
+          <div style={{ width: "48px", height: "2px", background: "#C9963A", margin: "0 auto 16px" }} />
+          <h2 className="font-display" style={{ fontSize: "clamp(28px, 3.5vw, 42px)", fontWeight: 500, color: "#1A1410" }}>
+            Bereit für deinen persönlichen Comic?
+          </h2>
+          <p style={{ fontSize: "17px", color: "#8B7355", fontFamily: "'DM Sans', sans-serif" }}>
+            Dauert nur wenige Minuten – Stichpunkte reichen.
+          </p>
+          <button
+            onClick={onStart}
+            style={{ background: "#1A1410", color: "white", padding: "16px 48px", borderRadius: "8px", fontSize: "16px", fontFamily: "'DM Sans', sans-serif", fontWeight: 500 }}
+            className="hover:opacity-85 transition-opacity duration-200"
+          >
+            Jetzt Comic erstellen
+          </button>
+        </div>
+      </section>
+
       <Footer />
     </div>
   );
