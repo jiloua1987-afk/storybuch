@@ -91,9 +91,9 @@ export function buildPageSVG(overlay: PanelTextOverlay): string {
 
   // Page title
   svg += `<text x="${W / 2}" y="52" text-anchor="middle"
-    font-family="Arial Black, Impact, sans-serif"
-    font-size="42" font-weight="900" fill="#1A1410"
-    letter-spacing="2">${escXml(pageTitle.toUpperCase())}</text>`;
+    font-family="Arial Black, Arial, sans-serif"
+    font-size="38" font-weight="900" fill="#1A1410"
+    letter-spacing="1">${escXml(pageTitle.toUpperCase())}</text>`;
 
   if (pageSubtitle) {
     svg += `<text x="${W / 2}" y="74" text-anchor="middle"
@@ -130,7 +130,7 @@ export function buildPageSVG(overlay: PanelTextOverlay): string {
       // Text lines
       lines.forEach((line, i) => {
         svg += `<text x="${bx + 8}" y="${by + 18 + i * 22}"
-          font-family="Arial, sans-serif" font-size="14" font-weight="600" fill="#1A1410">${escXml(line)}</text>`;
+          font-family="Arial, sans-serif" font-size="13" font-weight="bold" fill="#1A1410">${escXml(line)}</text>`;
       });
     }
   }
