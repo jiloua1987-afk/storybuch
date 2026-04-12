@@ -292,5 +292,3 @@ export default function Step2Upload() {
     </motion.div>
   );
 }
-# Sun Apr 12 11:11:30 CEST 2026
-
