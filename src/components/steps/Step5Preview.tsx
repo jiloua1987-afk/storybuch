@@ -63,13 +63,11 @@ export default function Step5Preview() {
               /* Cover */
               <div className="relative w-full max-w-sm mx-auto" style={{ aspectRatio: "1024/1536" }}>
                 {project.coverImageUrl ? (
-                  <Image
-                    src={project.coverImageUrl}
-                    alt="Cover"
-                    fill
-                    className="object-cover"
-                    unoptimized={project.coverImageUrl.startsWith("data:")}
-                  />
+                  project.coverImageUrl.startsWith("data:") ? (
+                    <img src={project.coverImageUrl} alt="Cover" className="w-full h-full object-cover" />
+                  ) : (
+                    <Image src={project.coverImageUrl} alt="Cover" fill className="object-cover" unoptimized />
+                  )
                 ) : (
                   <div className="absolute inset-0 bg-gradient-to-b from-purple-600 to-purple-900 flex items-end p-8">
                     <h1 className="font-display text-4xl font-bold text-white">{project.title}</h1>
@@ -85,8 +83,12 @@ export default function Step5Preview() {
                     <p className="text-purple-600 font-medium text-sm">Seite wird neu illustriert…</p>
                   </div>
                 ) : page.imageUrl ? (
-                  <Image src={page.imageUrl} alt={page.title} fill className="object-contain"
-                    unoptimized={page.imageUrl.startsWith("data:")} />
+                  page.imageUrl.startsWith("data:") ? (
+                    <img src={page.imageUrl} alt={page.title}
+                      className="w-full h-full object-contain" />
+                  ) : (
+                    <Image src={page.imageUrl} alt={page.title} fill className="object-contain" unoptimized />
+                  )
                 ) : (
                   <div className="absolute inset-0 bg-gray-100 flex items-center justify-center">
                     <p className="text-gray-400">Kein Bild verfügbar</p>
@@ -140,8 +142,11 @@ export default function Step5Preview() {
             className={`relative rounded-xl overflow-hidden border-2 transition-all ${currentPage === -1 ? "border-purple-500 shadow-md" : "border-transparent hover:border-purple-200"}`}
             style={{ aspectRatio: "2/3" }}>
             {project.coverImageUrl ? (
-              <Image src={project.coverImageUrl} alt="Cover" fill className="object-cover"
-                unoptimized={project.coverImageUrl.startsWith("data:")} />
+              project.coverImageUrl.startsWith("data:") ? (
+                <img src={project.coverImageUrl} alt="Cover" className="w-full h-full object-cover" />
+              ) : (
+                <Image src={project.coverImageUrl} alt="Cover" fill className="object-cover" unoptimized />
+              )
             ) : (
               <div className="absolute inset-0 bg-gradient-to-b from-purple-400 to-purple-700 flex items-center justify-center">
                 <span className="text-white text-xs font-bold">Cover</span>
@@ -154,8 +159,11 @@ export default function Step5Preview() {
               className={`relative rounded-xl overflow-hidden border-2 transition-all ${i === currentPage ? "border-purple-500 shadow-md" : "border-transparent hover:border-purple-200"}`}
               style={{ aspectRatio: "3/2" }}>
               {p.imageUrl ? (
-                <Image src={p.imageUrl} alt={p.title} fill className="object-cover"
-                  unoptimized={p.imageUrl.startsWith("data:")} />
+                p.imageUrl.startsWith("data:") ? (
+                  <img src={p.imageUrl} alt={p.title} className="w-full h-full object-cover" />
+                ) : (
+                  <Image src={p.imageUrl} alt={p.title} fill className="object-cover" unoptimized />
+                )
               ) : (
                 <div className="absolute inset-0 bg-gray-100 flex items-center justify-center">
                   <span className="text-gray-400 text-xs">{i + 1}</span>
