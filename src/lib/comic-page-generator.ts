@@ -94,7 +94,8 @@ export async function generateComicPage(
   characters: Character[],
   illustrationStyle: string,
   comicStyle: string,
-  category: string = "familie"
+  category: string = "familie",
+  styleReferenceBase64?: string  // Base64 des Comic.png Referenzbilds
 ): Promise<string> {
   const prompt = buildComicPagePrompt({
     title: page.title,
@@ -108,6 +109,33 @@ export async function generateComicPage(
   });
 
   try {
+    // Mit Stil-Referenzbild (gpt-image-1 image input via responses API)
+    if (styleReferenceBase64) {
+      const response = await (openai as any).responses.create({
+        model: "gpt-image-1",
+        input: [
+          {
+            role: "user",
+            content: [
+              {
+                type: "input_image",
+                image_url: `data:image/png;base64,${styleReferenceBase64}`,
+              },
+              {
+                type: "input_text",
+                text: `Use the art style, character drawing technique, and panel quality from this reference image. Apply the same watercolor comic style and character proportions. Then create: ${prompt}`,
+              },
+            ],
+          },
+        ],
+        output: [{ type: "image_generation_call", quality: "high", size: "1536x1024" }],
+      });
+
+      const output = response.output?.[0];
+      if (output?.result) return `data:image/png;base64,${output.result}`;
+    }
+
+    // Ohne Referenzbild – standard generate
     const response = await openai.images.generate({
       model: "gpt-image-1",
       prompt,
@@ -124,6 +152,22 @@ export async function generateComicPage(
     return "";
   } catch (err: any) {
     console.error(`Page ${page.pageNumber} generation error:`, err.message);
+    // Fallback ohne Referenz
+    try {
+      const response = await openai.images.generate({
+        model: "gpt-image-1",
+        prompt,
+        n: 1,
+        size: "1536x1024",
+        quality: "high",
+      });
+      const data = response.data ?? [];
+      const item = data[0];
+      if (item?.url) return item.url;
+      if (item?.b64_json) return `data:image/png;base64,${item.b64_json}`;
+    } catch {
+      // ignore
+    }
     return `https://picsum.photos/seed/comic-page-${page.pageNumber}/1536/1024`;
   }
 }

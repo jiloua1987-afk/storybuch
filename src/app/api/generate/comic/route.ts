@@ -1,6 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
 import { buildComicStructure, buildCharacterAnchors, generateComicPage } from "@/lib/comic-page-generator";
 import { buildPageSVG, getPanelLayouts } from "@/lib/sharp-compositor";
+import fs from "fs";
+import path from "path";
+
+// Lade Stil-Referenzbild einmalig beim Start
+function loadStyleReference(): string | undefined {
+  try {
+    const refPath = path.join(process.cwd(), "public", "Comic.png");
+    if (fs.existsSync(refPath)) {
+      return fs.readFileSync(refPath).toString("base64");
+    }
+  } catch { /* ignore */ }
+  return undefined;
+}
+
+const STYLE_REFERENCE_B64 = loadStyleReference();
 
 export async function POST(req: NextRequest) {
   try {
@@ -37,7 +52,7 @@ export async function POST(req: NextRequest) {
 
     for (const page of pages) {
       // Generate raw image without text
-      const rawImageUrl = await generateComicPage(page, characters, illustrationStyle || "comic", comicStyle || "emotional", category);
+      const rawImageUrl = await generateComicPage(page, characters, illustrationStyle || "comic", comicStyle || "emotional", category, STYLE_REFERENCE_B64);
 
       // Fetch raw image
       let finalImageUrl = rawImageUrl;
