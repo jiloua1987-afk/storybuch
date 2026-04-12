@@ -131,14 +131,31 @@ export default function Step4Generate() {
 
       setGenerationProgress(STEPS[5].progress, STEPS[5].label);
       setStepIndex(5);
-      await new Promise((r) => setTimeout(r, 600));
+
+      // Step 5: Sprechblasen auf Bilder compositen
+      const chaptersWithBubbles = await Promise.all(
+        chaptersWithImages.map(async (ch: any) => {
+          if (!ch.dialogs?.length || !ch.imageUrl) return ch;
+          try {
+            const res = await fetch("/api/generate/bubbles", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ imageUrl: ch.imageUrl, dialogs: ch.dialogs }),
+            });
+            const data = res.ok ? await res.json() : {};
+            return { ...ch, imageUrl: data.compositeUrl || ch.imageUrl };
+          } catch {
+            return ch;
+          }
+        })
+      );
 
       setGenerationProgress(STEPS[6].progress, STEPS[6].label);
       setStepIndex(6);
       await new Promise((r) => setTimeout(r, 400));
 
       // Map to BookProject chapters format
-      const finalChapters = chaptersWithImages.map((ch: any) => ({
+      const finalChapters = chaptersWithBubbles.map((ch: any) => ({
         id: ch.id || `ch-${Math.random()}`,
         title: ch.titel || ch.title || "Kapitel",
         content: ch.handlung || ch.content || "",
