@@ -7,251 +7,156 @@ import Image from "next/image";
 import toast from "react-hot-toast";
 
 export default function Step5Preview() {
-  const { project, setStep, updateChapter, updateProject } = useBookStore();
-  const [currentPage, setCurrentPage] = useState(-1); // -1 = cover
-  const [editingChapter, setEditingChapter] = useState<string | null>(null);
-  const [editText, setEditText] = useState("");
-  const [editTitle, setEditTitle] = useState("");
-  const [regenerating, setRegenerating] = useState<string | null>(null);
+  const { project, setStep, updateChapter } = useBookStore();
+  const [currentPage, setCurrentPage] = useState(0);
   const [direction, setDirection] = useState(1);
+  const [regenerating, setRegenerating] = useState<string | null>(null);
 
   if (!project) return null;
 
-  const chapters = project.chapters;
-  const totalPages = chapters.length;
+  const pages = project.chapters;
+  const total = pages.length;
+  const page = pages[currentPage];
 
   const goNext = () => {
-    if (currentPage < totalPages - 1) {
-      setDirection(1);
-      setCurrentPage((p) => p + 1);
-    }
+    if (currentPage < total - 1) { setDirection(1); setCurrentPage((p) => p + 1); }
   };
-
   const goPrev = () => {
-    if (currentPage > -1) {
-      setDirection(-1);
-      setCurrentPage((p) => p - 1);
-    }
+    if (currentPage > 0) { setDirection(-1); setCurrentPage((p) => p - 1); }
   };
 
-  const startEdit = (chapterId: string) => {
-    const ch = chapters.find((c) => c.id === chapterId);
-    if (!ch) return;
-    setEditText(ch.content);
-    setEditTitle(ch.title);
-    setEditingChapter(chapterId);
-  };
-
-  const saveEdit = () => {
-    if (!editingChapter) return;
-    updateChapter(editingChapter, { content: editText, title: editTitle });
-    setEditingChapter(null);
-    toast.success("Kapitel gespeichert!");
-  };
-
-  const handleRegenImage = async (chapterId: string) => {
-    setRegenerating(chapterId);
-    // Simulate regeneration delay
+  const handleRegenPage = async (pageId: string) => {
+    setRegenerating(pageId);
     await new Promise((r) => setTimeout(r, 2000));
-    const seeds = ["nature1", "city2", "family3", "adventure4", "sunset5", "travel6"];
-    const newSeed = seeds[Math.floor(Math.random() * seeds.length)];
-    updateChapter(chapterId, {
-      imageUrl: `https://picsum.photos/seed/${newSeed}-${Date.now()}/800/500`,
-    });
+    const seeds = ["comic1", "comic2", "comic3", "comic4", "comic5"];
+    const seed = seeds[Math.floor(Math.random() * seeds.length)];
+    updateChapter(pageId, { imageUrl: `https://picsum.photos/seed/${seed}-${Date.now()}/1536/1024` });
     setRegenerating(null);
-    toast.success("Neues Bild generiert!");
+    toast.success("Seite neu erstellt!");
   };
-
-  const currentChapter = currentPage >= 0 ? chapters[currentPage] : null;
 
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      className="max-w-4xl mx-auto space-y-6"
-    >
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="max-w-5xl mx-auto space-y-6">
+
+      {/* Header */}
       <div className="text-center space-y-1">
-        <h2 className="text-3xl font-bold text-brand-800" style={{ fontFamily: "var(--font-display)" }}>
-          Dein Buch 📖
-        </h2>
-        <p className="text-gray-500 text-sm">
-          {currentPage === -1 ? "Titelseite" : `Kapitel ${currentPage + 1} von ${totalPages}`}
-        </p>
+        <h2 className="font-display text-3xl font-semibold text-[#1f1a2e]">{project.title}</h2>
+        <p className="text-gray-400 text-sm">Seite {currentPage + 1} von {total}</p>
       </div>
 
-      {/* Book viewer */}
-      <div className="book-container relative">
+      {/* Comic Page Viewer */}
+      <div className="relative">
         <AnimatePresence mode="wait" custom={direction}>
           <motion.div
             key={currentPage}
             custom={direction}
-            initial={{ opacity: 0, x: direction * 60 }}
+            initial={{ opacity: 0, x: direction * 40 }}
             animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: direction * -60 }}
-            transition={{ duration: 0.4, ease: "easeInOut" }}
-            className="bg-white rounded-3xl shadow-2xl overflow-hidden border border-brand-100"
+            exit={{ opacity: 0, x: direction * -40 }}
+            transition={{ duration: 0.35 }}
+            className="bg-white rounded-2xl overflow-hidden shadow-xl border border-gray-100"
           >
-            {currentPage === -1 ? (
-              /* Cover page */
-              <div className="relative h-[500px] flex flex-col items-center justify-end pb-12">
+            {/* Full-page comic image */}
+            <div className="relative w-full" style={{ aspectRatio: "1536/1024" }}>
+              {regenerating === page.id ? (
+                <div className="absolute inset-0 bg-purple-50 flex flex-col items-center justify-center gap-3">
+                  <div className="text-4xl animate-pulse">🎨</div>
+                  <p className="text-purple-600 font-medium text-sm">Seite wird neu illustriert…</p>
+                </div>
+              ) : page.imageUrl ? (
                 <Image
-                  src={project.coverImageUrl || "https://picsum.photos/seed/cover/800/500"}
-                  alt="Buchcover"
+                  src={page.imageUrl}
+                  alt={page.title}
                   fill
-                  className="object-cover"
+                  className="object-contain"
+                  unoptimized={page.imageUrl.startsWith("data:")}
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
-                <div className="relative z-10 text-center px-8">
-                  <h1
-                    className="text-4xl font-bold text-white drop-shadow-lg"
-                    style={{ fontFamily: "var(--font-display)" }}
-                  >
-                    {project.title}
-                  </h1>
-                  <p className="text-white/80 mt-2 text-sm">Ein persönliches Buch</p>
+              ) : (
+                <div className="absolute inset-0 bg-gray-100 flex items-center justify-center">
+                  <p className="text-gray-400">Kein Bild verfügbar</p>
                 </div>
-              </div>
-            ) : currentChapter ? (
-              /* Chapter page */
-              <div className="grid md:grid-cols-2 min-h-[500px]">
-                {/* Image side */}
-                <div className="relative h-64 md:h-auto">
-                  {regenerating === currentChapter.id ? (
-                    <div className="absolute inset-0 shimmer flex items-center justify-center">
-                      <span className="text-brand-600 font-medium animate-pulse">Bild wird generiert…</span>
-                    </div>
-                  ) : (
-                    <Image
-                      src={currentChapter.imageUrl || "https://picsum.photos/seed/default/800/500"}
-                      alt={currentChapter.title}
-                      fill
-                      className="object-cover"
-                    />
-                  )}
-                  <button
-                    onClick={() => handleRegenImage(currentChapter.id)}
-                    disabled={!!regenerating}
-                    className="absolute bottom-3 right-3 bg-white/90 backdrop-blur text-brand-700 text-xs px-3 py-1.5 rounded-full shadow hover:bg-white transition-all disabled:opacity-50"
-                  >
-                    🔄 Neu erstellen
-                  </button>
-                </div>
+              )}
+            </div>
 
-                {/* Text side */}
-                <div className="p-8 flex flex-col justify-between">
-                  {editingChapter === currentChapter.id ? (
-                    <div className="space-y-3 flex-1">
-                      <input
-                        value={editTitle}
-                        onChange={(e) => setEditTitle(e.target.value)}
-                        className="w-full text-xl font-bold text-brand-800 border-b-2 border-brand-200 focus:border-brand-400 focus:outline-none pb-1"
-                        style={{ fontFamily: "var(--font-display)" }}
-                      />
-                      <textarea
-                        value={editText}
-                        onChange={(e) => setEditText(e.target.value)}
-                        rows={8}
-                        className="w-full text-sm text-gray-700 border border-brand-100 rounded-xl p-3 focus:border-brand-400 focus:outline-none resize-none leading-relaxed"
-                      />
-                      <div className="flex gap-2">
-                        <Button size="sm" onClick={saveEdit}>Speichern</Button>
-                        <Button size="sm" variant="ghost" onClick={() => setEditingChapter(null)}>Abbrechen</Button>
-                      </div>
-                    </div>
-                  ) : (
-                    <>
-                      <div className="space-y-4">
-                        <div className="flex items-start justify-between gap-2">
-                          <h3
-                            className="text-xl font-bold text-brand-800"
-                            style={{ fontFamily: "var(--font-display)" }}
-                          >
-                            {currentChapter.title}
-                          </h3>
-                          <button
-                            onClick={() => startEdit(currentChapter.id)}
-                            className="text-brand-400 hover:text-brand-600 text-sm flex-shrink-0"
-                          >
-                            ✏️ Bearbeiten
-                          </button>
-                        </div>
-                        <p className="prose-book text-sm leading-relaxed text-gray-700">
-                          {currentChapter.content}
-                        </p>
-                      </div>
-                      <div className="text-xs text-gray-300 text-right mt-4">
-                        Seite {currentPage + 2}
-                      </div>
-                    </>
-                  )}
-                </div>
+            {/* Page info bar */}
+            <div className="px-6 py-4 flex items-center justify-between border-t border-gray-100">
+              <div>
+                <h3 className="font-display font-semibold text-[#1f1a2e]">{page.title}</h3>
+                {page.content && (
+                  <p className="text-gray-400 text-xs mt-0.5 line-clamp-1">{page.content}</p>
+                )}
               </div>
-            ) : null}
+              <button
+                onClick={() => handleRegenPage(page.id)}
+                disabled={!!regenerating}
+                className="text-xs text-purple-500 hover:text-purple-700 border border-purple-200 px-3 py-1.5 rounded-lg hover:bg-purple-50 transition-all disabled:opacity-40"
+              >
+                Neu illustrieren
+              </button>
+            </div>
           </motion.div>
         </AnimatePresence>
       </div>
 
       {/* Navigation */}
       <div className="flex items-center justify-between">
-        <Button
-          variant="secondary"
-          onClick={goPrev}
-          disabled={currentPage === -1}
-          size="sm"
-        >
+        <Button variant="secondary" onClick={goPrev} disabled={currentPage === 0} size="sm">
           ← Vorherige Seite
         </Button>
 
         {/* Page dots */}
-        <div className="flex gap-1.5">
-          {[-1, ...chapters.map((_, i) => i)].map((p) => (
+        <div className="flex gap-2 items-center">
+          {pages.map((_, i) => (
             <button
-              key={p}
-              onClick={() => setCurrentPage(p)}
-              className={`w-2 h-2 rounded-full transition-all ${
-                p === currentPage ? "bg-brand-500 w-4" : "bg-brand-200"
-              }`}
+              key={i}
+              onClick={() => setCurrentPage(i)}
+              className={`rounded-full transition-all ${i === currentPage ? "w-6 h-2.5 bg-purple-500" : "w-2.5 h-2.5 bg-purple-200"}`}
             />
           ))}
         </div>
 
-        <Button
-          variant="secondary"
-          onClick={goNext}
-          disabled={currentPage === totalPages - 1}
-          size="sm"
-        >
+        <Button variant="secondary" onClick={goNext} disabled={currentPage === total - 1} size="sm">
           Nächste Seite →
         </Button>
       </div>
 
-      {/* Chapter list */}
-      <div className="bg-brand-50 rounded-2xl p-4 space-y-2">
-        <h3 className="text-sm font-semibold text-brand-700">📋 Inhaltsverzeichnis</h3>
-        <div className="space-y-1">
-          {chapters.map((ch, i) => (
+      {/* Page overview */}
+      <div className="bg-purple-50 rounded-2xl p-4 space-y-3">
+        <h3 className="text-sm font-semibold text-[#1f1a2e]">Alle Seiten</h3>
+        <div className="grid grid-cols-4 gap-3">
+          {pages.map((p, i) => (
             <button
-              key={ch.id}
+              key={p.id}
               onClick={() => setCurrentPage(i)}
-              className={`w-full text-left px-3 py-2 rounded-xl text-sm transition-all ${
-                currentPage === i
-                  ? "bg-brand-500 text-white"
-                  : "hover:bg-brand-100 text-gray-600"
+              className={`relative rounded-xl overflow-hidden border-2 transition-all ${
+                i === currentPage ? "border-purple-500 shadow-md" : "border-transparent hover:border-purple-200"
               }`}
+              style={{ aspectRatio: "3/2" }}
             >
-              <span className="font-medium">{i + 1}.</span> {ch.title}
+              {p.imageUrl ? (
+                <Image
+                  src={p.imageUrl}
+                  alt={p.title}
+                  fill
+                  className="object-cover"
+                  unoptimized={p.imageUrl.startsWith("data:")}
+                />
+              ) : (
+                <div className="absolute inset-0 bg-gray-100 flex items-center justify-center">
+                  <span className="text-gray-400 text-xs">{i + 1}</span>
+                </div>
+              )}
+              <div className="absolute bottom-0 inset-x-0 bg-black/50 px-1.5 py-1">
+                <p className="text-white text-xs truncate">{p.title}</p>
+              </div>
             </button>
           ))}
         </div>
       </div>
 
       <div className="flex gap-3">
-        <Button variant="secondary" onClick={() => setStep(2)}>
-          ← Stil ändern
-        </Button>
-        <Button onClick={() => setStep(5)} fullWidth size="lg">
-          Jetzt bestellen 🚀
-        </Button>
+        <Button variant="secondary" onClick={() => setStep(2)}>← Zurück</Button>
+        <Button onClick={() => setStep(5)} fullWidth size="lg">Jetzt bestellen</Button>
       </div>
     </motion.div>
   );

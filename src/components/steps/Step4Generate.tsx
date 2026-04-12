@@ -3,192 +3,99 @@ import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useBookStore } from "@/store/bookStore";
 import ProgressBar from "@/components/ui/ProgressBar";
-import { DUMMY_PROJECT } from "@/lib/dummyData";
 
-interface ProgressStep {
-  label: string;
-  progress: number;
-}
-
-const STEPS: ProgressStep[] = [
-  { label: "Geschichte wird analysiert…",        progress: 8  },
-  { label: "Kapitelstruktur wird erstellt…",      progress: 20 },
-  { label: "Figuren werden extrahiert…",          progress: 32 },
-  { label: "Dialoge werden geschrieben…",         progress: 48 },
-  { label: "Illustrationen werden erstellt…",     progress: 65 },
-  { label: "Sprechblasen werden hinzugefügt…",    progress: 80 },
-  { label: "Layout wird formatiert…",             progress: 92 },
-  { label: "Dein Comic ist fertig!",              progress: 100 },
+const STEPS = [
+  { label: "Geschichte wird analysiert…",       progress: 10 },
+  { label: "Comic-Struktur wird erstellt…",      progress: 25 },
+  { label: "Seite 1 wird illustriert…",          progress: 40 },
+  { label: "Seite 2 wird illustriert…",          progress: 55 },
+  { label: "Seite 3 wird illustriert…",          progress: 70 },
+  { label: "Seite 4 wird illustriert…",          progress: 85 },
+  { label: "Comic wird finalisiert…",            progress: 95 },
+  { label: "Dein Comic ist fertig!",             progress: 100 },
 ];
 
 export default function Step4Generate() {
-  const { setStep, project, updateProject, setGenerationProgress, generationProgress, generationStatus } =
-    useBookStore();
+  const { setStep, project, updateProject, setGenerationProgress } = useBookStore();
   const [stepIndex, setStepIndex] = useState(0);
   const [done, setDone] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [debugInfo, setDebugInfo] = useState<string>("");
 
-  useEffect(() => {
-    runGeneration();
-  }, []);
+  useEffect(() => { runGeneration(); }, []);
 
   async function runGeneration() {
     try {
-      // Step 1-2: Buchstruktur + Characters via GPT-4o
       setGenerationProgress(STEPS[0].progress, STEPS[0].label);
       setStepIndex(0);
+      setDebugInfo("Verbinde mit API…");
 
-      let chapters: any[] = [];
-      let characters: any[] = [];
-
-      setDebugInfo("Rufe API auf...");
-      const structureRes = await fetch("/api/generate/structure", {
+      const res = await fetch("/api/generate/comic", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          storyInput: project?.storyInput || "",
-          guidedAnswers: project?.guidedAnswers || {},
-          tone: project?.tone || "humorvoll",
-          language: project?.language || "de",
+          storyInput:        project?.storyInput || "",
+          guidedAnswers:     project?.guidedAnswers || {},
+          tone:              project?.tone || "humorvoll",
+          comicStyle:        project?.comicStyle || "emotional",
+          mustHaveSentences: project?.mustHaveSentences || "",
+          language:          project?.language || "de",
+          illustrationStyle: project?.illustrationStyle || "comic",
+          characters:        project?.characters || [],
+          numPages:          4,
         }),
       });
 
       setGenerationProgress(STEPS[1].progress, STEPS[1].label);
       setStepIndex(1);
 
-      if (structureRes.ok) {
-        const data = await structureRes.json();
-        chapters = data.chapters || [];
-        characters = data.characters || [];
-        setDebugInfo(`API OK: ${chapters.length} Kapitel, ${characters.length} Figuren`);
-        // Fallback if GPT returned empty
-        if (chapters.length === 0) {
-          setDebugInfo("GPT antwortete leer – nutze Demo-Daten als Fallback");
-          chapters = DUMMY_PROJECT.chapters.map((c) => ({
-            id: c.id, nummer: 1, titel: c.title,
-            handlung: c.content, szene_beschreibung: c.content,
-            illustration_prompt: c.imagePrompt || "",
-          }));
-        }
-      } else {
-        const errData = await structureRes.json().catch(() => ({}));
-        const msg = `API Fehler ${structureRes.status}: ${errData.error || structureRes.statusText}`;
-        setDebugInfo(msg);
-        throw new Error(msg);
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(`API Fehler ${res.status}: ${err.error || res.statusText}`);
       }
 
-      setGenerationProgress(STEPS[2].progress, STEPS[2].label);
-      setStepIndex(2);
+      const data = await res.json();
+      const pages = data.pages || [];
 
-      // Step 3: Dialoge generieren
-      setGenerationProgress(STEPS[3].progress, STEPS[3].label);
-      setStepIndex(3);
+      if (!pages.length) throw new Error("Keine Seiten generiert. Bitte nochmal versuchen.");
 
-      const chaptersWithDialogs = await Promise.all(
-        chapters.map(async (ch: any) => {
-          try {
-            const res = await fetch("/api/generate/dialogs", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                chapter: ch,
-                characters,
-                tone: project?.tone || "humorvoll",
-                comicStyle: project?.comicStyle || "emotional",
-                mustHaveSentences: project?.mustHaveSentences || "",
-                language: project?.language || "de",
-              }),
-            });
-            const data = res.ok ? await res.json() : { dialogs: [] };
-            return { ...ch, dialogs: data.dialogs || [] };
-          } catch {
-            return { ...ch, dialogs: [] };
-          }
-        })
-      );
+      setDebugInfo(`${pages.length} Seiten generiert`);
 
-      // Step 4: Bilder generieren
-      setGenerationProgress(STEPS[4].progress, STEPS[4].label);
-      setStepIndex(4);
+      // Update progress per page
+      pages.forEach((_: any, i: number) => {
+        const s = STEPS[2 + i] || STEPS[STEPS.length - 2];
+        setGenerationProgress(s.progress, s.label);
+        setStepIndex(2 + i);
+      });
 
-      const chaptersWithImages = await Promise.all(
-        chaptersWithDialogs.map(async (ch: any) => {
-          try {
-            const positions = (ch.dialogs || []).map((d: any) => d.position).slice(0, 2);
-            const res = await fetch("/api/generate/image", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                chapter: ch,
-                characters,
-                illustrationStyle: project?.illustrationStyle || "comic",
-                dialogPositions: positions,
-              }),
-            });
-            const data = res.ok ? await res.json() : {};
-            return { ...ch, imageUrl: data.imageUrl || `https://picsum.photos/seed/${ch.id}/800/500` };
-          } catch {
-            return { ...ch, imageUrl: `https://picsum.photos/seed/${ch.id}/800/500` };
-          }
-        })
-      );
-
-      setGenerationProgress(STEPS[5].progress, STEPS[5].label);
-      setStepIndex(5);
-
-      // Step 5: Sprechblasen auf Bilder compositen
-      const chaptersWithBubbles = await Promise.all(
-        chaptersWithImages.map(async (ch: any) => {
-          if (!ch.dialogs?.length || !ch.imageUrl) return ch;
-          try {
-            const res = await fetch("/api/generate/bubbles", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ imageUrl: ch.imageUrl, dialogs: ch.dialogs }),
-            });
-            const data = res.ok ? await res.json() : {};
-            return { ...ch, imageUrl: data.compositeUrl || ch.imageUrl };
-          } catch {
-            return ch;
-          }
-        })
-      );
-
-      setGenerationProgress(STEPS[6].progress, STEPS[6].label);
-      setStepIndex(6);
-      await new Promise((r) => setTimeout(r, 400));
-
-      // Map to BookProject chapters format
-      const finalChapters = chaptersWithBubbles.map((ch: any) => ({
-        id: ch.id || `ch-${Math.random()}`,
-        title: ch.titel || ch.title || "Kapitel",
-        content: ch.handlung || ch.content || "",
-        imageUrl: ch.imageUrl,
-        imagePrompt: ch.illustration_prompt || "",
-        dialogs: ch.dialogs || [],
+      // Map pages to chapters format for existing preview
+      const chapters = pages.map((p: any) => ({
+        id: p.id || `page-${p.pageNumber}`,
+        title: p.title || `Seite ${p.pageNumber}`,
+        content: p.panels?.map((panel: any) => panel.dialog || "").filter(Boolean).join(" ") || "",
+        imageUrl: p.imageUrl,
+        imagePrompt: "",
+        panels: p.panels || [],
       }));
 
       updateProject({
-        ...DUMMY_PROJECT,
-        id: project?.id || "demo",
-        title: project?.title || DUMMY_PROJECT.title,
-        tone: project?.tone || DUMMY_PROJECT.tone,
-        design: project?.design || DUMMY_PROJECT.design,
-        chapters: finalChapters,
-        characters: characters.map((c: any, i: number) => ({
-          id: `char-${i}`,
-          name: c.name,
-          role: "Hauptfigur",
-          imageUrl: undefined,
-        })),
+        id: project?.id || `proj-${Date.now()}`,
+        title: project?.title || "Mein Comic",
+        storyInput: project?.storyInput || "",
+        guidedAnswers: project?.guidedAnswers || { characters: "", location: "", timeframe: "", specialMoments: "" },
+        tone: project?.tone || "humorvoll",
+        design: "kinderbuch",
+        characters: project?.characters || [],
+        chapters,
         status: "preview",
+        createdAt: project?.createdAt || new Date().toISOString(),
       });
 
-      setGenerationProgress(STEPS[7].progress, STEPS[7].label);
-      setStepIndex(7);
+      setGenerationProgress(100, "Dein Comic ist fertig!");
+      setStepIndex(STEPS.length - 1);
       setDone(true);
       setTimeout(() => setStep(4), 1200);
+
     } catch (err: any) {
       console.error(err);
       setError(err.message || "Unbekannter Fehler");
@@ -200,7 +107,7 @@ export default function Step4Generate() {
       <div className="max-w-lg mx-auto text-center space-y-6 py-16">
         <div className="text-5xl">⚠️</div>
         <h2 className="font-display text-2xl text-[#1f1a2e]">Fehler bei der Generierung</h2>
-        <p className="text-gray-500 text-sm">{error}</p>
+        <p className="text-gray-500 text-sm bg-red-50 border border-red-100 rounded-xl p-4">{error}</p>
         <button
           onClick={() => { setError(null); runGeneration(); }}
           className="bg-purple-600 text-white px-6 py-3 rounded-xl hover:bg-purple-700 transition-colors"
@@ -221,7 +128,7 @@ export default function Step4Generate() {
         <h2 className="font-display text-3xl font-semibold text-[#1f1a2e]">
           Dein Comic wird erstellt
         </h2>
-        <p className="text-gray-500">Einen Moment – wir arbeiten an deinem persönlichen Meisterwerk.</p>
+        <p className="text-gray-500">Das dauert ca. 1–2 Minuten – wir illustrieren jede Seite einzeln.</p>
       </div>
 
       <motion.div
@@ -232,41 +139,32 @@ export default function Step4Generate() {
         {done ? "🎉" : "🎨"}
       </motion.div>
 
-      <ProgressBar progress={generationProgress} status={generationStatus} />
+      <ProgressBar progress={useBookStore.getState().generationProgress} status={useBookStore.getState().generationStatus} />
 
       <div className="space-y-2 text-left">
         {STEPS.map((s, i) => (
-          <AnimatePresence key={i}>
-            {i <= stepIndex && (
-              <motion.div
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
-                className={`flex items-center gap-3 text-sm ${
-                  i === stepIndex ? "text-purple-700 font-medium" : "text-gray-400"
-                }`}
-              >
-                <span className="w-4 text-center">
-                  {i < stepIndex ? "✓" : i === stepIndex ? "·" : ""}
-                </span>
-                <span>{s.label}</span>
-              </motion.div>
-            )}
-          </AnimatePresence>
+          i <= stepIndex && (
+            <motion.div
+              key={i}
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              className={`flex items-center gap-3 text-sm ${i === stepIndex ? "text-purple-700 font-medium" : "text-gray-400"}`}
+            >
+              <span className="w-4 text-center">{i < stepIndex ? "✓" : "·"}</span>
+              <span>{s.label}</span>
+            </motion.div>
+          )
         ))}
       </div>
 
       {debugInfo && (
-        <div className="bg-purple-50 border border-purple-200 rounded-xl p-3 text-xs text-purple-700 text-left">
+        <div className="bg-purple-50 border border-purple-100 rounded-xl p-3 text-xs text-purple-600">
           {debugInfo}
         </div>
       )}
 
       {done && (
-        <motion.p
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="text-purple-600 font-medium"
-        >
+        <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-purple-600 font-medium">
           Weiterleitung zur Vorschau…
         </motion.p>
       )}
