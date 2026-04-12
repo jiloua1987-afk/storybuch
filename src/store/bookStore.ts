@@ -47,6 +47,7 @@ export interface BookProject {
     location: string;
     timeframe: string;
     specialMoments: string;
+    [key: string]: string;
   };
   tone: Tone;
   design: BookDesign;
