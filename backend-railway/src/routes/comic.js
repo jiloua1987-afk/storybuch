@@ -267,7 +267,7 @@ router.post("/page", async (req, res) => {
           rawUrl = item.url;
         } else if (item?.b64_json) {
           const imgBuf2 = Buffer.from(item.b64_json, "base64");
-          const small = await sharp(imgBuf2).resize(900, null).jpeg({ quality: 75 }).toBuffer();
+          const small = await sharp(imgBuf2).resize(1200, null).jpeg({ quality: 90 }).toBuffer();
           rawUrl = `data:image/jpeg;base64,${small.toString("base64")}`;
         }
         if (rawUrl) console.log("✓ Edit API success, size:", Math.round(rawUrl.length / 1024), "KB");
@@ -291,15 +291,36 @@ router.post("/page", async (req, res) => {
         rawUrl = item.url;
       } else if (item?.b64_json) {
         const imgBuf2 = Buffer.from(item.b64_json, "base64");
-        const small = await sharp(imgBuf2).resize(900, null).jpeg({ quality: 75 }).toBuffer();
+        const small = await sharp(imgBuf2).resize(1200, null).jpeg({ quality: 90 }).toBuffer();
         rawUrl = `data:image/jpeg;base64,${small.toString("base64")}`;
       }
     }
 
     if (!rawUrl) {
       console.error("No image URL generated for page:", page.title);
-      return res.json({ imageUrl: "" });
+      // Retry once with standard generate
+      console.log("Retrying with standard generate...");
+      try {
+        const retryRes = await openai.images.generate({
+          model: "gpt-image-1",
+          prompt: fullPrompt,
+          n: 1,
+          size: "1536x1024",
+          quality: "high",
+        });
+        const retryItem = (retryRes.data || [])[0];
+        if (retryItem?.url) rawUrl = retryItem.url;
+        else if (retryItem?.b64_json) {
+          const imgBuf2 = Buffer.from(retryItem.b64_json, "base64");
+          const small = await sharp(imgBuf2).resize(1200, null).jpeg({ quality: 90 }).toBuffer();
+          rawUrl = `data:image/jpeg;base64,${small.toString("base64")}`;
+        }
+      } catch (retryErr) {
+        console.error("Retry also failed:", retryErr.message);
+      }
     }
+
+    if (!rawUrl) return res.json({ imageUrl: "" });
 
     // Wenn URL → direkt zurückgeben
     if (!rawUrl.startsWith("data:")) {
@@ -369,15 +390,17 @@ router.post("/cover", async (req, res) => {
 
     if (!rawUrl) return res.json({ coverImageUrl: "" });
 
-    // Bild laden und auf vernünftige Größe skalieren
+    // Bild laden
     let buf = await fetchBuf(rawUrl);
     if (!buf) return res.json({ coverImageUrl: rawUrl });
 
-    // Auf max 600px Breite skalieren für Cover-Vorschau
-    buf = await sharp(buf).resize(600, null, { withoutEnlargement: true }).toBuffer();
+    // Nur skalieren wenn es noch nicht komprimiert wurde (URL-Fall)
+    if (rawUrl.startsWith("http")) {
+      buf = await sharp(buf).resize(700, null, { withoutEnlargement: true }).toBuffer();
+    }
 
     const meta = await sharp(buf).metadata();
-    const W = meta.width || 600, H = meta.height || 900;
+    const W = meta.width || 700, H = meta.height || 1050;
 
     // Dynamischer Titelumbruch
     const titleWords = title.split(" ");
