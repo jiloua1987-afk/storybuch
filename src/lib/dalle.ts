@@ -51,9 +51,12 @@ export async function generatePanelImage(
       size: "1536x1024",
       quality: "high",
     });
-    return response.data[0].url || response.data[0].b64_json
-      ? `data:image/png;base64,${response.data[0].b64_json}`
-      : "";
+    const data = response.data ?? [];
+    const item = data[0];
+    if (!item) return "";
+    if (item.url) return item.url;
+    if (item.b64_json) return `data:image/png;base64,${item.b64_json}`;
+    return "";
   } catch (err: any) {
     console.error("DALL-E error:", err.message);
     // Fallback to placeholder
