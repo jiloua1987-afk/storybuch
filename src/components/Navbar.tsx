@@ -1,37 +1,37 @@
 "use client";
+import { motion } from "framer-motion";
 import { useBookStore } from "@/store/bookStore";
-import Link from "next/link";
 
 export default function Navbar() {
-  const { resetProject } = useBookStore();
+  const { project, resetProject } = useBookStore();
 
   return (
-    <nav style={{ background: "#FDF8F2", borderBottom: "1px solid #E8D9C0" }} className="sticky top-0 z-50">
-      <div className="max-w-[1120px] mx-auto px-6 py-4 flex items-center justify-between">
-        <button
+    <nav className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-brand-100 shadow-sm">
+      <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
+        <motion.button
+          whileHover={{ scale: 1.03 }}
           onClick={resetProject}
-          className="font-display text-[22px] text-[#1A1410] tracking-tight hover:opacity-70 transition-opacity duration-200"
+          className="flex items-center gap-2"
         >
-          MyComicStory
-        </button>
-
-        <div className="flex items-center gap-8">
-          <div className="hidden md:flex items-center gap-8">
-            <Link href="/ueber-uns" className="text-[14px] text-[#8B7355] hover:text-[#1A1410] transition-colors duration-200">
-              Über uns
-            </Link>
-            <Link href="/faq" className="text-[14px] text-[#8B7355] hover:text-[#1A1410] transition-colors duration-200">
-              FAQ
-            </Link>
-            <Link href="/preise" className="text-[14px] text-[#8B7355] hover:text-[#1A1410] transition-colors duration-200">
-              Preise
-            </Link>
-          </div>
-          <button
-            onClick={resetProject}
-            style={{ border: "1.5px solid #1A1410" }}
-            className="text-[14px] text-[#1A1410] px-5 py-2 rounded-[8px] hover:bg-[#1A1410] hover:text-white transition-all duration-200"
+          <span className="text-2xl">💥</span>
+          <span
+            className="text-xl font-bold text-brand-700"
+            style={{ fontFamily: "var(--font-display)" }}
           >
+            MyComicStory
+          </span>
+        </motion.button>
+
+        <div className="flex items-center gap-4 text-sm text-gray-500">
+          {project && (
+            <span className="hidden md:block text-brand-600 font-medium truncate max-w-[200px]">
+              ✍️ {project.title}
+            </span>
+          )}
+          <a href="/ueber-uns" className="hover:text-brand-600 transition-colors">Über uns</a>
+          <a href="/faq" className="hover:text-brand-600 transition-colors">FAQ</a>
+          <a href="/preise" className="hover:text-brand-600 transition-colors">Preise</a>
+          <button className="bg-brand-500 text-white px-4 py-1.5 rounded-full text-sm font-medium hover:bg-brand-600 transition-all">
             Anmelden
           </button>
         </div>

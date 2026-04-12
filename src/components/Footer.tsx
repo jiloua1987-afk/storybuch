@@ -3,44 +3,68 @@ import Link from "next/link";
 
 export default function Footer() {
   return (
-    <footer style={{ background: "#1A1410" }}>
-      <div className="max-w-[1120px] mx-auto px-6 py-16 grid md:grid-cols-4 gap-10">
-        <div className="space-y-3 md:col-span-1">
-          <p className="font-display text-[20px] text-white">MyComicStory</p>
-          <p className="text-[13px] text-[#8B7355] leading-relaxed">
+    <footer className="bg-brand-900 text-white">
+      <div className="max-w-5xl mx-auto px-4 py-16 grid md:grid-cols-4 gap-10">
+
+        {/* Brand */}
+        <div className="space-y-4 md:col-span-1">
+          <div className="flex items-center gap-2">
+            <span className="text-2xl">💥</span>
+            <span className="text-xl font-bold" style={{ fontFamily: "var(--font-display)" }}>
+              MyComicStory
+            </span>
+          </div>
+          <p className="text-brand-200 text-sm leading-relaxed">
             Deine Erinnerungen. Als Comic. Für immer.
           </p>
+          <div className="flex gap-3">
+            <a href="#" className="w-9 h-9 bg-brand-700 rounded-full flex items-center justify-center hover:bg-brand-600 transition-all text-sm">f</a>
+            <a href="#" className="w-9 h-9 bg-brand-700 rounded-full flex items-center justify-center hover:bg-brand-600 transition-all text-sm">in</a>
+            <a href="#" className="w-9 h-9 bg-brand-700 rounded-full flex items-center justify-center hover:bg-brand-600 transition-all text-sm">ig</a>
+          </div>
         </div>
-        <div className="space-y-3">
-          <p className="text-[13px] text-white font-medium uppercase tracking-widest">Produkt</p>
-          <ul className="space-y-2">
-            <li><Link href="/ueber-uns" className="text-[13px] text-[#8B7355] hover:text-white transition-colors duration-200">Über uns</Link></li>
-            <li><Link href="/faq" className="text-[13px] text-[#8B7355] hover:text-white transition-colors duration-200">FAQ & Kontakt</Link></li>
-            <li><Link href="/preise" className="text-[13px] text-[#8B7355] hover:text-white transition-colors duration-200">Preise</Link></li>
+
+        {/* Produkt */}
+        <div className="space-y-4">
+          <h3 className="font-semibold text-white">Produkt</h3>
+          <ul className="space-y-2 text-brand-200 text-sm">
+            <li><Link href="/ueber-uns" className="hover:text-white transition-colors">Über uns</Link></li>
+            <li><Link href="/faq" className="hover:text-white transition-colors">FAQ & Kontakt</Link></li>
+            <li><Link href="/preise" className="hover:text-white transition-colors">Preise</Link></li>
+            <li><a href="#" className="hover:text-white transition-colors">Beispiele</a></li>
           </ul>
         </div>
-        <div className="space-y-3">
-          <p className="text-[13px] text-white font-medium uppercase tracking-widest">Rechtliches</p>
-          <ul className="space-y-2">
-            <li><Link href="/impressum" className="text-[13px] text-[#8B7355] hover:text-white transition-colors duration-200">Impressum</Link></li>
-            <li><Link href="/datenschutz" className="text-[13px] text-[#8B7355] hover:text-white transition-colors duration-200">Datenschutz</Link></li>
-            <li><Link href="/agb" className="text-[13px] text-[#8B7355] hover:text-white transition-colors duration-200">AGB</Link></li>
+
+        {/* Rechtliches */}
+        <div className="space-y-4">
+          <h3 className="font-semibold text-white">Rechtliches</h3>
+          <ul className="space-y-2 text-brand-200 text-sm">
+            <li><Link href="/impressum" className="hover:text-white transition-colors">Impressum</Link></li>
+            <li><Link href="/datenschutz" className="hover:text-white transition-colors">Datenschutzerklärung</Link></li>
+            <li><Link href="/agb" className="hover:text-white transition-colors">AGB</Link></li>
           </ul>
         </div>
-        <div className="space-y-3">
-          <p className="text-[13px] text-white font-medium uppercase tracking-widest">Kontakt</p>
-          <p className="text-[13px] text-[#8B7355]">kontakt@mycomicstory.de</p>
-          <p className="text-[12px] text-[#8B7355] leading-relaxed">
-            Bestellstatus bitte über die DHL Sendungsverfolgung prüfen.
-          </p>
+
+        {/* Kontakt */}
+        <div className="space-y-4">
+          <h3 className="font-semibold text-white">Kontakt</h3>
+          <ul className="space-y-2 text-brand-200 text-sm">
+            <li>✉️ kontakt@mystorybook.de</li>
+            <li className="text-xs leading-relaxed text-brand-300">
+              Bestellstatus bitte über die DHL Sendungsverfolgung prüfen.
+            </li>
+          </ul>
         </div>
       </div>
-      <div style={{ borderTop: "1px solid rgba(255,255,255,0.08)" }} className="max-w-[1120px] mx-auto px-6 py-6 flex flex-col md:flex-row items-center justify-between gap-3">
-        <span className="text-[12px] text-[#8B7355]">© {new Date().getFullYear()} MyComicStory. Alle Rechte vorbehalten.</span>
-        <div className="flex gap-6">
-          <Link href="/impressum" className="text-[12px] text-[#8B7355] hover:text-white transition-colors duration-200">Impressum</Link>
-          <Link href="/datenschutz" className="text-[12px] text-[#8B7355] hover:text-white transition-colors duration-200">Datenschutz</Link>
-          <Link href="/agb" className="text-[12px] text-[#8B7355] hover:text-white transition-colors duration-200">AGB</Link>
+
+      <div className="border-t border-brand-700 py-6">
+        <div className="max-w-5xl mx-auto px-4 flex flex-col md:flex-row items-center justify-between gap-3 text-brand-300 text-xs">
+          <span>© {new Date().getFullYear()} MyStoryBook. Alle Rechte vorbehalten.</span>
+          <div className="flex gap-4">
+            <Link href="/impressum" className="hover:text-white transition-colors">Impressum</Link>
+            <Link href="/datenschutz" className="hover:text-white transition-colors">Datenschutz</Link>
+            <Link href="/agb" className="hover:text-white transition-colors">AGB</Link>
+          </div>
         </div>
       </div>
     </footer>

@@ -2,68 +2,56 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400;1,500&family=DM+Sans:wght@300;400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Inter:wght@300;400;500;600&display=swap');
 
 :root {
-  --cream:      #FDF8F2;
-  --cream-2:    #F5EDE0;
-  --ink:        #1A1410;
-  --gold:       #C9963A;
-  --taupe:      #8B7355;
-  --sand:       #E8D9C0;
-  --meta:       #9E8C75;
-  --card-bg:    #FFFFFF;
+  --font-display: 'Playfair Display', Georgia, serif;
 }
 
-* { box-sizing: border-box; }
-
-html { scroll-behavior: smooth; }
+* {
+  box-sizing: border-box;
+}
 
 body {
-  font-family: 'DM Sans', sans-serif;
-  background: var(--cream);
-  color: var(--ink);
-  -webkit-font-smoothing: antialiased;
+  font-family: 'Inter', sans-serif;
+  background: #fdf4ff;
 }
 
-.font-display {
-  font-family: 'Playfair Display', Georgia, serif;
+/* Book flip animation */
+.book-page {
+  transform-style: preserve-3d;
+  transition: transform 0.6s cubic-bezier(0.645, 0.045, 0.355, 1.000);
 }
 
-/* Grain texture */
-.hero-grain::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
-  opacity: 0.035;
-  pointer-events: none;
-  z-index: 0;
+.book-page.flipped {
+  transform: rotateY(-180deg);
 }
 
-/* Gold accent line */
-.gold-line::before {
-  content: '';
-  display: block;
-  width: 48px;
-  height: 2px;
-  background: var(--gold);
-  margin-bottom: 16px;
-}
-
-/* Scroll fade-in */
-.fade-up {
-  opacity: 0;
-  transform: translateY(24px);
-  transition: opacity 600ms cubic-bezier(0.25, 0.46, 0.45, 0.94),
-              transform 600ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
-}
-.fade-up.visible {
-  opacity: 1;
-  transform: translateY(0);
+/* Shimmer loading effect */
+.shimmer {
+  background: linear-gradient(
+    90deg,
+    #f0e6ff 25%,
+    #e0c8ff 50%,
+    #f0e6ff 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
 }
 
 /* Custom scrollbar */
-::-webkit-scrollbar { width: 5px; }
-::-webkit-scrollbar-track { background: var(--cream); }
-::-webkit-scrollbar-thumb { background: var(--sand); border-radius: 3px; }
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: #f1f1f1; }
+::-webkit-scrollbar-thumb { background: #c044ef; border-radius: 3px; }
+
+/* Page perspective for book */
+.book-container {
+  perspective: 2000px;
+}
+
+.prose-book {
+  font-family: var(--font-display);
+  line-height: 1.9;
+  font-size: 1.05rem;
+  color: #2d1b4e;
+}
