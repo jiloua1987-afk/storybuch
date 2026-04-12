@@ -11,8 +11,17 @@ interface UploadedImage {
   id: string;
   file: File;
   preview: string;
+  base64: string;
   label: string;
   type: "person" | "location" | "situation";
+}
+
+async function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = (e) => resolve((e.target?.result as string).split(",")[1] || "");
+    reader.readAsDataURL(file);
+  });
 }
 
 export default function Step2Upload() {
@@ -23,15 +32,16 @@ export default function Step2Upload() {
   const [labelInput, setLabelInput] = useState("");
 
   const onDrop = useCallback(
-    (acceptedFiles: File[]) => {
+    async (acceptedFiles: File[]) => {
       if (!consent) { toast.error("Bitte stimme zuerst der Datenschutzerklärung zu."); return; }
-      const newImages: UploadedImage[] = acceptedFiles.map((file) => ({
+      const newImages: UploadedImage[] = await Promise.all(acceptedFiles.map(async (file) => ({
         id: `img-${Date.now()}-${Math.random()}`,
         file,
         preview: URL.createObjectURL(file),
+        base64: await fileToBase64(file),
         label: labelInput || file.name.replace(/\.[^.]+$/, ""),
         type: activeType,
-      }));
+      })));
       setImages((prev) => [...prev, ...newImages]);
       setLabelInput("");
       toast.success(`${acceptedFiles.length} Bild(er) hochgeladen!`);
@@ -50,8 +60,11 @@ export default function Step2Upload() {
   const handleNext = () => {
     const characters = images
       .filter((img) => img.type === "person")
-      .map((img) => ({ id: img.id, name: img.label, role: "Hauptfigur", imageUrl: img.preview }));
-    updateProject({ characters });
+      .map((img) => ({ id: img.id, name: img.label, role: "Hauptfigur", imageUrl: img.preview, base64: img.base64 }));
+    const locationImages = images
+      .filter((img) => img.type === "location")
+      .map((img) => img.base64).filter(Boolean);
+    updateProject({ characters, referenceImages: characters.map((c) => c.base64).filter(Boolean), locationImages });
     setStep(2);
   };
 

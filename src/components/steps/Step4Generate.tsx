@@ -47,6 +47,8 @@ export default function Step4Generate() {
           illustrationStyle: project?.illustrationStyle || "comic",
           category:          project?.guidedAnswers?.category || "familie",
           numPages:          4,
+          referenceImages:   project?.referenceImages || [],
+          dedication:        project?.dedication || "",
         }),
       });
 

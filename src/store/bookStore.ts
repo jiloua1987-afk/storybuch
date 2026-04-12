@@ -54,6 +54,8 @@ export interface BookProject {
   characters: Character[];
   chapters: Chapter[];
   coverImageUrl?: string;
+  referenceImages?: string[];   // Base64 Personenfotos
+  locationImages?: string[];    // Base64 Ortsfotos
   status: "draft" | "generating" | "preview" | "checkout" | "ordered";
   createdAt: string;
 }
