@@ -6,10 +6,9 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
-async function saveImageToStorage(b64OrUrl, bookId, panelId) {
+async function saveImage(b64OrUrl, folder, filename) {
   try {
     let buffer;
-
     if (b64OrUrl.startsWith("data:")) {
       buffer = Buffer.from(b64OrUrl.replace(/^data:image\/\w+;base64,/, ""), "base64");
     } else if (b64OrUrl.startsWith("http")) {
@@ -25,21 +24,14 @@ async function saveImageToStorage(b64OrUrl, bookId, panelId) {
       .jpeg({ quality: 88, progressive: true })
       .toBuffer();
 
-    const filePath = `books/${bookId}/panels/${panelId}.jpg`;
-
+    const path = `${folder}/${filename}.jpg`;
     const { error } = await supabase.storage
       .from("comic-panels")
-      .upload(filePath, compressed, {
-        contentType: "image/jpeg",
-        upsert: true,
-      });
+      .upload(path, compressed, { contentType: "image/jpeg", upsert: true });
 
     if (error) throw error;
 
-    const { data } = supabase.storage
-      .from("comic-panels")
-      .getPublicUrl(filePath);
-
+    const { data } = supabase.storage.from("comic-panels").getPublicUrl(path);
     return data.publicUrl;
   } catch (err) {
     console.error("Storage error:", err.message);
@@ -47,4 +39,4 @@ async function saveImageToStorage(b64OrUrl, bookId, panelId) {
   }
 }
 
-module.exports = { saveImageToStorage };
+module.exports = { saveImage };

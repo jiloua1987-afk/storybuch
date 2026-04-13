@@ -4,7 +4,7 @@ const OpenAI = require("openai");
 const sharp = require("sharp");
 const fs = require("fs");
 const path = require("path");
-const { saveImageToStorage } = require("../lib/storage");
+const { saveImage } = require("../lib/storage");
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
@@ -208,7 +208,7 @@ Show each character clearly from head to toe. NO text, NO labels.`,
         // Save to Supabase
         if (sheetRaw) {
           const bookId = `book-${Date.now()}`;
-          characterSheetUrl = await saveImageToStorage(sheetRaw, bookId, "character-sheet") || sheetRaw;
+          characterSheetUrl = await saveImage(sheetRaw, bookId, "character-sheet") || sheetRaw;
           console.log("✓ Character sheet saved");
         }
       } catch (e) {
@@ -283,7 +283,7 @@ NEGATIVE: text, speech bubbles, captions, watermark, distorted faces, inconsiste
 
     // Save to Supabase Storage
     const bookId = page.id?.split("-")[0] || `book-${Date.now()}`;
-    const storedUrl = await saveImageToStorage(rawUrl, bookId, page.id || `page-${Date.now()}`);
+    const storedUrl = await saveImage(rawUrl, bookId, page.id || `page-${Date.now()}`);
     const finalUrl = storedUrl || rawUrl;
 
     console.log(`✓ Page "${page.title}" done → ${storedUrl ? "Supabase" : "base64"}`);
@@ -358,7 +358,7 @@ Characters prominently featured in foreground. NO text, NO title, NO letters any
     svg += `</svg>`;
 
     const comp = await sharp(buf).composite([{ input: Buffer.from(svg), top: 0, left: 0 }]).jpeg({ quality: 88 }).toBuffer();
-    const coverUrl = await saveImageToStorage(`data:image/jpeg;base64,${comp.toString("base64")}`, "covers", `cover-${Date.now()}`);
+    const coverUrl = await saveImage(`data:image/jpeg;base64,${comp.toString("base64")}`, "covers", `cover-${Date.now()}`);
     res.json({ coverImageUrl: coverUrl || `data:image/jpeg;base64,${comp.toString("base64")}` });
   } catch (err) {
     console.error("Cover error:", err.message);
