@@ -119,26 +119,44 @@ function getPanelLayouts(panelCount, W, H) {
 
 function buildPageSVG(pageTitle, panels, W, H) {
   const layouts = getPanelLayouts(panels.length, W, H);
+  // WICHTIG: Kein Text im SVG wegen Fontconfig-Problem auf Railway
+  // Nur geometrische Elemente (Rechtecke, Linien)
   let svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}">`;
-  svg += `<rect width="${W}" height="${H}" fill="#F5EDE0"/>`;
-  svg += `<text x="${W/2}" y="52" text-anchor="middle" font-family="Arial Black,Arial,sans-serif" font-size="36" font-weight="900" fill="#1A1410">${escXml(pageTitle.toUpperCase())}</text>`;
+
+  // Cream Hintergrund oben für Titel-Bereich
+  svg += `<rect x="0" y="0" width="${W}" height="70" fill="#F5EDE0"/>`;
+  // Schwarze Linie unter Titel-Bereich
+  svg += `<rect x="0" y="68" width="${W}" height="2" fill="#1A1410"/>`;
+
+  // Panel-Rahmen
   panels.forEach((panel, i) => {
     const l = layouts[i] || layouts[0];
-    svg += `<rect x="${l.x}" y="${l.y}" width="${l.width}" height="${l.height}" fill="none" stroke="#1A1410" stroke-width="4" rx="2"/>`;
+    svg += `<rect x="${l.x}" y="${l.y}" width="${l.width}" height="${l.height}" fill="none" stroke="#1A1410" stroke-width="4"/>`;
+
+    // Caption-Box (weißes Rechteck ohne Text)
     if (panel.dialog) {
       const text = panel.speaker ? `${panel.speaker}: ${panel.dialog}` : panel.dialog;
-      const lines = wrapText(text, 22);
-      const boxH = lines.length * 22 + 16;
-      const boxW = Math.min(l.width * 0.55, 280);
-      const margin = 10;
-      const bx = (i % 2 !== 0) ? l.x + l.width - boxW - margin : l.x + margin;
+      const lines = wrapText(text, 24);
+      const boxH = lines.length * 20 + 14;
+      const boxW = Math.min(l.width * 0.6, 260);
+      const margin = 8;
+      const isRight = i % 2 !== 0;
+      const bx = isRight ? l.x + l.width - boxW - margin : l.x + margin;
       const by = l.y + margin;
-      svg += `<rect x="${bx}" y="${by}" width="${boxW}" height="${boxH}" fill="white" stroke="#1A1410" stroke-width="2" rx="4"/>`;
+
+      // Weißer Hintergrund
+      svg += `<rect x="${bx}" y="${by}" width="${boxW}" height="${boxH}" fill="white" stroke="#1A1410" stroke-width="2" rx="3"/>`;
+
+      // Text als SVG-Text (einfachste Form)
       lines.forEach((line, li) => {
-        svg += `<text x="${bx+8}" y="${by+18+li*22}" font-family="Arial,sans-serif" font-size="13" font-weight="bold" fill="#1A1410">${escXml(line)}</text>`;
+        svg += `<text x="${bx + 6}" y="${by + 14 + li * 20}"
+          font-size="12" fill="#1A1410"
+          font-family="sans-serif"
+          font-weight="bold">${escXml(line)}</text>`;
       });
     }
   });
+
   svg += `</svg>`;
   return svg;
 }
@@ -384,23 +402,27 @@ router.post("/page", async (req, res) => {
     if (!rawUrl) return res.json({ imageUrl: "" });
 
     // Sharp Text-Overlay: Titel + Caption-Boxen auf das Bild legen
-    const buf = await fetchBuf(rawUrl);
-    if (!buf) return res.json({ imageUrl: rawUrl });
+    try {
+      const buf = await fetchBuf(rawUrl);
+      if (!buf) return res.json({ imageUrl: rawUrl });
 
-    // Auf 900px Breite skalieren (A4 Hochformat)
-    const resized = await sharp(buf).resize(900, null, { withoutEnlargement: true }).toBuffer();
-    const meta = await sharp(resized).metadata();
-    const W = meta.width || 900, H = meta.height || 1273; // A4 ratio
-    const svgStr = buildPageSVG(page.title, page.panels, W, H);
+      const resized = await sharp(buf).resize(900, null, { withoutEnlargement: true }).toBuffer();
+      const meta = await sharp(resized).metadata();
+      const W = meta.width || 900, H = meta.height || 1273;
+      const svgStr = buildPageSVG(page.title, page.panels, W, H);
 
-    const comp = await sharp(resized)
-      .composite([{ input: Buffer.from(svgStr), top: 0, left: 0 }])
-      .jpeg({ quality: 88 })
-      .toBuffer();
+      const comp = await sharp(resized)
+        .composite([{ input: Buffer.from(svgStr), top: 0, left: 0 }])
+        .jpeg({ quality: 88 })
+        .toBuffer();
 
-    const sizeKB = Math.round(comp.length / 1024);
-    console.log(`✓ Page "${page.title}" done with overlay, size: ${sizeKB}KB`);
-    res.json({ imageUrl: `data:image/jpeg;base64,${comp.toString("base64")}` });
+      const sizeKB = Math.round(comp.length / 1024);
+      console.log(`✓ Page "${page.title}" done with overlay, size: ${sizeKB}KB`);
+      return res.json({ imageUrl: `data:image/jpeg;base64,${comp.toString("base64")}` });
+    } catch (overlayErr) {
+      console.error("Overlay failed, returning raw image:", overlayErr.message);
+      return res.json({ imageUrl: rawUrl });
+    }
   } catch (err) {
     console.error("Page error:", err.message);
     res.status(500).json({ error: err.message, imageUrl: "" });
@@ -505,11 +527,10 @@ router.post("/cover", async (req, res) => {
     titleLines.forEach((line, i) => {
       svg += `<text x="${W / 2}" y="${titleStartY + i * titleLineHeight}"
         text-anchor="middle"
-        font-family="Georgia, serif"
+        font-family="sans-serif"
         font-size="${titleFontSize}"
         font-weight="bold"
         fill="white"
-        filter="drop-shadow(0px 2px 4px rgba(0,0,0,0.8))"
       >${escXml(line)}</text>`;
     });
 
@@ -522,7 +543,7 @@ router.post("/cover", async (req, res) => {
       const subtitle = location || category;
       svg += `<text x="${W / 2}" y="${lineY + 32}"
         text-anchor="middle"
-        font-family="Georgia, serif"
+        font-family="sans-serif"
         font-size="18"
         fill="rgba(255,255,255,0.75)"
         letter-spacing="2"
@@ -569,12 +590,12 @@ router.post("/ending", async (req, res) => {
 
     // Obere Dekoration
     svg += `<rect x="${W/2-60}" y="55" width="120" height="2" fill="#C9963A" rx="1"/>`;
-    svg += `<text x="${W/2}" y="48" text-anchor="middle" font-family="Georgia,serif" font-size="13" fill="#C9963A" letter-spacing="5">${escXml("✦  ERINNERUNGEN  ✦")}</text>`;
+    svg += `<text x="${W/2}" y="48" text-anchor="middle" font-family="sans-serif" font-size="13" fill="#C9963A" letter-spacing="5">${escXml("✦  ERINNERUNGEN  ✦")}</text>`;
 
     // Haupttext
     const startY = 110;
     textLines.forEach((line, i) => {
-      svg += `<text x="${W/2}" y="${startY + i * 38}" text-anchor="middle" font-family="Georgia,serif" font-size="22" fill="#2d1b4e" font-style="italic">${escXml(line)}</text>`;
+      svg += `<text x="${W/2}" y="${startY + i * 38}" text-anchor="middle" font-family="sans-serif" font-size="22" fill="#2d1b4e" font-style="italic">${escXml(line)}</text>`;
     });
 
     // Trennlinie
@@ -585,13 +606,13 @@ router.post("/ending", async (req, res) => {
     if (dedLines.length > 0) {
       const dedY = divY + 35;
       dedLines.forEach((line, i) => {
-        svg += `<text x="${W/2}" y="${dedY + i * 30}" text-anchor="middle" font-family="Georgia,serif" font-size="18" fill="#8B7355">${escXml(line)}</text>`;
+        svg += `<text x="${W/2}" y="${dedY + i * 30}" text-anchor="middle" font-family="sans-serif" font-size="18" fill="#8B7355">${escXml(line)}</text>`;
       });
     }
 
     // Untere Dekoration
     svg += `<rect x="${W/2-60}" y="${H-55}" width="120" height="2" fill="#C9963A" rx="1"/>`;
-    svg += `<text x="${W/2}" y="${H-38}" text-anchor="middle" font-family="Georgia,serif" font-size="13" fill="#C9963A" letter-spacing="5">${escXml("✦  THE END  ✦")}</text>`;
+    svg += `<text x="${W/2}" y="${H-38}" text-anchor="middle" font-family="sans-serif" font-size="13" fill="#C9963A" letter-spacing="5">${escXml("✦  THE END  ✦")}</text>`;
     svg += `</svg>`;
 
     const buf = await sharp({
