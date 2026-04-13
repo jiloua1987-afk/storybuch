@@ -1,11 +1,12 @@
 "use client";
+import ComicPanel from "@/components/ComicPanel";
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useBookStore } from "@/store/bookStore";
 import Button from "@/components/ui/Button";
+import PanelView from "@/components/comic/PanelView";
+import Image from "next/image";
 import toast from "react-hot-toast";
-
-// Bangers Font für Comic-Look
 const BANGERS_STYLE = `
   @import url('https://fonts.googleapis.com/css2?family=Bangers&display=swap');
   .comic-caption {
@@ -123,7 +124,7 @@ export default function Step5Preview() {
                     <p className="text-purple-600 font-medium text-sm">Seite wird neu illustriert…</p>
                   </div>
                 ) : (
-                  <ComicPageView
+                  <ComicPanel
                     imageUrl={page.imageUrl || ""}
                     panels={(page as any).panels || []}
                     title={page.title}
