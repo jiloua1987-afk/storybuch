@@ -177,6 +177,118 @@ router.post("/structure", async (req, res) => {
       if (v && k !== "category") ctx += `\n${k}: ${v}`;
     }
 
+    // Step 1+2: Story-Struktur + Character Builder parallel
+    const [structRes, charRes] = await Promise.all([
+      openai.chat.completions.create({
+        model: "gpt-4o",
+        messages: [
+          { role: "system", content: `You are a comic book author. Create a ${numPages}-page comic structure in ${lang}.
+Tone: ${tone}. Visual mood: ${mood}. Comic style: ${comicMod}.
+${mustHaveSentences ? `MUST include: ${mustHaveSentences}` : ""}
+
+Vary panel count: Page 1: 4 panels, Page 2: 3 panels, Page 3: 5 panels, Page 4: 4 panels.
+Each panel: specific visual scene + short dialog.
+Respond ONLY with JSON: {"pages": [{"id":"page1","pageNumber":1,"title":"Title in ${lang}","location":"English location","timeOfDay":"afternoon","panels":[{"nummer":1,"szene":"Specific English scene description","dialog":"Short ${lang} dialog max 8 words","speaker":"Name or null","bubble_type":"speech"}]}]}` },
+          { role: "user", content: ctx },
+        ],
+        response_format: { type: "json_object" },
+        temperature: 0.85,
+      }),
+      openai.chat.completions.create({
+        model: "gpt-4o",
+        messages: [
+          { role: "system", content: `Extract main characters. Respond ONLY with JSON: {"characters":[{"name":"Name","age":30,"visual_anchor":"Precise English: age, hair color/style, eye color, skin tone, clothing, distinctive features"}]}` },
+          { role: "user", content: ctx },
+        ],
+        response_format: { type: "json_object" },
+        temperature: 0.3,
+      }),
+    ]);
+
+    const pages = JSON.parse(structRes.choices[0].message.content || "{}").pages || [];
+    let characters = JSON.parse(charRes.choices[0].message.content || "{}").characters || [];
+
+    // Analyze reference photos
+    if (referenceImages.length > 0) {
+      console.log(`Analyzing ${referenceImages.length} reference photo(s)...`);
+      characters = await Promise.all(characters.map(async (char, i) => {
+        const ref = referenceImages[i] || referenceImages[0];
+        if (!ref) return char;
+        try {
+          const r = await openai.chat.completions.create({
+            model: "gpt-4o",
+            messages: [{ role: "user", content: [
+              { type: "image_url", image_url: { url: `data:image/jpeg;base64,${ref}`, detail: "high" } },
+              { type: "text", text: `Look at this photo. Describe the visual appearance of the people for a comic artist. Focus ONLY on visual features: approximate age, hair color and texture, skin tone, clothing colors. Do NOT identify anyone. English, max 60 words. Start with "Person ${i+1} (${char.name}):"` },
+            ]}],
+            max_tokens: 120,
+          });
+          const desc = r.choices[0].message.content || "";
+          return { ...char, visual_anchor: desc, refBase64: ref };
+        } catch (e) {
+          console.error("Photo analysis error:", e.message);
+          return char;
+        }
+      }));
+    }
+
+    // Step 3: Character Reference Sheet generieren (einmalig)
+    let characterSheetUrl = null;
+    if (characters.length > 0) {
+      try {
+        console.log("Generating character reference sheet...");
+        const charSheetPrompt = `Character reference sheet showing all characters standing side by side, full body view, neutral light background.
+Characters: ${characters.map(c => `${c.name}: ${c.visual_anchor}`).join(". ")}.
+Style: warm watercolor comic illustration, same style as a high-quality children's book.
+Show each character clearly from head to toe. Neutral poses, friendly expressions.
+NO text, NO labels, NO names in the image.`;
+
+        const sheetRes = await openai.images.generate({
+          model: "gpt-image-1",
+          prompt: charSheetPrompt,
+          n: 1,
+          size: "1536x1024",
+          quality: "high",
+        });
+
+        const item = (sheetRes.data || [])[0];
+        if (item?.url) characterSheetUrl = item.url;
+        else if (item?.b64_json) {
+          const buf = Buffer.from(item.b64_json, "base64");
+          const small = await sharp(buf).resize(800, null).jpeg({ quality: 85 }).toBuffer();
+          characterSheetUrl = `data:image/jpeg;base64,${small.toString("base64")}`;
+        }
+        console.log("✓ Character sheet generated");
+      } catch (e) {
+        console.error("Character sheet error:", e.message);
+      }
+    }
+
+    // Speichere characterSheetUrl in jedem Character
+    if (characterSheetUrl) {
+      characters = characters.map(c => ({ ...c, characterSheetUrl }));
+    }
+
+    res.json({ pages, characters });
+  } catch (err) {
+    console.error("Structure error:", err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+  try {
+    const { storyInput, guidedAnswers = {}, tone, comicStyle, mustHaveSentences,
+      language, category, numPages = 4, referenceImages = [] } = req.body;
+
+    const langMap = { de: "German", en: "English", fr: "French", es: "Spanish" };
+    const lang = langMap[language] || "German";
+    const mood = CATEGORY_MOOD[category] || CATEGORY_MOOD.familie;
+    const comicMod = COMIC_STYLE_MOD[comicStyle] || COMIC_STYLE_MOD.emotional;
+
+    let ctx = storyInput || "";
+    for (const [k, v] of Object.entries(guidedAnswers)) {
+      if (v && k !== "category") ctx += `\n${k}: ${v}`;
+    }
+
     const [structRes, charRes] = await Promise.all([
       openai.chat.completions.create({
         model: "gpt-4o",
@@ -308,9 +420,77 @@ ${negativeBlock}`;
 }
 router.post("/page", async (req, res) => {
   try {
-    const { page, characters = [], illustrationStyle = "comic", comicStyle = "emotional", category = "familie" } = req.body;
+    const { page, characters = [], illustrationStyle = "comic", comicStyle = "emotional", category = "familie", previousImageUrl = null } = req.body;
 
-    // Optimierter Prompt mit buildComicPrompt
+    const comicMod = COMIC_STYLE_MOD[comicStyle] || COMIC_STYLE_MOD.emotional;
+    const mood = CATEGORY_MOOD[category] || CATEGORY_MOOD.familie;
+    const charAnchors = characters.map(c => `${c.name}: ${c.visual_anchor}`).join("\n");
+    const characterSheetUrl = characters[0]?.characterSheetUrl || null;
+    const scenes = page.panels.map(p => `Panel ${p.nummer}: ${p.szene}`).join("\n");
+
+    const fullPrompt = `IMPORTANT: Maintain strict visual consistency across all panels. Same faces, same hair, same body proportions, same outfits always.
+
+CHARACTER DEFINITIONS (NEVER deviate):
+${charAnchors || "Characters as described in reference image."}
+${characterSheetUrl ? "\nUse the character reference sheet to maintain exact appearance." : ""}
+${previousImageUrl ? "\nMaintain visual continuity with the previous panel image." : ""}
+
+ART STYLE: warm watercolor comic illustration, rich colors, cinematic warm lighting, professional quality, ${comicMod}, ${mood}.
+NO text, NO letters, NO speech bubbles, NO captions in the image.
+Leave empty space at top-left or top-right corner of each panel for caption overlay.
+
+COMIC PAGE LAYOUT:
+Create a single A4 portrait comic page with ${page.panels.length} panels.
+${page.panels.length <= 3 ? "Layout: 1 wide panel top, 2 panels bottom" : page.panels.length === 5 ? "Layout: 2 panels top, 1 wide middle, 2 panels bottom" : "Layout: 2x2 grid"}
+Clean white borders between panels. Cream background outside panels.
+
+SCENES:
+${scenes}
+
+ENVIRONMENT: ${page.location || "beautiful scenic location"}, ${page.timeOfDay || "warm daylight"}.
+NEGATIVE: text, speech bubbles, captions, watermark, distorted faces, inconsistent characters, extra fingers.`;
+
+    console.log(`Generating page "${page.title}" with images.generate (${page.panels.length} panels)`);
+
+    const genRes = await openai.images.generate({
+      model: "gpt-image-1",
+      prompt: fullPrompt,
+      n: 1,
+      size: "1024x1536",
+      quality: "high",
+    });
+
+    const item = (genRes.data || [])[0];
+    let rawUrl = "";
+    if (item?.url) rawUrl = item.url;
+    else if (item?.b64_json) {
+      const imgBuf = Buffer.from(item.b64_json, "base64");
+      const small = await sharp(imgBuf).resize(900, null).jpeg({ quality: 88 }).toBuffer();
+      rawUrl = `data:image/jpeg;base64,${small.toString("base64")}`;
+    }
+
+    if (!rawUrl) return res.json({ imageUrl: "" });
+
+    // Sharp Text-Overlay
+    try {
+      const buf = await fetchBuf(rawUrl);
+      if (!buf) return res.json({ imageUrl: rawUrl });
+      const resized = await sharp(buf).resize(900, null, { withoutEnlargement: true }).toBuffer();
+      const meta = await sharp(resized).metadata();
+      const W = meta.width || 900, H = meta.height || 1273;
+      const svgStr = buildPageSVG(page.title, page.panels, W, H);
+      const comp = await sharp(resized).composite([{ input: Buffer.from(svgStr), top: 0, left: 0 }]).jpeg({ quality: 88 }).toBuffer();
+      console.log(`✓ Page "${page.title}" done, ${Math.round(comp.length/1024)}KB`);
+      return res.json({ imageUrl: `data:image/jpeg;base64,${comp.toString("base64")}` });
+    } catch (overlayErr) {
+      console.error("Overlay failed:", overlayErr.message);
+      return res.json({ imageUrl: rawUrl });
+    }
+  } catch (err) {
+    console.error("Page error:", err.message);
+    res.status(500).json({ error: err.message, imageUrl: "" });
+  }
+});
     const scenes = page.panels.map(p => p.szene);
     const fullPrompt = buildComicPrompt({
       scenes,

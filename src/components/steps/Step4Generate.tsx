@@ -87,6 +87,7 @@ export default function Step4Generate() {
       // ── Step 3: Seiten einzeln ──────────────────────────────────────────────
       const chapters: any[] = [];
       const progressPerPage = 65 / pages.length;
+      let previousImageUrl: string | null = null;
 
       for (let i = 0; i < pages.length; i++) {
         const page = pages[i];
@@ -102,6 +103,7 @@ export default function Step4Generate() {
             comicStyle:        project?.comicStyle || "emotional",
             category:          project?.guidedAnswers?.category || "familie",
             referenceImages:   project?.referenceImages || [],
+            previousImageUrl,
           });
 
           const chapter = {
@@ -112,6 +114,7 @@ export default function Step4Generate() {
             imagePrompt: "",
           };
           chapters.push(chapter);
+          previousImageUrl = pageData.imageUrl || null;
           updateProject({ chapters: [...chapters] });
           addLog(`Seite ${i + 1} fertig`, true);
         } catch (e: any) {
