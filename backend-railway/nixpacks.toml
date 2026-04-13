@@ -1,8 +1,8 @@
+[phases.setup]
+aptPkgs = ["fontconfig", "fonts-dejavu-core"]
+
 [phases.install]
 cmds = ["npm install --no-audit --no-fund"]
-
-[phases.build]
-cmds = []
 
 [start]
 cmd = "npm start"
