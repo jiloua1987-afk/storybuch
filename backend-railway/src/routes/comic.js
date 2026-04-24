@@ -141,35 +141,60 @@ router.post("/page", async (req, res) => {
 
     const comicMod = COMIC_STYLE_MOD[comicStyle] || COMIC_STYLE_MOD.emotional;
     const mood = CATEGORY_MOOD[category] || CATEGORY_MOOD.familie;
-    const charAnchors = characters.map(c => `${c.name}: ${c.visual_anchor}`).join("\n");
+    const charDescs = characters.map(c =>
+      `CHARACTER "${c.name}": ${c.visual_anchor}`
+    ).join("\n\n");
 
-    const scenes = page.panels.map(p => `Panel ${p.nummer}: ${p.szene}`).join("\n");
+    const scenes = page.panels.map(p =>
+      `[Panel ${p.nummer}]: ${p.szene}`
+    ).join("\n");
+
+    const panelCount = page.panels.length;
+    const layoutDesc = panelCount <= 3
+      ? "3-panel comic page: ONE wide cinematic panel spanning full width on top (60% height), TWO equal square panels side by side on bottom row (40% height). Clear 4px black borders between all panels."
+      : panelCount === 5
+      ? "5-panel comic page: TWO panels on top row, ONE wide cinematic panel spanning full width in middle, TWO panels on bottom row. Clear 4px black borders between all panels."
+      : "4-panel comic page: 2×2 grid of equal panels. Clear 4px black borders between all panels. Each panel roughly 50% width × 50% height.";
 
     const fullPrompt = `CRITICAL INSTRUCTION — VISUAL CONSISTENCY:
 All characters must appear IDENTICAL across every single image in this series.
 Maintain with absolute precision:
 - Same face: identical facial structure, eyes, nose, mouth, skin tone
-- Same hair: exact color, length, texture, style — no variations
-- Same body: proportions, height ratios between characters
-- Same clothing: identical colors, patterns, style
+- Same hair: exact color, length, texture, style — no variations whatsoever
+- Same body: proportions and height ratios between all characters
+- Same clothing: identical colors and style throughout
 Treat every image as a frame from the same animated film.
+Any deviation from these character descriptions is an error.
 
-CHARACTER DEFINITIONS (NEVER deviate):
-${charAnchors || "Characters as described in the scene."}
+${charDescs || "Characters as described in the scene."}
 
 ART STYLE: warm watercolor comic illustration, rich colors, cinematic warm lighting, professional quality, ${comicMod}, ${mood}.
-ABSOLUTE RULE: NO text, NO letters, NO words, NO speech bubbles, NO captions, NO UI elements anywhere in the image. Pure illustration only.
-Leave approximately 25% empty/lighter space at top-left corner for caption overlay.
+Mood/tone: ${comicMod}
 
-COMIC PAGE LAYOUT:
-Create a single A4 portrait comic page with ${page.panels.length} panels.
-${page.panels.length <= 3 ? "Layout: 1 wide panel top, 2 panels bottom" : page.panels.length === 5 ? "Layout: 2 panels top, 1 wide middle, 2 panels bottom" : "Layout: 2x2 grid"}
-Clean black borders between panels. Cream background (#F5EDE0) outside panels.
+ABSOLUTE RULE: NO text, NO letters, NO words, NO speech bubbles,
+NO captions, NO UI elements anywhere in the image.
+The image must be a pure illustration only.
+Leave approximately 20% empty or visually simple space at the top-left
+corner of each panel for text overlay that will be added separately.
 
-SCENES:
+COMIC PAGE COMPOSITION:
+Create ONE single A4 portrait comic book page with exactly ${panelCount} panels.
+
+LAYOUT: ${layoutDesc}
+Page border: 12px cream/warm beige (#F5EDE0) visible around all edges.
+Panel borders: solid black, 4px width, clean and precise.
+Leave an 80px cream-colored header strip at the very top for title overlay (draw NOTHING there).
+
+${page.location ? `LOCATION: ${page.location}` : ""}
+${page.timeOfDay ? `LIGHTING: ${page.timeOfDay} — adjust all panel lighting accordingly.` : ""}
+
+PANEL SCENES (illustrate each with maximum detail and emotion):
 ${scenes}
 
-ENVIRONMENT: ${page.location || "beautiful scenic location"}, ${page.timeOfDay || "warm daylight"}.`;
+QUALITY: Professional comic book page, print-ready A4 quality.
+Rich detailed backgrounds in every panel. Expressive character faces.
+Cinematic camera angles that vary between panels (close-up, medium shot, wide establishing shot).
+NEGATIVE: No text, no speech bubbles, no watermarks, no distorted faces, no extra fingers, no inconsistent characters between panels.`;
 
     console.log(`Generating page "${page.title}" (${page.panels.length} panels)`);
 
