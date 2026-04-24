@@ -3,8 +3,13 @@ import { useEffect, useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useBookStore } from "@/store/bookStore";
 import ProgressBar from "@/components/ui/ProgressBar";
+import {
+  DRY_RUN_DELAY, MOCK_CHARACTERS, MOCK_PAGES,
+  MOCK_COVER_URL, getMockPageUrl, MOCK_ENDING,
+} from "@/lib/dryRunData";
 
-// Each step calls Railway backend for image generation (no timeout)
+// Dry-run mode: set NEXT_PUBLIC_DRY_RUN=true to test without API costs
+const DRY_RUN = process.env.NEXT_PUBLIC_DRY_RUN === "true";
 const RAILWAY_URL = process.env.NEXT_PUBLIC_RAILWAY_URL || "";
 
 export default function Step4Generate() {
@@ -42,6 +47,8 @@ export default function Step4Generate() {
   }
 
   async function runGeneration() {
+    if (DRY_RUN) return runDryGeneration();
+
     try {
       // ── Step 1: Story-Struktur ──────────────────────────────────────────────
       setStepLabel("Geschichte wird analysiert…");
@@ -170,6 +177,88 @@ export default function Step4Generate() {
       setDone(true);
       setTimeout(() => setStep(4), 1200);
 
+    } catch (err: any) {
+      setError(err.message);
+    }
+  }
+
+  // ── Dry-Run Mode (no API calls) ───────────────────────────────────────────
+  async function runDryGeneration() {
+    const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
+    try {
+      // Step 1: Structure
+      setStepLabel("🧪 DRY RUN — Geschichte wird analysiert…");
+      setProgress(5);
+      addLog("🧪 DRY RUN MODUS — keine API-Kosten");
+      await wait(DRY_RUN_DELAY);
+
+      const pages = MOCK_PAGES;
+      const characters = MOCK_CHARACTERS;
+      addLog(`${pages.length} Seiten geplant`, true);
+      setProgress(15);
+
+      // Step 2: Cover
+      setStepLabel("Cover wird erstellt…");
+      addLog("Cover wird erstellt…");
+      setProgress(18);
+      await wait(DRY_RUN_DELAY);
+      const coverImageUrl = MOCK_COVER_URL;
+      updateProject({ coverImageUrl });
+      addLog("Cover fertig", true);
+      setProgress(22);
+
+      // Step 3: Pages
+      const chapters: any[] = [];
+      const progressPerPage = 65 / pages.length;
+
+      for (let i = 0; i < pages.length; i++) {
+        const page = pages[i];
+        setStepLabel(`Seite ${i + 1} von ${pages.length}: "${page.title}"…`);
+        addLog(`Seite ${i + 1}: "${page.title}"…`);
+        setProgress(22 + i * progressPerPage);
+        await wait(DRY_RUN_DELAY);
+
+        const chapter = {
+          id: page.id,
+          title: page.title,
+          content: page.panels.map((p) => p.dialog || "").filter(Boolean).join(" "),
+          imageUrl: getMockPageUrl(i),
+          imagePrompt: "",
+          panels: page.panels,
+        };
+        chapters.push(chapter);
+        updateProject({ chapters: [...chapters] });
+        addLog(`Seite ${i + 1} fertig`, true);
+        setProgress(22 + (i + 1) * progressPerPage);
+      }
+
+      // Step 4: Ending
+      setStepLabel("Abschlussseite wird erstellt…");
+      addLog("Abschlussseite wird erstellt…");
+      setProgress(90);
+      await wait(DRY_RUN_DELAY);
+      updateProject({ endingData: MOCK_ENDING });
+      addLog("Abschlussseite fertig", true);
+
+      // Finalize
+      updateProject({
+        id: project?.id || `dry-${Date.now()}`,
+        title: project?.title || "Sardinien-Abenteuer",
+        storyInput: project?.storyInput || "Dry run test story",
+        guidedAnswers: project?.guidedAnswers || { characters: "", location: "Sardinien", timeframe: "Sommer 2025", specialMoments: "" },
+        tone: project?.tone || "humorvoll",
+        design: "kinderbuch",
+        characters: characters.map((c, i) => ({ id: `c${i}`, name: c.name, role: "Hauptfigur" })),
+        chapters,
+        coverImageUrl,
+        status: "preview",
+        createdAt: project?.createdAt || new Date().toISOString(),
+      });
+
+      setProgress(100);
+      setStepLabel("🧪 DRY RUN fertig!");
+      setDone(true);
+      setTimeout(() => setStep(4), 1200);
     } catch (err: any) {
       setError(err.message);
     }
