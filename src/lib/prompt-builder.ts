@@ -39,7 +39,7 @@ const TONE_STYLE_LOCKS: Record<string, string> = {
 };
 
 const ILLUSTRATION_STYLE_LOCKS: Record<string, string> = {
-  comic:       "warm watercolor comic illustration, bold black outlines, vibrant saturated colors, cinematic lighting, hand-drawn feel, professional comic book art",
+  comic:       "professional comic book illustration, bold clean black outlines, vibrant saturated colors, cel-shaded coloring, dynamic compositions, high contrast, sharp details, European BD quality (Asterix/Tintin level)",
   aquarell:    "soft watercolor illustration, pastel colors, gentle brushstrokes, dreamy romantic atmosphere, painterly texture, no harsh outlines",
   bleistift:   "detailed pencil sketch comic, crosshatching for shadows, hand-drawn linework, black and white with subtle warm tones",
   realistisch: "realistic comic art style, detailed digital painting, warm cinematic lighting, photorealistic faces with comic proportions",
@@ -112,6 +112,8 @@ function buildStyleBlock(
   return `ART STYLE: ${artStyle}
 Mood/tone: ${mood}
 Atmosphere: ${atmosphere}
+IMPORTANT: High resolution, sharp details, professional print quality.
+Every face must be clearly rendered with distinct features — no blurry or generic faces.
 
 ABSOLUTE RULE: NO text, NO letters, NO words, NO speech bubbles,
 NO captions, NO UI elements anywhere in the image.

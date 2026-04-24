@@ -137,10 +137,19 @@ Show each character clearly from head to toe. NO text, NO labels.`,
 // Text is rendered in frontend via CSS overlays
 router.post("/page", async (req, res) => {
   try {
-    const { page, characters = [], comicStyle = "emotional", category = "familie" } = req.body;
+    const { page, characters = [], comicStyle = "emotional", category = "familie", illustrationStyle = "comic" } = req.body;
 
     const comicMod = COMIC_STYLE_MOD[comicStyle] || COMIC_STYLE_MOD.emotional;
     const mood = CATEGORY_MOOD[category] || CATEGORY_MOOD.familie;
+
+    const STYLE_LOCKS = {
+      comic:       "professional comic book illustration, bold clean black outlines, vibrant saturated colors, cel-shaded coloring, dynamic compositions, high contrast, sharp details, European BD quality (Asterix/Tintin level)",
+      aquarell:    "soft watercolor illustration, pastel colors, gentle brushstrokes, dreamy romantic atmosphere, painterly texture, no harsh outlines",
+      bleistift:   "detailed pencil sketch comic, crosshatching for shadows, hand-drawn linework, black and white with subtle warm tones",
+      realistisch: "realistic comic art style, detailed digital painting, warm cinematic lighting, photorealistic faces with comic proportions",
+    };
+    const artStyle = STYLE_LOCKS[illustrationStyle] || STYLE_LOCKS.comic;
+
     const charDescs = characters.map(c =>
       `CHARACTER "${c.name}": ${c.visual_anchor}`
     ).join("\n\n");
@@ -168,8 +177,11 @@ Any deviation from these character descriptions is an error.
 
 ${charDescs || "Characters as described in the scene."}
 
-ART STYLE: warm watercolor comic illustration, rich colors, cinematic warm lighting, professional quality, ${comicMod}, ${mood}.
-Mood/tone: ${comicMod}
+ART STYLE: ${artStyle}
+Mood: ${comicMod}
+Atmosphere: ${mood}
+IMPORTANT: High resolution, sharp details, professional print quality.
+Every face must be clearly rendered with distinct features — no blurry or generic faces.
 
 ABSOLUTE RULE: NO text, NO letters, NO words, NO speech bubbles,
 NO captions, NO UI elements anywhere in the image.
@@ -272,10 +284,22 @@ router.post("/ending", async (req, res) => {
     const r = await openai.chat.completions.create({
       model: "gpt-4o",
       messages: [
-        { role: "system", content: `Write a warm, emotional and personal closing text for a comic book in ${lang}. Tone: ${tone || "warm, nostalgic, loving"}. 3-4 short sentences. Make it feel like a heartfelt letter. No title.` },
-        { role: "user", content: storyInput || Object.values(guidedAnswers).filter(Boolean).join(", ") },
+        { role: "system", content: `You write the final page of a personal comic book in ${lang}.
+This is NOT a generic book — it's about REAL people and THEIR specific story.
+
+RULES:
+- Reference the ACTUAL characters by name from the story
+- Mention 1-2 SPECIFIC moments from their story
+- Write as if you are the narrator who witnessed everything
+- 3-4 short, emotional sentences
+- Tone: ${tone || "warm, nostalgic, loving"}
+- End with a sentence that feels like a warm hug
+- NEVER use generic phrases like "Liebe Leserinnen und Leser" or "[Dein Name]"
+- NEVER break the fourth wall — don't mention "this book" or "this story"
+- Write as if speaking directly to the family` },
+        { role: "user", content: `Story: ${storyInput || ""}\n${Object.entries(guidedAnswers).filter(([k,v]) => v && k !== "category").map(([k,v]) => `${k}: ${v}`).join("\n")}${dedication ? `\nDedication: ${dedication}` : ""}` },
       ],
-      max_tokens: 150, temperature: 0.9,
+      max_tokens: 150, temperature: 0.8,
     });
 
     const endingText = r.choices[0].message.content || "";

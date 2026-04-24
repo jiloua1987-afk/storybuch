@@ -11,24 +11,41 @@ export async function POST(req: NextRequest) {
     const langMap: Record<string, string> = { de: "German", en: "English", fr: "French", es: "Spanish" };
     const lang = langMap[language] || "German";
 
-    // GPT-4o writes closing text — returned as JSON, rendered in frontend via CSS
+    const storyContext = [
+      storyInput || "",
+      ...Object.entries(guidedAnswers || {})
+        .filter(([k, v]) => v && k !== "category")
+        .map(([k, v]) => `${k}: ${v}`),
+      dedication ? `Dedication: ${dedication}` : "",
+    ].filter(Boolean).join("\n");
+
     const res = await openai.chat.completions.create({
       model: "gpt-4o",
       messages: [{
         role: "system",
-        content: `Write a warm, emotional closing paragraph for a personal comic book in ${lang}. Tone: ${tone || "warm"}. Max 70 words. Make it feel like the last page of a beloved book – personal, touching, memorable. No title.`,
+        content: `You write the final page of a personal comic book in ${lang}.
+This is NOT a generic book — it's about REAL people and THEIR specific story.
+
+RULES:
+- Reference the ACTUAL characters by name from the story
+- Mention 1-2 SPECIFIC moments from their story
+- Write as if you are the narrator who witnessed everything
+- 3-4 short, emotional sentences
+- Tone: ${tone || "warm, nostalgic, loving"}
+- End with a sentence that feels like a warm hug
+- NEVER use generic phrases like "Liebe Leserinnen und Leser" or "[Dein Name]"
+- NEVER break the fourth wall — don't mention "this book" or "this story"
+- Write as if speaking directly to the family`,
       }, {
         role: "user",
-        content: storyInput || Object.values(guidedAnswers || {}).filter(Boolean).join(", "),
+        content: storyContext,
       }],
-      max_tokens: 120,
-      temperature: 0.9,
+      max_tokens: 150,
+      temperature: 0.8,
     });
 
     const endingText = res.choices[0].message.content || "";
 
-    // Return text + dedication as JSON — NO sharp, NO SVG image rendering
-    // Frontend renders this as a styled HTML page
     return NextResponse.json({
       endingText,
       dedication: dedication || "",

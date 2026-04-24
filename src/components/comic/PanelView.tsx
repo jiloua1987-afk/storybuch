@@ -15,37 +15,58 @@ interface PanelViewProps {
   pageNumber?: number;
 }
 
-// ── Bubble shape styles per type ─────────────────────────────────────────────
-function getBubbleClasses(type?: string | null): string {
+// ── Bubble styles ────────────────────────────────────────────────────────────
+function getBubbleStyle(type?: string | null) {
   switch (type) {
     case "shout":
-      return "bg-yellow-50/95 border-[3px] border-[#1A1410] px-3 py-2";
+      return { bg: "bg-[#FFFDE8] border-[2.5px] border-[#1A1410]", radius: "rounded-sm" };
     case "thought":
-      return "bg-white/90 border-2 border-dashed border-[#1A1410] px-3 py-2";
+      return { bg: "bg-white/90 border-2 border-dashed border-[#555]", radius: "rounded-[18px]" };
     case "whisper":
-      return "bg-white/75 border border-dashed border-[#666] px-3 py-2";
+      return { bg: "bg-white/70 border border-dashed border-[#888]", radius: "rounded-[14px]" };
     case "caption":
-      return "bg-[#1A1410]/85 px-3 py-2";
-    default: // speech
-      return "bg-white/95 border-2 border-[#1A1410] px-3 py-2";
+      return { bg: "bg-[#2d1b4e]/90 border-0", radius: "rounded-md" };
+    default:
+      return { bg: "bg-white border-2 border-[#1A1410]", radius: "rounded-[16px]" };
   }
 }
 
-function getBubbleRadius(type?: string | null): string {
-  switch (type) {
-    case "shout": return "rounded-sm"; // sharp edges for shout
-    case "thought": return "rounded-[20px]"; // very round for thought
-    case "caption": return "rounded-md";
-    default: return "rounded-[14px]"; // speech bubble round
+// Position bubbles inside their respective panel areas
+// Header takes ~6%, then panels split the remaining space
+function getBubblePosition(index: number, total: number): React.CSSProperties {
+  const base: React.CSSProperties = { position: "absolute", maxWidth: "40%", zIndex: 10 };
+  const header = 6; // % for title bar
+
+  if (total <= 3) {
+    // 1 wide top (60%) + 2 bottom (40%)
+    const pos = [
+      { top: `${header + 2}%`, left: "2%" },
+      { top: `${header + 38}%`, left: "2%" },
+      { top: `${header + 38}%`, right: "2%" },
+    ];
+    return { ...base, ...(pos[index] || pos[0]) };
   }
-}
-
-function getTextColor(type?: string | null): string {
-  return type === "caption" ? "text-white" : "text-[#1A1410]";
-}
-
-function getSpeakerColor(type?: string | null): string {
-  return type === "caption" ? "text-yellow-300" : "text-purple-700";
+  if (total === 4) {
+    // 2x2 grid — each panel is ~47% wide, ~47% tall
+    const halfH = 47;
+    const pos = [
+      { top: `${header + 2}%`, left: "2%" },
+      { top: `${header + 2}%`, right: "2%" },
+      { top: `${header + halfH + 2}%`, left: "2%" },
+      { top: `${header + halfH + 2}%`, right: "2%" },
+    ];
+    return { ...base, ...(pos[index] || pos[0]) };
+  }
+  // 5 panels: 2 top, 1 wide middle, 2 bottom — each row ~31%
+  const rowH = 31;
+  const pos = [
+    { top: `${header + 2}%`, left: "2%" },
+    { top: `${header + 2}%`, right: "2%" },
+    { top: `${header + rowH + 2}%`, left: "2%" },
+    { top: `${header + rowH * 2 + 2}%`, left: "2%" },
+    { top: `${header + rowH * 2 + 2}%`, right: "2%" },
+  ];
+  return { ...base, ...(pos[index] || pos[0]) };
 }
 
 export default function PanelView({ imageUrl, title, panels = [], pageNumber }: PanelViewProps) {
@@ -55,41 +76,8 @@ export default function PanelView({ imageUrl, title, panels = [], pageNumber }: 
   const getDialog = (panel: PanelData, i: number) =>
     editedDialogs[i] !== undefined ? editedDialogs[i] : panel.dialog || "";
 
-  // Position bubbles based on panel count and index
-  function getBubblePosition(index: number, total: number): React.CSSProperties {
-    const base: React.CSSProperties = { position: "absolute", maxWidth: "42%", zIndex: 10 };
-
-    if (total <= 3) {
-      const pos = [
-        { top: "4%", left: "3%" },
-        { bottom: "28%", left: "3%" },
-        { bottom: "4%", right: "3%" },
-      ];
-      return { ...base, ...pos[index] };
-    }
-    if (total === 4) {
-      const pos = [
-        { top: "4%", left: "3%" },
-        { top: "4%", right: "3%" },
-        { top: "52%", left: "3%" },
-        { top: "52%", right: "3%" },
-      ];
-      return { ...base, ...pos[index] };
-    }
-    const pos = [
-      { top: "3%", left: "3%" },
-      { top: "3%", right: "3%" },
-      { top: "36%", left: "3%" },
-      { top: "68%", left: "3%" },
-      { top: "68%", right: "3%" },
-      { top: "36%", right: "3%" },
-    ];
-    return { ...base, ...(pos[index] || pos[0]) };
-  }
-
   return (
     <div className="relative w-full bg-[#F5EDE0] rounded-xl overflow-hidden shadow-xl">
-      {/* Image + dialog overlays */}
       <div className="relative">
         {imageUrl ? (
           <img src={imageUrl} alt={title || "Comic page"} className="w-full h-auto block" />
@@ -99,29 +87,27 @@ export default function PanelView({ imageUrl, title, panels = [], pageNumber }: 
           </div>
         )}
 
-        {/* Page title overlay — top of image */}
+        {/* Page title — overlay on cream header area */}
         {title && (
-          <div className="absolute top-0 inset-x-0 bg-[#F5EDE0]/90 py-2 text-center border-b-2 border-[#1A1410]">
-            <h3
-              className="font-black text-[#1A1410] tracking-wider text-base md:text-lg uppercase"
-              style={{ fontFamily: "'Bangers', cursive", letterSpacing: "0.1em" }}
-            >
+          <div className="absolute top-0 inset-x-0 py-2 text-center"
+            style={{ background: "linear-gradient(to bottom, #F5EDE0 60%, transparent)" }}>
+            <h3 className="text-[#1A1410] tracking-wider text-sm md:text-base uppercase"
+              style={{ fontFamily: "'Bangers', cursive", letterSpacing: "0.12em" }}>
               {title}
             </h3>
           </div>
         )}
 
-        {/* Comic Speech Bubble Overlays */}
+        {/* Speech Bubbles */}
         {panels.map((panel, i) => {
           const dialog = getDialog(panel, i);
           if (!dialog) return null;
           const isEditing = editingIndex === i;
           const posStyle = getBubblePosition(i, panels.length);
-          const bubbleType = panel.bubble_type;
-          const bubbleClasses = getBubbleClasses(bubbleType);
-          const radiusClass = getBubbleRadius(bubbleType);
-          const textColor = getTextColor(bubbleType);
-          const speakerColor = getSpeakerColor(bubbleType);
+          const { bg, radius } = getBubbleStyle(panel.bubble_type);
+          const isCaption = panel.bubble_type === "caption";
+          const isThought = panel.bubble_type === "thought";
+          const hasTail = !isCaption && !isThought && panel.bubble_type !== "whisper";
 
           return (
             <div key={i} style={posStyle} className="group">
@@ -132,64 +118,49 @@ export default function PanelView({ imageUrl, title, panels = [], pageNumber }: 
                   onChange={(e) => setEditedDialogs({ ...editedDialogs, [i]: e.target.value })}
                   onBlur={() => setEditingIndex(null)}
                   onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && setEditingIndex(null)}
-                  className={`text-xs font-bold text-[#1A1410] bg-white border-2 border-[#1A1410] ${radiusClass} p-2 resize-none w-full outline-none`}
+                  className={`text-[#1A1410] bg-white border-2 border-[#1A1410] ${radius} p-2 resize-none w-full outline-none`}
                   rows={2}
                   style={{ fontFamily: "'Bangers', cursive", fontSize: "13px" }}
                 />
               ) : (
                 <div className="relative">
-                  {/* Bubble body */}
                   <div
                     onClick={() => setEditingIndex(i)}
-                    className={`${bubbleClasses} ${radiusClass} cursor-pointer hover:scale-105 transition-transform`}
-                    style={{
-                      boxShadow: bubbleType === "caption" ? "none" : "2px 3px 0px rgba(26,20,16,0.4)",
-                    }}
+                    className={`${bg} ${radius} px-3 py-1.5 cursor-pointer hover:scale-[1.03] transition-transform`}
+                    style={{ boxShadow: isCaption ? "none" : "1px 2px 0px rgba(26,20,16,0.3)" }}
                   >
-                    <p
-                      className={`${textColor} leading-snug`}
-                      style={{
-                        fontFamily: "'Bangers', cursive",
-                        fontSize: "13px",
-                        letterSpacing: "0.04em",
-                      }}
-                    >
+                    <p className={`${isCaption ? "text-white" : "text-[#1A1410]"} leading-snug`}
+                      style={{ fontFamily: "'Bangers', cursive", fontSize: "13px", letterSpacing: "0.03em" }}>
                       {panel.speaker && panel.speaker !== "narrator" && (
-                        <span className={`${speakerColor} font-bold`}>{panel.speaker}: </span>
+                        <span className={`${isCaption ? "text-[#C9963A]" : "text-[#1A1410]"} font-bold`}>
+                          {panel.speaker}:{" "}
+                        </span>
                       )}
                       {dialog}
                     </p>
                   </div>
 
-                  {/* Tail (speech + shout only) */}
-                  {(bubbleType === "speech" || !bubbleType || bubbleType === "shout") && (
-                    <div
-                      className="absolute -bottom-2 left-4"
+                  {/* Tail */}
+                  {hasTail && (
+                    <div className="absolute -bottom-[7px] left-5"
                       style={{
-                        width: 0,
-                        height: 0,
-                        borderLeft: "8px solid transparent",
-                        borderRight: "8px solid transparent",
-                        borderTop: bubbleType === "shout"
-                          ? "10px solid rgba(254,252,232,0.95)"
-                          : "10px solid rgba(255,255,255,0.95)",
-                        filter: "drop-shadow(1px 2px 0px rgba(26,20,16,0.3))",
+                        width: 0, height: 0,
+                        borderLeft: "7px solid transparent",
+                        borderRight: "7px solid transparent",
+                        borderTop: panel.bubble_type === "shout"
+                          ? "9px solid #FFFDE8"
+                          : "9px solid white",
                       }}
                     />
                   )}
 
                   {/* Thought dots */}
-                  {bubbleType === "thought" && (
-                    <div className="absolute -bottom-3 left-5 flex gap-1">
-                      <div className="w-2 h-2 rounded-full bg-white/90 border border-[#1A1410]" />
-                      <div className="w-1.5 h-1.5 rounded-full bg-white/80 border border-[#1A1410]" />
+                  {isThought && (
+                    <div className="absolute -bottom-3 left-4 flex gap-1">
+                      <div className="w-1.5 h-1.5 rounded-full bg-white/90 border border-[#555]" />
+                      <div className="w-1 h-1 rounded-full bg-white/80 border border-[#555]" />
                     </div>
                   )}
-
-                  {/* Edit hint on hover */}
-                  <div className="absolute -top-5 left-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <span className="text-[10px] bg-purple-600 text-white px-1.5 py-0.5 rounded">✏️ edit</span>
-                  </div>
                 </div>
               )}
             </div>
@@ -197,7 +168,6 @@ export default function PanelView({ imageUrl, title, panels = [], pageNumber }: 
         })}
       </div>
 
-      {/* Page number */}
       {pageNumber && (
         <div className="text-center py-1 text-xs text-gray-400">Seite {pageNumber}</div>
       )}
