@@ -253,8 +253,7 @@ NEGATIVE: No text, no speech bubbles, no watermarks, no distorted faces, no extr
               ],
             },
           ],
-          size: "1024x1536",
-          quality: "high",
+          tools: [{ type: "image_generation", quality: "high", size: "1024x1536" }],
         });
 
         const output = refResponse.output;

@@ -154,13 +154,13 @@ async function generateWithStyleReference(prompt: string, styleRefB64: string): 
         ],
       },
     ],
-    size: "1024x1536",
-    quality: "high",
+    tools: [{ type: "image_generation", quality: "high", size: "1024x1536" }],
   });
 
   const output = response.output;
   if (Array.isArray(output)) {
     for (const item of output) {
+      // With tools API, result is in image_generation_call
       if (item.type === "image_generation_call" && item.result) {
         return `data:image/png;base64,${item.result}`;
       }
