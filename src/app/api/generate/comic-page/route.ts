@@ -1,17 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { generateComicPage } from "@/lib/comic-page-generator";
-import { buildComicPagePrompt } from "@/lib/prompt-builder";
-import OpenAI from "openai";
+import { saveImageToStorage } from "@/lib/storage";
 
 export const maxDuration = 60;
-
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 export async function POST(req: NextRequest) {
   try {
     const { page, characters, illustrationStyle, comicStyle, category } = await req.json();
 
-    // Generate raw image — NO text overlay, NO sharp compositing
+    // Generate raw image
     const rawUrl = await generateComicPage(
       page,
       characters || [],
@@ -20,9 +17,16 @@ export async function POST(req: NextRequest) {
       category || "familie"
     );
 
-    // Return image URL + panels JSON (text rendered in frontend via CSS)
+    if (!rawUrl) {
+      return NextResponse.json({ imageUrl: "", panels: page.panels || [] });
+    }
+
+    // Save to Supabase Storage → return public URL (no b64 in response)
+    const bookId = page.id?.split("-")[0] || `book-${Date.now()}`;
+    const imageUrl = await saveImageToStorage(rawUrl, bookId, page.id || `page-${Date.now()}`);
+
     return NextResponse.json({
-      imageUrl: rawUrl || "",
+      imageUrl,
       panels: page.panels || [],
     });
   } catch (err: any) {

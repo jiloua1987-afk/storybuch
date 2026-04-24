@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { buildComicStructure, buildCharacterAnchors, generateComicPage } from "@/lib/comic-page-generator";
 import { generateCoverImage } from "@/lib/cover-generator";
+import { saveImageToStorage } from "@/lib/storage";
 import OpenAI from "openai";
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
@@ -101,12 +102,14 @@ export async function POST(req: NextRequest) {
         const bookTitle = (storyInput || "").split("\n")[0]?.substring(0, 50) || "Mein Comic";
         const dedication = guidedAnswers?.dedication || body.dedication || "";
 
-        // Step 2: Cover — raw image, no sharp overlay
+        // Step 2: Cover → Supabase Storage
         send("progress", { label: "Cover wird erstellt…", progress: 18 });
+        const bookId = `book-${Date.now()}`;
         try {
-          const coverUrl = await generateCoverImage(
+          const rawCover = await generateCoverImage(
             bookTitle, characters, category, illustrationStyle || "comic", location
           );
+          const coverUrl = rawCover ? await saveImageToStorage(rawCover, "covers", `cover-${bookId}`) : "";
           send("cover", { coverImageUrl: coverUrl });
           send("progress", { label: "Cover fertig", progress: 22 });
         } catch {
@@ -129,11 +132,13 @@ export async function POST(req: NextRequest) {
               category
             );
 
-            // Send image URL + panels JSON — frontend renders text via CSS
+            // Save to Supabase → send public URL (no b64 over SSE)
+            const imageUrl = rawUrl ? await saveImageToStorage(rawUrl, bookId, page.id || `page-${i}`) : "";
+
             send("page", {
               pageIndex: i,
               pageId: page.id,
-              imageUrl: rawUrl,
+              imageUrl,
               title: page.title,
               panels: page.panels,
             });

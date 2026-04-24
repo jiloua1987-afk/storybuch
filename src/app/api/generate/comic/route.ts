@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { buildComicStructure, buildCharacterAnchors, generateComicPage } from "@/lib/comic-page-generator";
 import { generateCoverImage } from "@/lib/cover-generator";
+import { saveImageToStorage } from "@/lib/storage";
 
 export async function POST(req: NextRequest) {
   try {
@@ -14,7 +15,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Keine Geschichte angegeben." }, { status: 400 });
     }
 
-    // Step 1: Story structure + Character Builder (parallel)
     const [pages, characters] = await Promise.all([
       buildComicStructure(
         storyInput || "", guidedAnswers || {}, tone || "humorvoll",
@@ -30,38 +30,37 @@ export async function POST(req: NextRequest) {
 
     const location = guidedAnswers?.ort || guidedAnswers?.location || "";
     const bookTitle = storyInput?.split("\n")[0]?.substring(0, 50) || "Mein Comic";
+    const bookId = `book-${Date.now()}`;
 
-    // Step 2: Cover — raw image, no text overlay
+    // Cover → Supabase
     let coverImageUrl = "";
     try {
-      coverImageUrl = await generateCoverImage(
-        bookTitle, characters, category,
-        illustrationStyle || "comic", location
+      const rawCover = await generateCoverImage(
+        bookTitle, characters, category, illustrationStyle || "comic", location
       );
+      if (rawCover) {
+        coverImageUrl = await saveImageToStorage(rawCover, "covers", `cover-${bookId}`);
+      }
     } catch (e: any) {
       console.error("Cover error:", e.message);
     }
 
-    // Step 3: Comic pages — raw images, no sharp compositing
+    // Pages → Supabase
     const comicPages = [];
     for (const page of pages) {
       let imageUrl = "";
       try {
-        imageUrl = await generateComicPage(
-          page, characters,
-          illustrationStyle || "comic",
-          comicStyle || "emotional",
-          category
+        const rawUrl = await generateComicPage(
+          page, characters, illustrationStyle || "comic", comicStyle || "emotional", category
         );
+        if (rawUrl) {
+          imageUrl = await saveImageToStorage(rawUrl, bookId, page.id || `page-${page.pageNumber}`);
+        }
       } catch (e: any) {
         console.error(`Page ${page.pageNumber} error:`, e.message);
       }
 
-      comicPages.push({
-        ...page,
-        imageUrl,
-        panels: page.panels, // panels JSON for frontend CSS overlay
-      });
+      comicPages.push({ ...page, imageUrl, panels: page.panels });
     }
 
     return NextResponse.json({ pages: comicPages, coverImageUrl, characters });
