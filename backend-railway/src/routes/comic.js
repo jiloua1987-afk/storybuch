@@ -2,9 +2,30 @@ const express = require("express");
 const router = express.Router();
 const OpenAI = require("openai");
 const sharp = require("sharp");
+const fs = require("fs");
+const path = require("path");
 const { saveImage } = require("../lib/storage");
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+// ── Load style reference image ────────────────────────────────────────────────
+let STYLE_REF_B64 = null;
+try {
+  // Try multiple possible locations
+  const candidates = [
+    path.join(__dirname, "../../public/Comic.png"),
+    path.join(__dirname, "../../style-reference.png"),
+    path.join(process.cwd(), "public", "Comic.png"),
+  ];
+  for (const refPath of candidates) {
+    if (fs.existsSync(refPath)) {
+      STYLE_REF_B64 = fs.readFileSync(refPath).toString("base64");
+      console.log(`✓ Style reference loaded from ${refPath}`);
+      break;
+    }
+  }
+  if (!STYLE_REF_B64) console.warn("⚠ No style reference image found");
+} catch (e) { console.warn("Style reference load error:", e.message); }
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const CATEGORY_MOOD = {
@@ -208,21 +229,61 @@ Rich detailed backgrounds in every panel. Expressive character faces.
 Cinematic camera angles that vary between panels (close-up, medium shot, wide establishing shot).
 NEGATIVE: No text, no speech bubbles, no watermarks, no distorted faces, no extra fingers, no inconsistent characters between panels.`;
 
-    console.log(`Generating page "${page.title}" (${page.panels.length} panels)`);
+    console.log(`Generating page "${page.title}" (${page.panels.length} panels)${STYLE_REF_B64 ? " [with style ref]" : ""}`);
 
-    // A4 portrait format
-    const genRes = await openai.images.generate({
-      model: "gpt-image-1",
-      prompt: fullPrompt,
-      n: 1,
-      size: "1024x1536",
-      quality: "high",
-    });
-
-    const item = (genRes.data || [])[0];
     let rawUrl = "";
-    if (item?.url) rawUrl = item.url;
-    else if (item?.b64_json) rawUrl = `data:image/png;base64,${item.b64_json}`;
+
+    // Primary: responses API with style reference image
+    if (STYLE_REF_B64) {
+      try {
+        const refResponse = await openai.responses.create({
+          model: "gpt-image-1",
+          input: [
+            {
+              role: "user",
+              content: [
+                {
+                  type: "input_image",
+                  image_url: `data:image/png;base64,${STYLE_REF_B64}`,
+                },
+                {
+                  type: "input_text",
+                  text: `Use the EXACT art style, line quality, coloring technique, and panel composition from this reference image. Match the same level of professional comic book quality. Then create:\n\n${fullPrompt}`,
+                },
+              ],
+            },
+          ],
+          size: "1024x1536",
+          quality: "high",
+        });
+
+        const output = refResponse.output;
+        if (Array.isArray(output)) {
+          for (const item of output) {
+            if (item.type === "image_generation_call" && item.result) {
+              rawUrl = `data:image/png;base64,${item.result}`;
+              break;
+            }
+          }
+        }
+      } catch (e) {
+        console.warn(`Style reference failed for "${page.title}", falling back:`, e.message);
+      }
+    }
+
+    // Fallback: standard generate without reference
+    if (!rawUrl) {
+      const genRes = await openai.images.generate({
+        model: "gpt-image-1",
+        prompt: fullPrompt,
+        n: 1,
+        size: "1024x1536",
+        quality: "high",
+      });
+      const item = (genRes.data || [])[0];
+      if (item?.url) rawUrl = item.url;
+      else if (item?.b64_json) rawUrl = `data:image/png;base64,${item.b64_json}`;
+    }
 
     if (!rawUrl) return res.json({ imageUrl: "", panels: page.panels });
 

@@ -1,7 +1,19 @@
 import OpenAI from "openai";
 import { buildComicPagePrompt, buildGPTStructurePrompt, type Character, type Panel } from "./prompt-builder";
+import fs from "fs";
+import path from "path";
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+// ── Load style reference image once at startup ───────────────────────────────
+let STYLE_REF_B64: string | null = null;
+try {
+  const refPath = path.join(process.cwd(), "public", "Comic.png");
+  if (fs.existsSync(refPath)) {
+    STYLE_REF_B64 = fs.readFileSync(refPath).toString("base64");
+    console.log("✓ Style reference image loaded (Comic.png)");
+  }
+} catch { /* ignore */ }
 
 export interface StoryPage {
   id: string;
@@ -88,8 +100,9 @@ Be very specific: 'Emma: 6-year-old girl, shoulder-length red-brown hair, yellow
   }));
 }
 
-// ── Step 3: gpt-image-1 generates comic page ────────────────────────────────
-// Uses images.generate() ONLY (not images.edit) per Spec Section 8
+// ── Step 3: Generate comic page with style reference ─────────────────────────
+// Primary: responses API with Comic.png as style reference
+// Fallback: images.generate() without reference
 export async function generateComicPage(
   page: StoryPage,
   characters: Character[],
@@ -108,9 +121,57 @@ export async function generateComicPage(
     timeOfDay: page.timeOfDay,
   });
 
+  // Try with style reference first
+  if (STYLE_REF_B64) {
+    try {
+      const result = await generateWithStyleReference(prompt, STYLE_REF_B64);
+      if (result) return result;
+    } catch (err: any) {
+      console.warn(`Style reference failed for page ${page.pageNumber}, falling back:`, err.message);
+    }
+  }
+
+  // Fallback: standard generate without reference
+  return generateStandard(prompt, page.pageNumber);
+}
+
+// ── Generate with style reference via responses API ──────────────────────────
+async function generateWithStyleReference(prompt: string, styleRefB64: string): Promise<string> {
+  const response = await (openai as any).responses.create({
+    model: "gpt-image-1",
+    input: [
+      {
+        role: "user",
+        content: [
+          {
+            type: "input_image",
+            image_url: `data:image/png;base64,${styleRefB64}`,
+          },
+          {
+            type: "input_text",
+            text: `Use the EXACT art style, line quality, coloring technique, and panel composition from this reference image. Match the same level of professional comic book quality. Then create:\n\n${prompt}`,
+          },
+        ],
+      },
+    ],
+    size: "1024x1536",
+    quality: "high",
+  });
+
+  const output = response.output;
+  if (Array.isArray(output)) {
+    for (const item of output) {
+      if (item.type === "image_generation_call" && item.result) {
+        return `data:image/png;base64,${item.result}`;
+      }
+    }
+  }
+  return "";
+}
+
+// ── Standard generate without reference ──────────────────────────────────────
+async function generateStandard(prompt: string, pageNumber: number): Promise<string> {
   try {
-    // Always use images.generate() — NOT images.edit()
-    // A4 portrait: 1024x1536 for print-ready quality
     const response = await openai.images.generate({
       model: "gpt-image-1",
       prompt,
@@ -119,14 +180,12 @@ export async function generateComicPage(
       quality: "high",
     });
 
-    const data = response.data ?? [];
-    const item = data[0];
-    if (!item) return "";
-    if (item.url) return item.url;
-    if (item.b64_json) return `data:image/png;base64,${item.b64_json}`;
+    const item = (response.data ?? [])[0];
+    if (item?.url) return item.url;
+    if (item?.b64_json) return `data:image/png;base64,${item.b64_json}`;
     return "";
   } catch (err: any) {
-    console.error(`Page ${page.pageNumber} generation error:`, err.message);
+    console.error(`Page ${pageNumber} generation error:`, err.message);
     // Single retry
     try {
       const response = await openai.images.generate({
@@ -136,13 +195,10 @@ export async function generateComicPage(
         size: "1024x1536",
         quality: "high",
       });
-      const data = response.data ?? [];
-      const item = data[0];
+      const item = (response.data ?? [])[0];
       if (item?.url) return item.url;
       if (item?.b64_json) return `data:image/png;base64,${item.b64_json}`;
-    } catch {
-      // ignore retry failure
-    }
+    } catch { /* ignore */ }
     return "";
   }
 }
