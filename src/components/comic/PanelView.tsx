@@ -1,51 +1,82 @@
 "use client";
 import { useState } from "react";
 
+interface PanelData {
+  dialog?: string;
+  speaker?: string;
+  nummer: number;
+  bubble_type?: "speech" | "caption" | "shout" | "thought" | "whisper" | null;
+}
+
 interface PanelViewProps {
   imageUrl: string;
   title?: string;
-  panels?: { dialog?: string; speaker?: string; nummer: number }[];
+  panels?: PanelData[];
   pageNumber?: number;
+}
+
+// ── Bubble shape styles per type ─────────────────────────────────────────────
+function getBubbleClasses(type?: string | null): string {
+  switch (type) {
+    case "shout":
+      return "bg-yellow-50/95 border-[3px] border-[#1A1410] px-3 py-2";
+    case "thought":
+      return "bg-white/90 border-2 border-dashed border-[#1A1410] px-3 py-2";
+    case "whisper":
+      return "bg-white/75 border border-dashed border-[#666] px-3 py-2";
+    case "caption":
+      return "bg-[#1A1410]/85 px-3 py-2";
+    default: // speech
+      return "bg-white/95 border-2 border-[#1A1410] px-3 py-2";
+  }
+}
+
+function getBubbleRadius(type?: string | null): string {
+  switch (type) {
+    case "shout": return "rounded-sm"; // sharp edges for shout
+    case "thought": return "rounded-[20px]"; // very round for thought
+    case "caption": return "rounded-md";
+    default: return "rounded-[14px]"; // speech bubble round
+  }
+}
+
+function getTextColor(type?: string | null): string {
+  return type === "caption" ? "text-white" : "text-[#1A1410]";
+}
+
+function getSpeakerColor(type?: string | null): string {
+  return type === "caption" ? "text-yellow-300" : "text-purple-700";
 }
 
 export default function PanelView({ imageUrl, title, panels = [], pageNumber }: PanelViewProps) {
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [editedDialogs, setEditedDialogs] = useState<Record<number, string>>({});
 
-  const getDialog = (panel: any, i: number) =>
+  const getDialog = (panel: PanelData, i: number) =>
     editedDialogs[i] !== undefined ? editedDialogs[i] : panel.dialog || "";
 
-  // Position bubbles based on panel count and index to avoid overlap
-  function getBubbleStyle(index: number, total: number): React.CSSProperties {
-    const base: React.CSSProperties = {
-      position: "absolute",
-      maxWidth: "44%",
-      zIndex: 10,
-    };
+  // Position bubbles based on panel count and index
+  function getBubblePosition(index: number, total: number): React.CSSProperties {
+    const base: React.CSSProperties = { position: "absolute", maxWidth: "42%", zIndex: 10 };
 
     if (total <= 3) {
-      // 1 wide top + 2 bottom → distribute vertically
-      const positions = [
+      const pos = [
         { top: "4%", left: "3%" },
         { bottom: "28%", left: "3%" },
         { bottom: "4%", right: "3%" },
       ];
-      return { ...base, ...positions[index] };
+      return { ...base, ...pos[index] };
     }
-
     if (total === 4) {
-      // 2x2 grid
-      const positions = [
+      const pos = [
         { top: "4%", left: "3%" },
         { top: "4%", right: "3%" },
         { top: "52%", left: "3%" },
         { top: "52%", right: "3%" },
       ];
-      return { ...base, ...positions[index] };
+      return { ...base, ...pos[index] };
     }
-
-    // 5+ panels: stagger positions
-    const positions = [
+    const pos = [
       { top: "3%", left: "3%" },
       { top: "3%", right: "3%" },
       { top: "36%", left: "3%" },
@@ -53,23 +84,11 @@ export default function PanelView({ imageUrl, title, panels = [], pageNumber }: 
       { top: "68%", right: "3%" },
       { top: "36%", right: "3%" },
     ];
-    return { ...base, ...(positions[index] || positions[0]) };
+    return { ...base, ...(pos[index] || pos[0]) };
   }
 
   return (
     <div className="relative w-full bg-[#F5EDE0] rounded-xl overflow-hidden shadow-xl">
-      {/* Page title */}
-      {title && (
-        <div className="px-4 py-3 text-center border-b-2 border-[#1A1410]">
-          <h3
-            className="font-black text-[#1A1410] tracking-wider text-lg uppercase"
-            style={{ fontFamily: "'Bangers', 'Arial Black', sans-serif", letterSpacing: "0.1em" }}
-          >
-            {title}
-          </h3>
-        </div>
-      )}
-
       {/* Image + dialog overlays */}
       <div className="relative">
         {imageUrl ? (
@@ -80,44 +99,97 @@ export default function PanelView({ imageUrl, title, panels = [], pageNumber }: 
           </div>
         )}
 
-        {/* CSS Speech Bubble Overlays */}
+        {/* Page title overlay — top of image */}
+        {title && (
+          <div className="absolute top-0 inset-x-0 bg-[#F5EDE0]/90 py-2 text-center border-b-2 border-[#1A1410]">
+            <h3
+              className="font-black text-[#1A1410] tracking-wider text-base md:text-lg uppercase"
+              style={{ fontFamily: "'Bangers', cursive", letterSpacing: "0.1em" }}
+            >
+              {title}
+            </h3>
+          </div>
+        )}
+
+        {/* Comic Speech Bubble Overlays */}
         {panels.map((panel, i) => {
           const dialog = getDialog(panel, i);
           if (!dialog) return null;
           const isEditing = editingIndex === i;
-          const posStyle = getBubbleStyle(i, panels.length);
+          const posStyle = getBubblePosition(i, panels.length);
+          const bubbleType = panel.bubble_type;
+          const bubbleClasses = getBubbleClasses(bubbleType);
+          const radiusClass = getBubbleRadius(bubbleType);
+          const textColor = getTextColor(bubbleType);
+          const speakerColor = getSpeakerColor(bubbleType);
 
           return (
-            <div key={i} style={posStyle}>
+            <div key={i} style={posStyle} className="group">
               {isEditing ? (
                 <textarea
                   autoFocus
                   value={dialog}
                   onChange={(e) => setEditedDialogs({ ...editedDialogs, [i]: e.target.value })}
                   onBlur={() => setEditingIndex(null)}
-                  className="text-xs font-bold text-[#1A1410] bg-white border-2 border-[#1A1410] rounded p-1.5 resize-none w-full"
+                  onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && setEditingIndex(null)}
+                  className={`text-xs font-bold text-[#1A1410] bg-white border-2 border-[#1A1410] ${radiusClass} p-2 resize-none w-full outline-none`}
                   rows={2}
-                  style={{ fontFamily: "'Bangers', 'Arial Black', sans-serif", fontSize: "12px" }}
+                  style={{ fontFamily: "'Bangers', cursive", fontSize: "13px" }}
                 />
               ) : (
-                <div
-                  onClick={() => setEditingIndex(i)}
-                  className="bg-white/95 border-2 border-[#1A1410] rounded-lg px-2.5 py-1.5 cursor-pointer hover:bg-yellow-50 transition-colors"
-                  style={{ boxShadow: "2px 2px 0px #1A1410" }}
-                >
-                  <p
-                    className="text-[#1A1410] leading-tight"
+                <div className="relative">
+                  {/* Bubble body */}
+                  <div
+                    onClick={() => setEditingIndex(i)}
+                    className={`${bubbleClasses} ${radiusClass} cursor-pointer hover:scale-105 transition-transform`}
                     style={{
-                      fontFamily: "'Bangers', 'Arial Black', sans-serif",
-                      fontSize: "12px",
-                      letterSpacing: "0.04em",
+                      boxShadow: bubbleType === "caption" ? "none" : "2px 3px 0px rgba(26,20,16,0.4)",
                     }}
                   >
-                    {panel.speaker && (
-                      <span className="text-purple-700 font-bold">{panel.speaker}: </span>
-                    )}
-                    {dialog}
-                  </p>
+                    <p
+                      className={`${textColor} leading-snug`}
+                      style={{
+                        fontFamily: "'Bangers', cursive",
+                        fontSize: "13px",
+                        letterSpacing: "0.04em",
+                      }}
+                    >
+                      {panel.speaker && panel.speaker !== "narrator" && (
+                        <span className={`${speakerColor} font-bold`}>{panel.speaker}: </span>
+                      )}
+                      {dialog}
+                    </p>
+                  </div>
+
+                  {/* Tail (speech + shout only) */}
+                  {(bubbleType === "speech" || !bubbleType || bubbleType === "shout") && (
+                    <div
+                      className="absolute -bottom-2 left-4"
+                      style={{
+                        width: 0,
+                        height: 0,
+                        borderLeft: "8px solid transparent",
+                        borderRight: "8px solid transparent",
+                        borderTop: bubbleType === "shout"
+                          ? "10px solid rgba(254,252,232,0.95)"
+                          : "10px solid rgba(255,255,255,0.95)",
+                        filter: "drop-shadow(1px 2px 0px rgba(26,20,16,0.3))",
+                      }}
+                    />
+                  )}
+
+                  {/* Thought dots */}
+                  {bubbleType === "thought" && (
+                    <div className="absolute -bottom-3 left-5 flex gap-1">
+                      <div className="w-2 h-2 rounded-full bg-white/90 border border-[#1A1410]" />
+                      <div className="w-1.5 h-1.5 rounded-full bg-white/80 border border-[#1A1410]" />
+                    </div>
+                  )}
+
+                  {/* Edit hint on hover */}
+                  <div className="absolute -top-5 left-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <span className="text-[10px] bg-purple-600 text-white px-1.5 py-0.5 rounded">✏️ edit</span>
+                  </div>
                 </div>
               )}
             </div>
