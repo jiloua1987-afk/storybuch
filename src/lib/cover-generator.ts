@@ -52,7 +52,7 @@ Leave the bottom 30% of the image slightly darker/simpler for title overlay.`;
       model: "gpt-image-1",
       prompt,
       n: 1,
-      size: "1024x1792",
+      size: "1024x1536",
       quality: "high",
     });
     const item = (response.data ?? [])[0];
@@ -67,7 +67,7 @@ Leave the bottom 30% of the image slightly darker/simpler for title overlay.`;
         model: "gpt-image-1",
         prompt,
         n: 1,
-        size: "1024x1792",
+        size: "1024x1536",
         quality: "high",
       });
       const item = (response.data ?? [])[0];

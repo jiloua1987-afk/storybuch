@@ -203,7 +203,7 @@ NEGATIVE: No text, no speech bubbles, no watermarks, no distorted faces, no extr
       model: "gpt-image-1",
       prompt: fullPrompt,
       n: 1,
-      size: "1024x1792",
+      size: "1024x1536",
       quality: "high",
     });
 
@@ -244,7 +244,7 @@ Style: warm watercolor comic art, professional cover quality, cinematic composit
 Characters prominently featured in foreground. NO text, NO title, NO letters anywhere.`;
 
     const genRes = await openai.images.generate({
-      model: "gpt-image-1", prompt, n: 1, size: "1024x1792", quality: "high"
+      model: "gpt-image-1", prompt, n: 1, size: "1024x1536", quality: "high"
     });
     const item = (genRes.data || [])[0];
     let rawUrl = item?.url || "";

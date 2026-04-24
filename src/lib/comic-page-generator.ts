@@ -110,12 +110,12 @@ export async function generateComicPage(
 
   try {
     // Always use images.generate() — NOT images.edit()
-    // A4 portrait: 1024x1792 for print-ready quality
+    // A4 portrait: 1024x1536 for print-ready quality
     const response = await openai.images.generate({
       model: "gpt-image-1",
       prompt,
       n: 1,
-      size: "1024x1792",
+      size: "1024x1536",
       quality: "high",
     });
 
@@ -133,7 +133,7 @@ export async function generateComicPage(
         model: "gpt-image-1",
         prompt,
         n: 1,
-        size: "1024x1792",
+        size: "1024x1536",
         quality: "high",
       });
       const data = response.data ?? [];

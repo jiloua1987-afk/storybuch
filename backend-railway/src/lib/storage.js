@@ -18,7 +18,7 @@ async function saveImage(b64OrUrl, folder, filename) {
       buffer = Buffer.from(b64OrUrl, "base64");
     }
 
-    // Komprimieren — A4 portrait images (1024x1792), resize height
+    // Komprimieren — A4 portrait images (1024x1536), resize height
     const compressed = await sharp(buffer)
       .resize(1400, null, { withoutEnlargement: true, fit: "inside" })
       .jpeg({ quality: 90, progressive: true })
