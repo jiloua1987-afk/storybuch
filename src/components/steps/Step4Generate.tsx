@@ -9,8 +9,7 @@ import {
 } from "@/lib/dryRunData";
 
 // Dry-run mode: set NEXT_PUBLIC_DRY_RUN=true to test without API costs
-// TEMPORARY: hardcoded to true for testing — set back to env var after testing
-const DRY_RUN = true;
+const DRY_RUN = process.env.NEXT_PUBLIC_DRY_RUN === "true";
 const RAILWAY_URL = process.env.NEXT_PUBLIC_RAILWAY_URL || "";
 
 export default function Step4Generate() {
