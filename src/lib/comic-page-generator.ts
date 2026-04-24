@@ -13,7 +13,7 @@ export interface StoryPage {
   imageUrl?: string;
 }
 
-// ── Step 1: GPT-4o baut Story-Struktur ───────────────────────────────────────
+// ── Step 1: GPT-4o builds story structure ────────────────────────────────────
 export async function buildComicStructure(
   storyInput: string,
   guidedAnswers: Record<string, string>,
@@ -49,7 +49,7 @@ export async function buildComicStructure(
   }));
 }
 
-// ── Step 2: Character Builder ─────────────────────────────────────────────────
+// ── Step 2: Character Builder ────────────────────────────────────────────────
 export async function buildCharacterAnchors(
   storyInput: string,
   guidedAnswers: Record<string, string>
@@ -69,11 +69,11 @@ Respond ONLY with JSON:
     {
       "name": "Character name",
       "age": 30,
-      "visual_anchor": "Precise English description: age, hair color and style, clothing colors, distinctive features, body type"
+      "visual_anchor": "Precise English description: age, hair color and style, eye color, skin tone, clothing colors, distinctive features, body type. Max 30 words."
     }
   ]
 }
-Be very specific: 'Emma: 6-year-old girl, shoulder-length red-brown hair, yellow t-shirt, blue shorts, freckles, big brown eyes'`,
+Be very specific: 'Emma: 6-year-old girl, shoulder-length red-brown hair, yellow t-shirt, blue shorts, freckles, big brown eyes, caucasian'`,
       },
       { role: "user", content: context },
     ],
@@ -88,14 +88,14 @@ Be very specific: 'Emma: 6-year-old girl, shoulder-length red-brown hair, yellow
   }));
 }
 
-// ── Step 3: gpt-image-1 generiert eine komplette Comic-Seite ─────────────────
+// ── Step 3: gpt-image-1 generates comic page ────────────────────────────────
+// Uses images.generate() ONLY (not images.edit) per Spec Section 8
 export async function generateComicPage(
   page: StoryPage,
   characters: Character[],
   illustrationStyle: string,
   comicStyle: string,
   category: string = "familie",
-  styleReferenceBase64?: string  // Base64 des Comic.png Referenzbilds
 ): Promise<string> {
   const prompt = buildComicPagePrompt({
     title: page.title,
@@ -109,38 +109,13 @@ export async function generateComicPage(
   });
 
   try {
-    // Mit Stil-Referenzbild (gpt-image-1 image input via responses API)
-    if (styleReferenceBase64) {
-      const response = await (openai as any).responses.create({
-        model: "gpt-image-1",
-        input: [
-          {
-            role: "user",
-            content: [
-              {
-                type: "input_image",
-                image_url: `data:image/png;base64,${styleReferenceBase64}`,
-              },
-              {
-                type: "input_text",
-                text: `Use the art style, character drawing technique, and panel quality from this reference image. Apply the same watercolor comic style and character proportions. Then create: ${prompt}`,
-              },
-            ],
-          },
-        ],
-        output: [{ type: "image_generation_call", quality: "high", size: "1536x1024" }],
-      });
-
-      const output = response.output?.[0];
-      if (output?.result) return `data:image/png;base64,${output.result}`;
-    }
-
-    // Ohne Referenzbild – standard generate
+    // Always use images.generate() — NOT images.edit()
+    // A4 portrait: 1024x1792 for print-ready quality
     const response = await openai.images.generate({
       model: "gpt-image-1",
       prompt,
       n: 1,
-      size: "1536x1024",
+      size: "1024x1792",
       quality: "high",
     });
 
@@ -152,13 +127,13 @@ export async function generateComicPage(
     return "";
   } catch (err: any) {
     console.error(`Page ${page.pageNumber} generation error:`, err.message);
-    // Fallback ohne Referenz
+    // Single retry
     try {
       const response = await openai.images.generate({
         model: "gpt-image-1",
         prompt,
         n: 1,
-        size: "1536x1024",
+        size: "1024x1792",
         quality: "high",
       });
       const data = response.data ?? [];
@@ -166,13 +141,13 @@ export async function generateComicPage(
       if (item?.url) return item.url;
       if (item?.b64_json) return `data:image/png;base64,${item.b64_json}`;
     } catch {
-      // ignore
+      // ignore retry failure
     }
-    return `https://picsum.photos/seed/comic-page-${page.pageNumber}/1536/1024`;
+    return "";
   }
 }
 
-// ── Helper ────────────────────────────────────────────────────────────────────
+// ── Helper ───────────────────────────────────────────────────────────────────
 function buildContext(storyInput: string, guidedAnswers: Record<string, string>): string {
   let ctx = storyInput || "";
   const fields = [

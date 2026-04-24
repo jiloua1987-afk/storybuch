@@ -11,12 +11,21 @@ export interface Character {
   imageUrl?: string;
 }
 
+export interface ChapterPanel {
+  nummer: number;
+  szene?: string;
+  dialog?: string;
+  speaker?: string;
+  bubble_type?: "speech" | "caption" | "shout" | "thought";
+}
+
 export interface Chapter {
   id: string;
   title: string;
   content: string;
   imageUrl?: string;
   imagePrompt?: string;
+  panels?: ChapterPanel[];
 }
 
 export type ComicStyle = "action" | "emotional" | "humor";
@@ -31,10 +40,16 @@ export interface CustomDialog {
 export type IllustrationStyle = "comic" | "aquarell" | "bleistift" | "realistisch";
 export type BookLanguage = "de" | "en" | "fr" | "es";
 
+export interface EndingData {
+  endingText: string;
+  dedication: string;
+}
+
 export interface BookProject {
   id: string;
   title: string;
   dedication?: string;
+  endingData?: EndingData;
   illustrationStyle?: IllustrationStyle;
   language?: BookLanguage;
   comicStyle?: ComicStyle;

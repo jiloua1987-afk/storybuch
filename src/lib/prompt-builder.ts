@@ -1,5 +1,6 @@
-// Fix + Flex Prompt Builder
-// Baut den optimalen gpt-image-1 Prompt abhängig von Kategorie, Stil und Kontext
+// Prompt Builder v2 — Einzelbilder pro Szene
+// Jedes Panel = 1 eigenständiges Bild in maximaler Qualität
+// Text-Overlays werden im Frontend per CSS gerendert
 
 export interface Character {
   name: string;
@@ -28,18 +29,26 @@ export interface PagePromptInput {
   tone?: string;
 }
 
-// ── Stil-Definitionen ─────────────────────────────────────────────────────────
-const ILLUSTRATION_STYLES: Record<string, string> = {
-  comic:       "warm watercolor comic illustration, bold black outlines, vibrant saturated colors, cinematic lighting, hand-drawn feel, professional comic book art",
-  aquarell:    "soft watercolor illustration, pastel colors, gentle brushstrokes, dreamy romantic atmosphere, no harsh outlines",
+// ── Style-Lock Strings (from Spec Section 8.2) ──────────────────────────────
+const STYLE_LOCKS: Record<string, string> = {
+  comic:       "warm watercolor children's book illustration, soft rounded lines, bright cheerful colors, gentle lighting, storybook quality, professional illustration",
+  aquarell:    "soft watercolor illustration, pastel colors, gentle brushstrokes, dreamy romantic atmosphere, painterly texture",
   bleistift:   "detailed pencil sketch comic, crosshatching for shadows, hand-drawn linework, black and white with subtle warm tones",
   realistisch: "realistic comic art style, detailed digital painting, warm cinematic lighting, photorealistic faces with comic proportions",
 };
 
+const TONE_STYLES: Record<string, string> = {
+  kindgerecht: "warm watercolor children's book illustration, soft rounded lines, bright cheerful colors, gentle lighting, storybook quality",
+  humorvoll:   "vibrant European comic BD style, bold clean outlines, saturated colors, expressive exaggerated poses, dynamic energy",
+  romantisch:  "romantic illustrated novel style, golden hour warm lighting, soft watercolor washes, cinematic composition, intimate atmosphere, painterly",
+  episch:      "epic graphic novel illustration, dramatic cinematic lighting, highly detailed backgrounds, rich deep colors, wide angle panoramic",
+  biografisch: "illustrated memoir style, warm muted earth tones, editorial linework, nostalgic atmosphere",
+};
+
 const COMIC_STYLE_MODIFIERS: Record<string, string> = {
-  action:    "dynamic poses, motion lines, exaggerated expressions, high energy, dramatic angles, bold compositions",
+  action:    "dynamic poses, motion lines, exaggerated expressions, high energy, dramatic angles",
   emotional: "tender moments, soft lighting, close-up facial expressions showing emotion, warm intimate atmosphere",
-  humor:     "exaggerated funny expressions, comedic timing, playful body language, bright cheerful colors, cartoon-like reactions",
+  humor:     "exaggerated funny expressions, comedic timing, playful body language, bright cheerful colors",
 };
 
 const CATEGORY_ATMOSPHERE: Record<string, string> = {
@@ -52,74 +61,109 @@ const CATEGORY_ATMOSPHERE: Record<string, string> = {
   sonstiges:  "warm inviting atmosphere, personal and intimate storytelling",
 };
 
-// ── FIXER ANTEIL ──────────────────────────────────────────────────────────────
-function buildFixed(
-  characters: Character[],
+// ── BLOCK 1: Consistency (always first — model reads top-down) ───────────────
+function buildConsistencyBlock(characters: Character[]): string {
+  if (characters.length === 0) return "";
+
+  const charAnchors = characters
+    .map((c) => `CHARACTER "${c.name}": ${c.visual_anchor}`)
+    .join("\n");
+
+  return `CRITICAL INSTRUCTION — VISUAL CONSISTENCY:
+All characters must appear IDENTICAL across every single image in this series.
+Maintain with absolute precision:
+- Same face: identical facial structure, eyes, nose, mouth, skin tone
+- Same hair: exact color, length, texture, style — no variations
+- Same body: proportions, height ratios between characters
+- Same clothing: identical colors, patterns, style
+Treat every image as a frame from the same animated film.
+
+${charAnchors}`;
+}
+
+// ── BLOCK 2: Style Lock ──────────────────────────────────────────────────────
+function buildStyleBlock(
   illustrationStyle: string,
   comicStyle: string,
-  category: string
+  category: string,
+  tone?: string
 ): string {
-  const style = ILLUSTRATION_STYLES[illustrationStyle] || ILLUSTRATION_STYLES.comic;
+  const style = (tone && TONE_STYLES[tone]) || STYLE_LOCKS[illustrationStyle] || STYLE_LOCKS.comic;
   const comicMod = COMIC_STYLE_MODIFIERS[comicStyle] || COMIC_STYLE_MODIFIERS.emotional;
   const atmosphere = CATEGORY_ATMOSPHERE[category] || CATEGORY_ATMOSPHERE.familie;
 
-  const charAnchors = characters.length > 0
-    ? `CHARACTERS (keep 100% consistent in every panel — same face, hair, clothes, proportions): ${
-        characters.map((c) => `[${c.name}: ${c.visual_anchor}]`).join(" ")
-      }.`
-    : "";
-
-  return `${charAnchors} Art style: ${style}. Mood: ${comicMod}. Atmosphere: ${atmosphere}. NEVER add random text, logos, or watermarks anywhere in the image.`;
+  return `ART STYLE: ${style}
+Mood: ${comicMod}
+Atmosphere: ${atmosphere}
+ABSOLUTE RULE: NO text, NO letters, NO words, NO speech bubbles, NO captions, NO UI elements anywhere in the image. The image must be a pure illustration only.
+Leave approximately 25% empty/lighter space at top-left corner for caption text overlay that will be added separately.`;
 }
 
-// ── FLEXIBLER ANTEIL ──────────────────────────────────────────────────────────
-function buildFlex(input: PagePromptInput): string {
-  const { title, panels, location, timeOfDay } = input;
-  const panelCount = panels.length;
+// ── Single Scene Prompt (1 image per panel) ──────────────────────────────────
+export function buildScenePrompt(
+  scene: string,
+  characters: Character[],
+  illustrationStyle: string,
+  comicStyle: string,
+  category: string,
+  location?: string,
+  timeOfDay?: string,
+  tone?: string,
+  layout: "wide" | "tall" | "hero" = "wide"
+): string {
+  const consistency = buildConsistencyBlock(characters);
+  const style = buildStyleBlock(illustrationStyle, comicStyle, category, tone);
 
-  // Variable Layouts
-  const layoutMap: Record<number, string> = {
-    3: "3-panel layout: ONE wide panoramic panel on top spanning full width, TWO equal panels side by side on bottom row",
-    4: "4-panel layout: 2x2 grid of equal panels",
-    5: "5-panel layout: TWO panels on top row, ONE wide panoramic panel in middle spanning full width, TWO panels on bottom row",
-    6: "6-panel layout: 3 columns x 2 rows grid",
-  };
-  const layout = layoutMap[panelCount] || layoutMap[4];
+  const composition = layout === "wide"
+    ? "cinematic wide shot, 16:9 landscape ratio"
+    : layout === "tall"
+    ? "portrait vertical composition"
+    : "full page hero shot";
 
-  // Panel scenes ONLY – no text instructions
-  const panelDescs = panels.map((p) =>
-    `[Panel ${p.nummer}]: ${p.szene}. Leave empty space in upper-left corner for text overlay.`
-  ).join("\n");
+  const sceneBlock = `SCENE TO ILLUSTRATE:
+${scene}
+${location ? `Location: ${location}.` : ""}
+${timeOfDay ? `Lighting: ${timeOfDay} light.` : ""}
+Composition: ${composition}`;
 
-  return `Create ONE single comic book page image with ${panelCount} panels.
-Layout: ${layout}.
-Thick black panel borders (5px) between all panels.
-Cream/warm beige background (#F5EDE0) visible outside panels as page border (about 12px).
-Leave a 80px tall cream-colored header area at the very top for title text (DO NOT draw anything there).
+  return [consistency, "", style, "", sceneBlock].filter(Boolean).join("\n");
+}
+
+// ── Legacy: Multi-panel page prompt (backward compat during migration) ───────
+export function buildComicPagePrompt(input: PagePromptInput): string {
+  const { panels, characters, illustrationStyle, comicStyle, category, location, timeOfDay, tone } = input;
+
+  // During migration: if only 1 panel, use single-scene prompt
+  if (panels.length === 1) {
+    return buildScenePrompt(
+      panels[0].szene, characters, illustrationStyle, comicStyle,
+      category || "familie", location, timeOfDay, tone
+    );
+  }
+
+  // Multi-panel: use consistency block + scene descriptions
+  const consistency = buildConsistencyBlock(characters);
+  const style = buildStyleBlock(illustrationStyle, comicStyle, category || "familie", tone);
+
+  const panelDescs = panels
+    .map((p) => `[Panel ${p.nummer}]: ${p.szene}`)
+    .join("\n");
+
+  const sceneBlock = `Create ONE single comic book page image with ${panels.length} panels.
+Layout: ${panels.length <= 3 ? "1 wide panel top, 2 panels bottom" : panels.length === 4 ? "2x2 grid" : "2 top, 1 wide middle, 2 bottom"}.
+Thick black panel borders between all panels.
+Cream/warm beige background (#F5EDE0) visible as page border.
 ${location ? `Location: ${location}.` : ""} ${timeOfDay ? `Lighting: ${timeOfDay} light.` : ""}
-
-CRITICAL: NO TEXT, NO LETTERS, NO WORDS, NO CAPTIONS anywhere in the image.
-Leave small empty space in upper-left corner of each panel for caption box overlay.
 
 Panel scenes:
 ${panelDescs}
 
-Overall: professional comic book page, warm and inviting, print-ready quality.`;
+Professional comic book page, warm and inviting, A4 print-ready quality.`;
+
+  return [consistency, "", style, "", sceneBlock].filter(Boolean).join("\n");
 }
 
-// ── HAUPT-FUNKTION ────────────────────────────────────────────────────────────
-export function buildComicPagePrompt(input: PagePromptInput): string {
-  const fixed = buildFixed(
-    input.characters,
-    input.illustrationStyle,
-    input.comicStyle,
-    input.category || "familie"
-  );
-  const flex = buildFlex(input);
-  return `${fixed}\n\n${flex}`;
-}
-
-// ── GPT-4o Story-Struktur Prompt ──────────────────────────────────────────────
+// ── GPT-4o Story Structure Prompt ────────────────────────────────────────────
 export function buildGPTStructurePrompt(
   lang: string,
   tone: string,
@@ -151,11 +195,12 @@ Tone: ${tone}. Visual style: ${style}. Category focus: ${catHint}.
 ${mustHaveSentences ? `MUST include these moments/sentences: ${mustHaveSentences}` : ""}
 
 Rules:
-- Each page has 4-5 panels telling a coherent mini-story
+- Each page has 3-5 panels telling a coherent mini-story
 - Panel scenes: VERY specific and visual (who, what, where, facial expression, body language, lighting)
 - Dialogs: SHORT (max 8 words), natural, in ${lang}, emotionally fitting
-- Vary panel layouts across pages (not always 2x2)
+- Vary panel layouts across pages
 - Each page title: 3-5 words, dramatic or funny, in ${lang}
+- Each panel scene description must work as a STANDALONE image prompt
 
 Respond ONLY with JSON:
 {
@@ -169,7 +214,7 @@ Respond ONLY with JSON:
       "panels": [
         {
           "nummer": 1,
-          "szene": "Very specific English scene for image generation",
+          "szene": "Very specific English scene for SINGLE IMAGE generation — describe the complete scene including characters, setting, action, mood",
           "dialog": "Short ${lang} dialog max 8 words",
           "speaker": "Character name or null",
           "bubble_type": "speech|caption|shout|thought"

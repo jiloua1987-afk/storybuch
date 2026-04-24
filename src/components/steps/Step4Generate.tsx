@@ -112,6 +112,7 @@ export default function Step4Generate() {
             content: page.panels?.map((p: any) => p.dialog || "").filter(Boolean).join(" ") || "",
             imageUrl: pageData.imageUrl || "",
             imagePrompt: "",
+            panels: pageData.panels || page.panels || [],
           };
           chapters.push(chapter);
           previousImageUrl = pageData.imageUrl || null;
@@ -138,9 +139,13 @@ export default function Step4Generate() {
           language:      project?.language || "de",
           dedication:    project?.guidedAnswers?.dedication || project?.dedication || "",
         });
-        if (endData.imageUrl) {
-          chapters.push({ id: "ending", title: "Das Ende", content: "", imageUrl: endData.imageUrl, imagePrompt: "" });
-          updateProject({ chapters: [...chapters] });
+        if (endData.endingText) {
+          updateProject({
+            endingData: {
+              endingText: endData.endingText,
+              dedication: endData.dedication || "",
+            },
+          });
         }
         addLog("Abschlussseite fertig", true);
       } catch { addLog("Abschlussseite übersprungen", true); }
