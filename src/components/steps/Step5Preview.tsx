@@ -41,15 +41,15 @@ function CoverView({ imageUrl, title, subtitle }: { imageUrl?: string; title: st
 function EndingView({ endingText, dedication }: { endingText: string; dedication?: string }) {
   return (
     <div className="w-full max-w-sm mx-auto bg-[#FDF8F2] rounded-xl overflow-hidden border border-[#E8D9C0] shadow-lg"
-      style={{ aspectRatio: "1024/1792" }}>
+      style={{ aspectRatio: "1024/1536" }}>
       <div className="flex flex-col items-center justify-center h-full px-8 py-12 text-center">
         <p className="text-[#C9963A] text-xs tracking-[0.3em] uppercase mb-2"
           style={{ fontFamily: "'Playfair Display', Georgia, serif" }}>
-          ✦ Erinnerungen ✦
+          ✦ Widmung ✦
         </p>
         <div className="w-20 h-[2px] bg-[#C9963A] rounded mb-8" />
 
-        <p className="text-[#1A1410] text-base md:text-lg leading-relaxed italic"
+        <p className="text-[#1A1410] text-lg md:text-xl leading-relaxed italic"
           style={{ fontFamily: "'Playfair Display', Georgia, serif" }}>
           {endingText}
         </p>

@@ -16,38 +16,34 @@ export async function POST(req: NextRequest) {
       ...Object.entries(guidedAnswers || {})
         .filter(([k, v]) => v && k !== "category")
         .map(([k, v]) => `${k}: ${v}`),
-      dedication ? `Dedication: ${dedication}` : "",
+      dedication ? `Widmung vom Nutzer: ${dedication}` : "",
     ].filter(Boolean).join("\n");
 
     const res = await openai.chat.completions.create({
       model: "gpt-4o",
       messages: [{
         role: "system",
-        content: `You write the final page of a personal comic book in ${lang}.
-This is NOT a generic book — it's about REAL people and THEIR specific story.
+        content: `Du schreibst eine persönliche Widmung für die letzte Seite eines Comic-Buchs in ${lang}.
 
-RULES:
-- Reference the ACTUAL characters by name from the story
-- Mention 1-2 SPECIFIC moments from their story
-- Write as if you are the narrator who witnessed everything
-- 3-4 short, emotional sentences
-- Tone: ${tone || "warm, nostalgic, loving"}
-- End with a sentence that feels like a warm hug
-- NEVER use generic phrases like "Liebe Leserinnen und Leser" or "[Dein Name]"
-- NEVER break the fourth wall — don't mention "this book" or "this story"
-- Write as if speaking directly to the family`,
+WICHTIG — Das ist eine WIDMUNG, keine Zusammenfassung!
+- Schreibe wie eine handgeschriebene Widmung auf der letzten Seite eines Geschenks
+- Maximal 2-3 kurze, herzliche Sätze
+- Sprich die Hauptperson DIREKT an (z.B. "Für Dich, liebe Helga...")
+- Erwähne EIN konkretes Detail aus der Geschichte
+- Ton: ${tone || "liebevoll, persönlich, warm"}
+- VERBOTEN: "Liebe Leserinnen", "[Dein Name]", "dieses Buch", "diese Geschichte"
+- VERBOTEN: Zusammenfassungen der Handlung
+- Schreibe so, als würde ein Familienmitglied die Widmung von Hand schreiben`,
       }, {
         role: "user",
         content: storyContext,
       }],
-      max_tokens: 150,
+      max_tokens: 100,
       temperature: 0.8,
     });
 
-    const endingText = res.choices[0].message.content || "";
-
     return NextResponse.json({
-      endingText,
+      endingText: res.choices[0].message.content || "",
       dedication: dedication || "",
     });
   } catch (err: any) {
