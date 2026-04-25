@@ -36,37 +36,37 @@ export interface PagePromptInput {
 const STYLE_MATRIX: Record<string, Record<string, string>> = {
   liebe: {
     action:    "Romantic comic art with dynamic energy. Bold black outlines, rich warm colors (deep reds, golds, sunset oranges). Dramatic romantic poses — wind in hair, passionate gestures, cinematic close-ups. High contrast lighting with lens flares and bokeh effects. Professional European BD quality.",
-    emotional: "Tender romantic illustration. Soft watercolor washes in warm golden and rose tones. Gentle linework, intimate close-ups of hands touching, eyes meeting. Dreamy soft-focus backgrounds. Golden hour lighting throughout. Painterly, like a romantic illustrated novel.",
+    emotional: "Tender romantic illustration with clean linework. Warm golden and rose color palette, gentle shading. Intimate close-ups of hands touching, eyes meeting. Soft-focus backgrounds with golden hour lighting. Professional illustrated novel quality, like a high-end graphic novel.",
     humor:     "Playful romantic comedy comic style. Bright cheerful colors, exaggerated lovesick expressions, cartoon hearts and sparkles. Bold clean outlines, expressive body language. Characters with oversized eyes and comedic reactions. Fun and lighthearted, like a romantic manga.",
   },
   familie: {
     action:    "Energetic family adventure comic. Bold black outlines, vibrant saturated colors, dynamic compositions. Children with exaggerated excited expressions, parents in heroic poses. Motion lines, dramatic angles. Professional comic book quality like Asterix or Tintin.",
-    emotional: "Warm family storybook illustration. Soft rounded linework, gentle watercolor colors (warm yellows, soft greens, cozy browns). Tender moments between parents and children. Soft natural lighting, cozy domestic settings. Professional children's book quality like a Pixar concept art.",
+    emotional: "Warm family storybook illustration with clean linework. Rich warm colors (golden yellows, soft greens, cozy browns). Soft rounded character designs. Tender moments between parents and children. Warm natural lighting, cozy domestic settings. Professional children's book quality like Pixar concept art.",
     humor:     "Fun family comedy comic. Bold clean outlines, bright pop colors. Kids with wildly exaggerated expressions, parents with comedic reactions. Slapstick body language, playful chaos. Cartoon-style with professional quality. Like a European family comic strip.",
   },
   urlaub: {
     action:    "Adventure travel comic with cinematic energy. Bold outlines, vivid tropical and Mediterranean colors (turquoise, coral, golden sand). Dynamic wide-angle compositions, dramatic landscapes. Characters in action — running, jumping, exploring. Movie poster quality.",
-    emotional: "Beautiful travel memoir illustration. Luminous watercolor style with Mediterranean light — turquoise seas, golden sunsets, terracotta villages. Soft linework, panoramic compositions. Nostalgic and dreamy, like a painted travel journal. Rich atmospheric detail.",
+    emotional: "Beautiful travel illustration with warm luminous colors. Mediterranean light — turquoise seas, golden sunsets, terracotta villages. Clean linework, panoramic compositions. Nostalgic and dreamy atmosphere. Rich atmospheric detail, like a high-quality illustrated travel book.",
     humor:     "Hilarious vacation comic. Bright saturated holiday colors, exaggerated tourist situations. Characters with oversized sunglasses, comically overloaded luggage, funny tan lines. Bold outlines, cartoon energy. Like a funny postcard come to life.",
   },
   feier: {
     action:    "Explosive celebration comic. Bold dynamic outlines, confetti and streamers in motion. Vibrant party colors (gold, magenta, electric blue). Characters in dramatic surprise poses, champagne splashing. High energy, like a party captured in comic book form.",
-    emotional: "Heartwarming celebration illustration. Warm golden lighting, soft watercolor tones. Intimate moments — tearful speeches, group hugs, candle-lit faces. Gentle linework with rich emotional detail. Like a beautifully illustrated greeting card.",
+    emotional: "Heartwarming celebration illustration with warm golden lighting. Rich warm tones, gentle shading. Intimate moments — tearful speeches, group hugs, candle-lit faces. Clean linework with rich emotional detail. Like a beautifully illustrated greeting card.",
     humor:     "Hilarious party comic. Bright festive colors, exaggerated celebration chaos. Characters with comically surprised faces, cake disasters, dance floor fails. Bold cartoon outlines, maximum fun energy. Like a funny birthday card illustration.",
   },
   biografie: {
     action:    "Epic life story graphic novel. Dramatic cinematic lighting, rich deep colors with sepia undertones. Bold compositions showing key life moments. Strong black outlines, detailed backgrounds. Movie-quality biographical illustration, like a prestige graphic novel.",
-    emotional: "Nostalgic memoir illustration. Warm muted earth tones mixed with selective color highlights. Soft editorial linework, intimate portrait compositions. Timeless settings, emotional depth in every face. Like a New Yorker illustration or illustrated autobiography.",
+    emotional: "Nostalgic memoir illustration with warm muted earth tones mixed with selective color highlights. Clean editorial linework, intimate portrait compositions. Timeless settings, emotional depth in every face. Like a New Yorker illustration or illustrated autobiography.",
     humor:     "Charming biographical comic with wit. Warm retro color palette, clean expressive linework. Characters shown at different life stages with gentle humor. Exaggerated period details, playful anachronisms. Like an illustrated memoir with a smile.",
   },
   freunde: {
     action:    "High-energy friendship adventure comic. Bold outlines, vibrant saturated colors. Friends in dynamic group poses, high-fiving, running together. Motion lines, dramatic angles, comic book energy. Like a superhero team-up but with real friends.",
-    emotional: "Warm friendship illustration. Soft natural colors, gentle linework. Intimate moments — shared laughter, supportive hugs, quiet conversations. Warm ambient lighting, cozy settings. Like a beautifully illustrated friendship story.",
+    emotional: "Warm friendship illustration with soft natural colors and clean linework. Intimate moments — shared laughter, supportive hugs, quiet conversations. Warm ambient lighting, cozy settings. Like a beautifully illustrated friendship story.",
     humor:     "Hilarious buddy comedy comic. Bright pop colors, exaggerated funny expressions. Friends in ridiculous situations, inside jokes visualized. Bold cartoon outlines, maximum comedic timing. Like a funny webcomic with professional quality.",
   },
   sonstiges: {
     action:    "Dynamic storytelling comic. Bold black outlines, rich cinematic colors. Dramatic compositions with varied camera angles. Professional comic book quality with high contrast and sharp details. Expressive characters, detailed backgrounds.",
-    emotional: "Beautiful narrative illustration. Warm atmospheric colors, soft painterly linework. Intimate character moments with emotional depth. Cinematic lighting, rich environmental detail. Professional illustrated novel quality.",
+    emotional: "Beautiful narrative illustration with warm atmospheric colors and clean linework. Intimate character moments with emotional depth. Cinematic lighting, rich environmental detail. Professional illustrated novel quality.",
     humor:     "Entertaining comic with personality. Clean bold outlines, bright cheerful colors. Expressive exaggerated characters, playful compositions. Fun visual storytelling with comedic timing. Professional cartoon quality.",
   },
 };
