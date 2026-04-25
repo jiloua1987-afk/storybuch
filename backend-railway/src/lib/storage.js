@@ -18,16 +18,15 @@ async function saveImage(b64OrUrl, folder, filename) {
       buffer = Buffer.from(b64OrUrl, "base64");
     }
 
-    // Komprimieren — A4 portrait images (1024x1536), resize height
+    // Save as PNG to preserve sharp comic outlines — no JPEG compression
     const compressed = await sharp(buffer)
-      .resize(1400, null, { withoutEnlargement: true, fit: "inside" })
-      .jpeg({ quality: 90, progressive: true })
+      .png({ quality: 95 })
       .toBuffer();
 
-    const path = `${folder}/${filename}.jpg`;
+    const path = `${folder}/${filename}.png`;
     const { error } = await supabase.storage
       .from("comic-panels")
-      .upload(path, compressed, { contentType: "image/jpeg", upsert: true });
+      .upload(path, compressed, { contentType: "image/png", upsert: true });
 
     if (error) throw error;
 

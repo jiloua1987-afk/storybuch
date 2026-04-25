@@ -36,17 +36,16 @@ export async function saveImageToStorage(
       buffer = Buffer.from(b64OrUrl, "base64");
     }
 
-    // Resize with sharp (only available server-side)
+    // Save as PNG to preserve sharp comic outlines
     const sharp = (await import("sharp")).default;
     const compressed = await sharp(buffer)
-      .resize(1400, null, { withoutEnlargement: true, fit: "inside" })
-      .jpeg({ quality: 90, progressive: true })
+      .png({ quality: 95 })
       .toBuffer();
 
-    const path = `${folder}/${filename}.jpg`;
+    const path = `${folder}/${filename}.png`;
     const { error } = await supabase.storage
       .from("comic-panels")
-      .upload(path, compressed, { contentType: "image/jpeg", upsert: true });
+      .upload(path, compressed, { contentType: "image/png", upsert: true });
 
     if (error) {
       console.error("Supabase upload error:", error.message);
