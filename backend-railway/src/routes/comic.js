@@ -168,49 +168,40 @@ router.post("/page", async (req, res) => {
       sonstiges: { action: "bold outlines, rich cinematic colors, high contrast", emotional: "atmospheric colors, precise linework, cinematic lighting", humor: "bold outlines, bright colors, professional cartoon quality" },
     };
     const style = (SM[category] || SM.sonstiges)[comicStyle] || (SM[category] || SM.sonstiges).emotional;
-
-    const charList = characters.map(c => `${c.name}: ${c.visual_anchor}`).join(". ");
-    const panelList = page.panels.map(p => `Panel ${p.nummer}: ${p.szene}`).join("\n");
+    const charList = characters.map(c => `${c.name}: ${c.age || ""}, ${c.visual_anchor}`).join("\n- ");
+    const panelList = page.panels.map(p => `${p.nummer}. ${p.szene}`).join("\n");
     const panelCount = page.panels.length;
     const layoutDesc = panelCount <= 3 ? "1 large panel on top, 2 panels on bottom"
       : panelCount === 5 ? "2 on top, 1 wide middle, 2 on bottom" : "2×2 grid";
 
-    // Step 1: GPT-4o Prompt Rewriter — condense scenes for image AI
+    // Step 1: GPT-4o Prompt Rewriter
     let imagePrompt = "";
     try {
-      const charList = characters.map(c => `${c.name}: ${c.age || ""}, ${c.visual_anchor}`).join("\n- ");
       const rewriteRes = await openai.chat.completions.create({
         model: "gpt-4o",
         messages: [{
           role: "system",
           content: `You are a prompt rewriter for a high-quality multi-panel comic image generation pipeline.
-
-Your task is to convert narrative story content into a highly optimized image-generation prompt for gpt-image-1.
-
-You do NOT write stories. You do NOT write prose. You do NOT write emotional narration. You do NOT write dialogue.
-You ONLY rewrite structured story content into a visual image prompt optimized for multi-panel comic rendering.
+You convert narrative story content into optimized image-generation prompts for gpt-image-1.
+You do NOT write stories, prose, narration, or dialogue.
 
 REWRITE RULES:
-- Aggressively compress narrative content into visual instructions
-- Visually concrete, short, image-first, composition-first, renderable, unambiguous
-- Write like a comic art director, not a storyteller
-- Convert emotions into visible expressions, poses, gestures, body language
+- Aggressively compress into visual instructions
+- Write like a comic art director
+- Convert emotions into visible expressions, poses, gestures
 - Each panel: camera framing, visible action, key subject, environment, lighting — 1-2 sentences max
 
-PROMPT STRUCTURE (always this order):
+PROMPT STRUCTURE (this order):
 1. QUALITY BLOCK — crisp linework, clean rendering, sharp faces, print quality
 2. STYLE BLOCK — visual style only
-3. LAYOUT BLOCK — comic page layout, clean panel composition
+3. LAYOUT BLOCK — comic page layout
 4. CHARACTER CONSISTENCY BLOCK — characters identical in every panel
 5. SCENE BLOCK — each panel as visual direction only
 6. NEGATIVE BLOCK — strict visual negatives
 
-STYLE TRANSLATION:
-- emotional → soft facial expressions, warm light, gentle body language
-- humor → expressive poses, playful motion, exaggerated reactions
-- action → dynamic angles, movement, strong poses, cinematic energy
+STYLE TRANSLATION: emotional→soft expressions/warm light, humor→exaggerated poses/reactions, action→dynamic angles/movement
 
-Output ONLY the final image prompt as plain text. No markdown, no commentary.`,
+Output ONLY the final image prompt as plain text.`,
         }, {
           role: "user",
           content: `Story Type: ${category}\nComic Style: ${comicStyle}\n\nCharacters:\n- ${charList}\n\nPanels:\n${panelList}`,
@@ -220,22 +211,17 @@ Output ONLY the final image prompt as plain text. No markdown, no commentary.`,
       });
       imagePrompt = rewriteRes.choices[0].message.content || "";
       if (imagePrompt.length < 100) imagePrompt = "";
+      else console.log(`  → Prompt rewritten (${imagePrompt.length} chars)`);
     } catch (e) {
       console.warn("Prompt rewrite failed:", e.message);
     }
 
-    // Fallback: build prompt directly
+    // Fallback prompt
     if (!imagePrompt) {
-      imagePrompt = `Create a premium European comic book page with ${panelCount} panels in a ${layoutDesc}. Each panel shows a different scene — no duplicates, no cropping.
-
-${charList ? `Characters (keep identical in every panel): ${charList}\n` : ""}${panelList}
-${page.location ? `\nSetting: ${page.location}.` : ""}${page.timeOfDay ? ` ${page.timeOfDay} lighting.` : ""}
-
-Style: crisp black ink outlines, ${style}, expressive faces, bold panel borders, professional graphic novel quality. No watercolor. No soft blur. No text in image.`;
+      imagePrompt = `Create a premium European comic book page with ${panelCount} panels in a ${layoutDesc}. Each panel shows a different scene — no duplicates, no cropping.\n\nCharacters (keep identical in every panel): ${characters.map(c => `${c.name}: ${c.visual_anchor}`).join(". ")}\n${page.panels.map(p => `Panel ${p.nummer}: ${p.szene}`).join("\n")}\n${page.location ? `\nSetting: ${page.location}.` : ""}${page.timeOfDay ? ` ${page.timeOfDay} lighting.` : ""}\n\nStyle: crisp black ink outlines, ${style}, expressive faces, bold panel borders, professional graphic novel quality. No watercolor. No soft blur. No text in image.`;
     }
 
-    console.log(`Generating page "${page.title}" (${panelCount} panels, prompt: ${imagePrompt.length} chars)`);
-
+    console.log(`Generating page "${page.title}" (${panelCount} panels)`);
     let rawUrl = "";
 
     // Primary: images.edit() with user reference photo
@@ -245,7 +231,6 @@ Style: crisp black ink outlines, ${style}, expressive faces, bold panel borders,
         const refBuf = Buffer.from(primaryRef, "base64");
         const refBlob = new Blob([refBuf], { type: "image/jpeg" });
         const refFile = new File([refBlob], "reference.jpg", { type: "image/jpeg" });
-
         const editRes = await openai.images.edit({
           model: "gpt-image-1",
           image: refFile,
@@ -253,13 +238,12 @@ Style: crisp black ink outlines, ${style}, expressive faces, bold panel borders,
           size: "1024x1536",
           quality: "high",
         });
-
         const item = (editRes.data || [])[0];
         if (item?.url) rawUrl = item.url;
         else if (item?.b64_json) rawUrl = `data:image/png;base64,${item.b64_json}`;
         if (rawUrl) console.log(`  → Generated with reference photo`);
       } catch (e) {
-        console.warn(`  → Reference photo failed, falling back:`, e.message);
+        console.warn(`  → Reference photo failed:`, e.message);
       }
     }
 
@@ -276,27 +260,6 @@ Style: crisp black ink outlines, ${style}, expressive faces, bold panel borders,
         console.error(`Generation failed for "${page.title}":`, e.message);
       }
     }
-        console.warn(`  → Reference photo failed, falling back:`, e.message);
-      }
-    }
-
-    // Fallback: images.generate() without reference
-    if (!rawUrl) {
-      try {
-        const genRes = await openai.images.generate({
-          model: "gpt-image-1",
-          prompt: fullPrompt,
-          n: 1,
-          size: "1024x1536",
-          quality: "high",
-        });
-        const item = (genRes.data || [])[0];
-        if (item?.url) rawUrl = item.url;
-        else if (item?.b64_json) rawUrl = `data:image/png;base64,${item.b64_json}`;
-      } catch (e) {
-        console.error(`Generation failed for "${page.title}":`, e.message);
-      }
-    }
 
     if (!rawUrl) return res.json({ imageUrl: "", panels: page.panels, panelPositions: null });
 
@@ -305,39 +268,29 @@ Style: crisp black ink outlines, ${style}, expressive faces, bold panel borders,
     const storedUrl = await saveImage(rawUrl, bookId, page.id || `page-${Date.now()}`);
     const finalUrl = storedUrl || rawUrl;
 
-    // ── Panel Position Detection via GPT-4o Vision ──────────────────────────
+    // Panel Position Detection via GPT-4o Vision
     let panelPositions = null;
     try {
-      // Download the generated image for analysis
-      let imgForAnalysis = finalUrl;
-      if (finalUrl.startsWith("http")) {
-        // Use the Supabase URL directly
-        imgForAnalysis = finalUrl;
-      }
-
       const visionRes = await openai.chat.completions.create({
         model: "gpt-4o",
         messages: [{
           role: "user",
           content: [
-            { type: "image_url", image_url: { url: imgForAnalysis, detail: "low" } },
-            { type: "text", text: `This is a comic page with ${panelCount} panels. Analyze the image and return the position of each panel as percentage coordinates.
-Respond ONLY with JSON: {"panels":[{"nummer":1,"top":5,"left":0,"width":100,"height":45},{"nummer":2,"top":52,"left":0,"width":50,"height":46}]}
-top/left/width/height are percentages of the total image. Panel 1 is top-left, numbering goes left-to-right, top-to-bottom.` }
+            { type: "image_url", image_url: { url: finalUrl, detail: "low" } },
+            { type: "text", text: `This is a comic page with ${panelCount} panels. Return panel positions as percentage coordinates. JSON only: {"panels":[{"nummer":1,"top":5,"left":0,"width":100,"height":45}]}` }
           ]
         }],
         response_format: { type: "json_object" },
         max_tokens: 200,
         temperature: 0.1,
       });
-
       const posData = JSON.parse(visionRes.choices[0].message.content || "{}");
       if (posData.panels && posData.panels.length > 0) {
         panelPositions = posData.panels;
         console.log(`✓ Panel positions detected for "${page.title}"`);
       }
     } catch (e) {
-      console.warn(`Panel detection failed for "${page.title}":`, e.message);
+      console.warn(`Panel detection failed:`, e.message);
     }
 
     console.log(`✓ Page "${page.title}" done → ${storedUrl ? "Supabase" : "inline"}`);
@@ -347,9 +300,6 @@ top/left/width/height are percentages of the total image. Panel 1 is top-left, n
     res.status(500).json({ error: err.message, imageUrl: "", panels: [] });
   }
 });
-
-// ── POST /api/comic/cover ─────────────────────────────────────────────────────
-// Raw cover image — NO title overlay. Title rendered in frontend via CSS.
 router.post("/cover", async (req, res) => {
   try {
     const { title, characters = [], category = "familie", illustrationStyle = "comic", location = "" } = req.body;
