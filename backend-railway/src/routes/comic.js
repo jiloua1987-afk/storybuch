@@ -9,9 +9,8 @@ const { saveImage } = require("../lib/storage");
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 // ── Load style reference image ────────────────────────────────────────────────
-let STYLE_REF_B64 = null;
+let STYLE_REF_BUFFER = null;
 try {
-  // Try multiple possible locations
   const candidates = [
     path.join(__dirname, "../../public/Comic.png"),
     path.join(__dirname, "../../style-reference.png"),
@@ -19,12 +18,12 @@ try {
   ];
   for (const refPath of candidates) {
     if (fs.existsSync(refPath)) {
-      STYLE_REF_B64 = fs.readFileSync(refPath).toString("base64");
+      STYLE_REF_BUFFER = fs.readFileSync(refPath);
       console.log(`✓ Style reference loaded from ${refPath}`);
       break;
     }
   }
-  if (!STYLE_REF_B64) console.warn("⚠ No style reference image found");
+  if (!STYLE_REF_BUFFER) console.warn("⚠ No style reference image found");
 } catch (e) { console.warn("Style reference load error:", e.message); }
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -229,42 +228,29 @@ Rich detailed backgrounds in every panel. Expressive character faces.
 Cinematic camera angles that vary between panels (close-up, medium shot, wide establishing shot).
 NEGATIVE: No text, no speech bubbles, no watermarks, no distorted faces, no extra fingers, no inconsistent characters between panels.`;
 
-    console.log(`Generating page "${page.title}" (${page.panels.length} panels)${STYLE_REF_B64 ? " [with style ref]" : ""}`);
+    console.log(`Generating page "${page.title}" (${page.panels.length} panels)${STYLE_REF_BUFFER ? " [with style ref]" : ""}`);
 
     let rawUrl = "";
 
-    // Primary: responses API with style reference image
-    if (STYLE_REF_B64) {
+    // Primary: images.edit() with style reference + input_fidelity
+    if (STYLE_REF_BUFFER) {
       try {
-        const refResponse = await openai.responses.create({
+        const blob = new Blob([STYLE_REF_BUFFER], { type: "image/png" });
+        const file = new File([blob], "style-reference.png", { type: "image/png" });
+
+        const editPrompt = `Use the EXACT art style, line quality, coloring technique, and panel layout style from this reference image. Match the same level of professional comic book quality — bold outlines, vibrant colors, expressive faces. Then create:\n\n${fullPrompt}`;
+
+        const editRes = await openai.images.edit({
           model: "gpt-image-1",
-          input: [
-            {
-              role: "user",
-              content: [
-                {
-                  type: "input_image",
-                  image_url: `data:image/png;base64,${STYLE_REF_B64}`,
-                },
-                {
-                  type: "input_text",
-                  text: `Use the EXACT art style, line quality, coloring technique, and panel composition from this reference image. Match the same level of professional comic book quality. Then create:\n\n${fullPrompt}`,
-                },
-              ],
-            },
-          ],
-          tools: [{ type: "image_generation", quality: "high", size: "1024x1536" }],
+          image: file,
+          prompt: editPrompt,
+          size: "1024x1536",
+          quality: "high",
         });
 
-        const output = refResponse.output;
-        if (Array.isArray(output)) {
-          for (const item of output) {
-            if (item.type === "image_generation_call" && item.result) {
-              rawUrl = `data:image/png;base64,${item.result}`;
-              break;
-            }
-          }
-        }
+        const item = (editRes.data || [])[0];
+        if (item?.url) rawUrl = item.url;
+        else if (item?.b64_json) rawUrl = `data:image/png;base64,${item.b64_json}`;
       } catch (e) {
         console.warn(`Style reference failed for "${page.title}", falling back:`, e.message);
       }

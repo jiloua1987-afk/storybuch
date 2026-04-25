@@ -6,11 +6,11 @@ import path from "path";
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 // ── Load style reference image once at startup ───────────────────────────────
-let STYLE_REF_B64: string | null = null;
+let STYLE_REF_BUFFER: Buffer | null = null;
 try {
   const refPath = path.join(process.cwd(), "public", "Comic.png");
   if (fs.existsSync(refPath)) {
-    STYLE_REF_B64 = fs.readFileSync(refPath).toString("base64");
+    STYLE_REF_BUFFER = fs.readFileSync(refPath);
     console.log("✓ Style reference image loaded (Comic.png)");
   }
 } catch { /* ignore */ }
@@ -100,8 +100,8 @@ Be very specific: 'Emma: 6-year-old girl, shoulder-length red-brown hair, yellow
   }));
 }
 
-// ── Step 3: Generate comic page with style reference ─────────────────────────
-// Primary: responses API with Comic.png as style reference
+// ── Step 3: Generate comic page ──────────────────────────────────────────────
+// Primary: images.edit() with Comic.png as style reference + input_fidelity
 // Fallback: images.generate() without reference
 export async function generateComicPage(
   page: StoryPage,
@@ -121,51 +121,39 @@ export async function generateComicPage(
     timeOfDay: page.timeOfDay,
   });
 
-  // Try with style reference first
-  if (STYLE_REF_B64) {
+  // Try with style reference via images.edit()
+  if (STYLE_REF_BUFFER) {
     try {
-      const result = await generateWithStyleReference(prompt, STYLE_REF_B64);
+      const result = await generateWithStyleRef(prompt);
       if (result) return result;
     } catch (err: any) {
-      console.warn(`Style reference failed for page ${page.pageNumber}, falling back:`, err.message);
+      console.warn(`Style ref failed for page ${page.pageNumber}, falling back:`, err.message);
     }
   }
 
-  // Fallback: standard generate without reference
+  // Fallback: standard generate
   return generateStandard(prompt, page.pageNumber);
 }
 
-// ── Generate with style reference via responses API ──────────────────────────
-async function generateWithStyleReference(prompt: string, styleRefB64: string): Promise<string> {
-  const response = await (openai as any).responses.create({
-    model: "gpt-image-1",
-    input: [
-      {
-        role: "user",
-        content: [
-          {
-            type: "input_image",
-            image_url: `data:image/png;base64,${styleRefB64}`,
-          },
-          {
-            type: "input_text",
-            text: `Use the EXACT art style, line quality, coloring technique, and panel composition from this reference image. Match the same level of professional comic book quality. Then create:\n\n${prompt}`,
-          },
-        ],
-      },
-    ],
-    tools: [{ type: "image_generation", quality: "high", size: "1024x1536" }],
-  });
+// ── images.edit() with style reference ───────────────────────────────────────
+async function generateWithStyleRef(prompt: string): Promise<string> {
+  // Convert Buffer to File object for the API
+  const blob = new Blob([STYLE_REF_BUFFER!], { type: "image/png" });
+  const file = new File([blob], "style-reference.png", { type: "image/png" });
 
-  const output = response.output;
-  if (Array.isArray(output)) {
-    for (const item of output) {
-      // With tools API, result is in image_generation_call
-      if (item.type === "image_generation_call" && item.result) {
-        return `data:image/png;base64,${item.result}`;
-      }
-    }
-  }
+  const editPrompt = `Use the EXACT art style, line quality, coloring technique, and panel layout style from this reference image. Match the same level of professional comic book quality — bold outlines, vibrant colors, expressive faces. Then create:\n\n${prompt}`;
+
+  const response = await openai.images.edit({
+    model: "gpt-image-1",
+    image: file,
+    prompt: editPrompt,
+    size: "1024x1536",
+    quality: "high",
+  } as any);
+
+  const item = (response.data ?? [])[0];
+  if (item?.url) return item.url;
+  if (item?.b64_json) return `data:image/png;base64,${item.b64_json}`;
   return "";
 }
 
@@ -179,14 +167,12 @@ async function generateStandard(prompt: string, pageNumber: number): Promise<str
       size: "1024x1536",
       quality: "high",
     });
-
     const item = (response.data ?? [])[0];
     if (item?.url) return item.url;
     if (item?.b64_json) return `data:image/png;base64,${item.b64_json}`;
     return "";
   } catch (err: any) {
     console.error(`Page ${pageNumber} generation error:`, err.message);
-    // Single retry
     try {
       const response = await openai.images.generate({
         model: "gpt-image-1",
