@@ -111,7 +111,7 @@ export async function generateComicPage(
   });
 
   // Try with user reference photo first (like ChatGPT does it)
-  const primaryRef = referenceImages[0] || characters.find((c: any) => c.refBase64)?.refBase64;
+  const primaryRef = referenceImages[0] || (characters.find((c) => (c as any).refBase64) as any)?.refBase64;
   if (primaryRef) {
     try {
       const refBuf = Buffer.from(primaryRef, "base64");
