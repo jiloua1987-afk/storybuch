@@ -168,54 +168,50 @@ router.post("/page", async (req, res) => {
       sonstiges: { action: "bold outlines, rich cinematic colors, high contrast", emotional: "atmospheric colors, precise linework, cinematic lighting", humor: "bold outlines, bright colors, professional cartoon quality" },
     };
     const style = (SM[category] || SM.sonstiges)[comicStyle] || (SM[category] || SM.sonstiges).emotional;
-    const charList = characters.map(c => `${c.name}: ${c.age || ""}, ${c.visual_anchor}`).join("\n- ");
-    const panelList = page.panels.map(p => `${p.nummer}. ${p.szene}`).join("\n");
-    const panelCount = page.panels.length;
-    const layoutDesc = panelCount <= 3 ? "1 large panel on top, 2 panels on bottom"
-      : panelCount === 5 ? "2 on top, 1 wide middle, 2 on bottom" : "2×2 grid";
+    const charListStr = characters.map(c => `${c.name} (${c.age || ""}, ${c.visual_anchor})`).join(", ");
 
-    // Step 1: GPT-4o Prompt Rewriter
+    // Step 1: GPT-4o Prompt Rewriter — writes like an Art Director
     let imagePrompt = "";
     try {
       const rewriteRes = await openai.chat.completions.create({
         model: "gpt-4o",
         messages: [{
           role: "system",
-          content: `You are a prompt rewriter for a high-quality multi-panel comic image generation pipeline.
-You convert narrative story content into optimized image-generation prompts for gpt-image-1.
-You do NOT write stories, prose, narration, or dialogue.
+          content: `You rewrite comic scene descriptions into short, natural image prompts for gpt-image-1.
 
-REWRITE RULES:
-- Aggressively compress into visual instructions
-- Write like a comic art director
-- Convert emotions into visible expressions, poses, gestures
-- Each panel: camera framing, visible action, key subject, environment, lighting — 1-2 sentences max
+Write like an art director briefing an illustrator — NOT like a prompt engineer.
 
-PROMPT STRUCTURE (this order):
-1. QUALITY BLOCK — crisp linework, clean rendering, sharp faces, print quality
-2. STYLE BLOCK — visual style only
-3. LAYOUT BLOCK — comic page layout
-4. CHARACTER CONSISTENCY BLOCK — characters identical in every panel
-5. SCENE BLOCK — each panel as visual direction only
-6. NEGATIVE BLOCK — strict visual negatives
+OUTPUT STRUCTURE (exactly this, nothing else):
+1. One master sentence: style + layout + motif + story context
+2. One character anchor sentence (if reference photo exists)
+3. Panel breakdown: one short visual sentence per panel
+4. One style tail: short style keywords + negatives
 
-STYLE TRANSLATION: emotional→soft expressions/warm light, humor→exaggerated poses/reactions, action→dynamic angles/movement
-
-Output ONLY the final image prompt as plain text.`,
+RULES:
+- Total output: max 120 words
+- No block headers (no "QUALITY:", "STYLE:", "LAYOUT:" etc.)
+- No redundant synonyms
+- No meta-language, no prompt engineering jargon
+- Write naturally, like describing a scene to an artist
+- Each panel: max 1 sentence, purely what is VISIBLE`,
         }, {
           role: "user",
-          content: `Story Type: ${category}\nComic Style: ${comicStyle}\n\nCharacters:\n- ${charList}\n\nPanels:\n${panelList}`,
+          content: `${panelCount} panels in a ${layoutDesc}. Category: ${category}, style: ${comicStyle}.
+Characters: ${charListStr}
+Location: ${page.location || "not specified"}, Time: ${page.timeOfDay || "daytime"}
+
+Panels:
+${panelList}`,
         }],
-        max_tokens: 400,
+        max_tokens: 250,
         temperature: 0.2,
       });
       imagePrompt = rewriteRes.choices[0].message.content || "";
-      if (imagePrompt.length < 100) imagePrompt = "";
+      if (imagePrompt.length < 80) imagePrompt = "";
       else console.log(`  → Prompt rewritten (${imagePrompt.length} chars)`);
     } catch (e) {
       console.warn("Prompt rewrite failed:", e.message);
     }
-
     // Fallback prompt
     if (!imagePrompt) {
       imagePrompt = `Create a premium European comic book page with ${panelCount} panels in a ${layoutDesc}. Each panel shows a different scene — no duplicates, no cropping.\n\nCharacters (keep identical in every panel): ${characters.map(c => `${c.name}: ${c.visual_anchor}`).join(". ")}\n${page.panels.map(p => `Panel ${p.nummer}: ${p.szene}`).join("\n")}\n${page.location ? `\nSetting: ${page.location}.` : ""}${page.timeOfDay ? ` ${page.timeOfDay} lighting.` : ""}\n\nStyle: crisp black ink outlines, ${style}, expressive faces, bold panel borders, professional graphic novel quality. No watercolor. No soft blur. No text in image.`;

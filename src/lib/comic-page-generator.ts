@@ -88,60 +88,54 @@ Be very specific: 'Emma: 6-year-old girl, shoulder-length red-brown hair, yellow
   }));
 }
 
-// ── Step 2.5: Prompt Rewriter — GPT-4o condenses scenes for image AI ─────────
+// ── Step 2.5: Prompt Rewriter — writes like an Art Director, not a Prompt Engineer
 async function rewriteForImageAI(page: StoryPage, characters: Character[], category: string, comicStyle: string): Promise<string> {
   try {
-    const charList = characters.map(c => `${c.name}: ${c.age}, ${c.visual_anchor}`).join("\n- ");
+    const charList = characters.map(c => `${c.name} (${c.age || ""}, ${c.visual_anchor})`).join(", ");
     const panelList = page.panels.map(p => `${p.nummer}. ${p.szene}`).join("\n");
+    const panelCount = page.panels.length;
+    const layoutDesc = panelCount <= 3 ? "1 wide panel on top, 2 panels on bottom"
+      : panelCount === 5 ? "2 on top, 1 wide middle, 2 on bottom" : "2×2 grid";
 
     const response = await openai.chat.completions.create({
       model: "gpt-4o",
       messages: [{
         role: "system",
-        content: `You are a prompt rewriter for a high-quality multi-panel comic image generation pipeline.
+        content: `You rewrite comic scene descriptions into short, natural image prompts for gpt-image-1.
 
-Your task is to convert narrative story content into a highly optimized image-generation prompt for gpt-image-1.
+Write like an art director briefing an illustrator — NOT like a prompt engineer.
 
-You do NOT write stories. You do NOT write prose. You do NOT write emotional narration. You do NOT write dialogue.
-You ONLY rewrite structured story content into a visual image prompt optimized for multi-panel comic rendering.
+OUTPUT STRUCTURE (exactly this, nothing else):
+1. One master sentence: style + layout + motif + story context
+2. One character anchor sentence (if reference photo exists)
+3. Panel breakdown: one short visual sentence per panel
+4. One style tail: short style keywords + negatives
 
-Your output will be used directly with gpt-image-1.
-
-REWRITE RULES:
-- Aggressively compress narrative content into visual instructions
-- Visually concrete, short, image-first, composition-first, renderable, unambiguous
-- Write like a comic art director, not a storyteller
-- Convert emotions into visible expressions, poses, gestures, body language
-- Never describe feelings abstractly
-- Each panel: camera framing, visible action, key subject, environment, lighting — 1-2 sentences max
-
-PROMPT STRUCTURE (always this order):
-1. QUALITY BLOCK — crisp linework, clean rendering, sharp faces, print quality
-2. STYLE BLOCK — visual style only, no story tone, no literary language
-3. LAYOUT BLOCK — comic page layout, readability, clean panel composition
-4. CHARACTER CONSISTENCY BLOCK — characters identical in every panel, concise
-5. SCENE BLOCK — each panel as visual direction only
-6. NEGATIVE BLOCK — strict visual negatives
-
-STYLE TRANSLATION:
-- emotional → soft facial expressions, warm light, gentle body language
-- humor → expressive poses, playful motion, exaggerated reactions
-- action → dynamic angles, movement, strong poses, cinematic energy
-
-FORBIDDEN: markdown, bullet explanations, commentary, JSON, prose, dialogue, titles.
-Output ONLY the final image prompt as plain text.`,
+RULES:
+- Total output: max 120 words
+- No block headers (no "QUALITY:", "STYLE:", "LAYOUT:" etc.)
+- No redundant synonyms (don't say "crisp" AND "clean" AND "sharp" — pick one)
+- No meta-language, no prompt engineering jargon
+- Write naturally, like describing a scene to an artist
+- Each panel: max 1 sentence, purely what is VISIBLE
+- Convert emotions into expressions and body language`,
       }, {
         role: "user",
-        content: `Story Type: ${category}\nComic Style: ${comicStyle}\n\nCharacters:\n- ${charList}\n\nPanels:\n${panelList}`,
+        content: `${panelCount} panels in a ${layoutDesc}. Category: ${category}, style: ${comicStyle}.
+Characters: ${charList}
+Location: ${page.location || "not specified"}, Time: ${page.timeOfDay || "daytime"}
+
+Panels:
+${panelList}`,
       }],
-      max_tokens: 400,
+      max_tokens: 250,
       temperature: 0.2,
     });
 
     const rewritten = response.choices[0].message.content || "";
-    if (rewritten.length > 100) return rewritten;
+    if (rewritten.length > 80) return rewritten;
   } catch (err: any) {
-    console.warn("Prompt rewrite failed, using original:", err.message);
+    console.warn("Prompt rewrite failed:", err.message);
   }
   return "";
 }
