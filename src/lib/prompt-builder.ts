@@ -202,33 +202,113 @@ export function buildGPTStructurePrompt(
   const catStyles = STYLE_MATRIX[category] || STYLE_MATRIX.sonstiges;
   const artDirection = catStyles[comicStyle] || catStyles.emotional;
 
-  const categoryHints: Record<string, string> = {
-    liebe:      "Focus on romantic moments: first meeting, tender looks, meaningful gestures, the moment they knew, relationship milestones. Include small intimate details (hands touching, a shared glance, a whispered word).",
-    familie:    "Focus on family bonding: children's unique reactions and personalities, parental love, shared adventures, cozy chaotic moments. Each child should have their own little personality quirk visible in their behavior.",
-    urlaub:     "Focus on travel: arrival excitement and first impressions, discoveries and adventures, local culture (food, places), funny or chaotic travel situations, emotional moments between travelers, departure with nostalgia.",
-    feier:      "Focus on celebration: secret preparation and anticipation, the big surprise moment, emotional speeches and reactions, fun party chaos, intimate moments between guests, the toast or final group moment.",
-    biografie:  "Focus on life journey: a vivid childhood memory, a key turning point, an important relationship moment, a proud achievement, a reflective present-day scene. Show how the person changed over time.",
-    freunde:    "Focus on friendship: a shared adventure or misadventure, an inside joke moment, supporting each other through difficulty, celebrating together, a quiet moment of loyalty and connection.",
-    sonstiges:  "Focus on the most emotionally resonant and visually interesting moments. Find the humor, the tenderness, and the drama in the story.",
-  };
-  const catHint = categoryHints[category] || categoryHints.familie;
+  // ── STORY MODULE (from GPT suggestion — dramaturgy per category) ────────────
+  const storyModules: Record<string, string> = {
+    liebe: `STORY TYPE: Romantic personal story about two people.
+Key dramatic elements:
+- The first meeting or a special early moment — capture the spark
+- Small intimate details: hands touching, a shared glance, a whispered word
+- Closeness, tension, eye contact — show the chemistry
+- Emotional development — how feelings deepen
+- A meaningful conclusion that feels like a promise
+The story should feel real, intimate, and grown-up. Not cheesy — warm, elegant, emotional.`,
 
-  const comicStyleHints: Record<string, string> = {
-    action:    "Make scenes DYNAMIC: characters in motion, dramatic angles, high energy moments, exaggerated reactions, things happening fast.",
-    emotional: "Make scenes INTIMATE: close-ups of faces showing emotion, tender gestures, quiet meaningful moments, warm lighting, characters connecting.",
-    humor:     "Make scenes FUNNY: exaggerated expressions, comedic timing, small disasters, playful chaos, characters in ridiculous situations, visual gags.",
+    familie: `STORY TYPE: Warm family story about shared moments, closeness, and everyday adventures.
+Key dramatic elements:
+- The dynamic between parents and children — who is the brave one, the shy one, the funny one?
+- Different personalities visible in behavior and reactions
+- Small chaotic situations that every family knows
+- Humorous family moments mixed with tender ones
+- Emotional closeness — a hug, a look, holding hands
+The story should feel warm, lively, and authentic.`,
+
+    urlaub: `STORY TYPE: Personal travel story full of shared experiences, impressions, and small adventures.
+Key dramatic elements:
+- Arrival and first impressions — the excitement of somewhere new
+- Discovering together — an excursion, a local market, trying new food
+- Spontaneous moments that weren't planned
+- Small mishaps or funny situations (lost luggage, wrong turn, sunburn)
+- An emotional look back — the moment you realize this was special
+The story should transport wanderlust, warmth, and the feeling of a treasured memory.`,
+
+    feier: `STORY TYPE: A special story around an event or a memorable day.
+Key dramatic elements:
+- Anticipation and secret preparation — who is planning what?
+- Special encounters and arrivals
+- Small surprises and unexpected moments
+- Emotional highlights — a speech, tears of joy, a toast
+- A memorable conclusion that everyone will remember
+The story should feel lively, festive, and deeply emotional.`,
+
+    biografie: `STORY TYPE: Important life stations as a personal visual memory journey.
+Key dramatic elements:
+- A vivid childhood memory with sensory details
+- A key turning point or challenge that shaped the person
+- An important relationship moment
+- A proud achievement or milestone
+- A reflective present-day scene showing growth
+The story should feel appreciative, personal, and meaningful. Show how the person evolved.`,
+
+    freunde: `STORY TYPE: Personal story about connection, shared memories, and real closeness.
+Key dramatic elements:
+- How the friendship started — the first connection
+- A shared adventure or misadventure
+- An insider moment that only they understand
+- Loyalty and support through a difficult time
+- An emotional conclusion celebrating the bond
+The story should feel honest, warm, and relatable.`,
+
+    sonstiges: `STORY TYPE: A personal memory with a clear emotional core.
+Key dramatic elements:
+- The specific situation that makes this story unique
+- Personal dynamics between the people involved
+- Concrete small moments — not abstract feelings
+- Clear emotional development from beginning to end
+- A strong, memorable conclusion`,
   };
-  const styleHint = comicStyleHints[comicStyle] || comicStyleHints.emotional;
+  const storyModule = storyModules[category] || storyModules.sonstiges;
+
+  // ── STYLE MODULE (from GPT suggestion — narrative rhythm per comic style) ──
+  const styleModules: Record<string, string> = {
+    action: `NARRATIVE STYLE: Dynamic, lively, full of movement.
+- Use active verbs, quick scene changes, physical movement
+- Characters should be DOING things, not just standing
+- Dialogs: short, direct, lively — like movie one-liners
+- Illustrations should emphasize: movement, perspective, dynamic energy, dramatic angles
+- Pacing: fast, punchy, each panel drives the story forward`,
+
+    emotional: `NARRATIVE STYLE: Warm, atmospheric, emotionally deep.
+- Focus on closeness: glances, gestures, mood, atmosphere
+- Quiet meaningful moments matter more than action
+- Dialogs: fewer but more personal — each word counts
+- Illustrations should emphasize: light, intimacy, atmosphere, facial expressions
+- Pacing: slow, contemplative, let moments breathe`,
+
+    humor: `NARRATIVE STYLE: Charming, playful, and humorous.
+- Include small mishaps, charming observations, sympathetic chaos
+- Characters react with exaggerated expressions and funny body language
+- Dialogs: casual, witty, natural — like real people joking
+- Illustrations should emphasize: facial expressions, situational comedy, lively details
+- Pacing: comedic timing — setup, beat, punchline`,
+  };
+  const styleModule = styleModules[comicStyle] || styleModules.emotional;
 
   return `You are a professional comic book author, visual storyteller, and dramaturg.
 Your job: Transform a personal story into a vivid, emotional, and visually stunning ${numPages}-page comic book in ${lang}.
 
-THE STORY SHOULD FEEL LIKE A PERSONAL MEMORY — warm, authentic, specific.
-Not generic. Not kitschig. Real moments that make people laugh and cry.
+QUALITY RULES — NON-NEGOTIABLE:
+- The story must feel like a PERSONAL MEMORY — warm, authentic, specific
+- Use natural, warm language — no generic phrases, no Disney clichés
+- Emotionally rich but not kitschig — real moments that make people laugh and cry
+- Each person must have a recognizable personality visible in their behavior and speech
+- Build in concrete small details: glances, gestures, small mishaps, real emotions
+- Every scene must be clearly and vividly illustratable
 
 VISUAL STYLE: ${artDirection}
-NARRATIVE FOCUS: ${catHint}
-COMIC STYLE DIRECTION: ${styleHint}
+
+${storyModule}
+
+${styleModule}
 ${mustHaveSentences ? `\nMUST INCLUDE these key moments or sentences: "${mustHaveSentences}"` : ""}
 
 CRITICAL RULES FOR PANEL SCENE DESCRIPTIONS ("szene"):
