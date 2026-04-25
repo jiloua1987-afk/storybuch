@@ -120,7 +120,7 @@ Respond ONLY with JSON: {"pages": [{"id":"page1","pageNumber":1,"title":"Title i
           model: "gpt-image-1",
           prompt: `Character reference sheet showing all characters standing side by side, full body view, neutral background.
 Characters: ${characters.map(c => `${c.name}: ${c.visual_anchor}`).join(". ")}.
-Style: professional comic book illustration, high quality.
+Style: warm watercolor comic illustration, high quality.
 Show each character clearly from head to toe. NO text, NO labels.`,
           n: 1, size: "1536x1024", quality: "high",
         });
@@ -160,13 +160,13 @@ router.post("/page", async (req, res) => {
 
     // Style Matrix: category × comicStyle → art direction
     const SM = {
-      liebe:    { action: "Romantic comic art with dynamic energy. Bold black outlines, rich warm colors (deep reds, golds, sunset oranges). Dramatic romantic poses, cinematic close-ups. Professional European BD quality.", emotional: "Tender romantic illustration. Clean linework, warm golden and rose tones. Intimate close-ups. Golden hour lighting. Professional illustrated novel quality.", humor: "Playful romantic comedy comic. Bright cheerful colors, exaggerated lovesick expressions. Bold clean outlines. Fun and lighthearted, like a romantic manga." },
-      familie:  { action: "Energetic family adventure comic. Bold black outlines, vibrant saturated colors, dynamic compositions. Children with exaggerated excited expressions. Motion lines, dramatic angles. Like Asterix or Tintin.", emotional: "Warm family storybook illustration. Clean rounded linework, warm colors (golden yellows, soft greens, cozy browns). Tender moments. Professional quality like Pixar concept art.", humor: "Fun family comedy comic. Bold clean outlines, bright pop colors. Kids with wildly exaggerated expressions. Slapstick body language. Like a European family comic strip." },
-      urlaub:   { action: "Adventure travel comic with cinematic energy. Bold outlines, vivid tropical colors (turquoise, coral, golden sand). Dynamic wide-angle compositions. Movie poster quality.", emotional: "Beautiful travel memoir illustration. Luminous warm colors with Mediterranean light. Soft linework, panoramic compositions. Like a painted travel journal.", humor: "Hilarious vacation comic. Bright saturated holiday colors, exaggerated tourist situations. Bold outlines, cartoon energy. Like a funny postcard." },
-      feier:    { action: "Explosive celebration comic. Bold dynamic outlines, confetti in motion. Vibrant party colors (gold, magenta, electric blue). High energy party comic.", emotional: "Heartwarming celebration illustration. Warm golden lighting, rich warm tones. Intimate moments — tearful speeches, group hugs. Like a beautifully illustrated greeting card.", humor: "Hilarious party comic. Bright festive colors, exaggerated celebration chaos. Bold cartoon outlines, maximum fun energy." },
+      liebe:    { action: "Romantic comic art with dynamic energy. Bold black outlines, rich warm colors (deep reds, golds, sunset oranges). Dramatic romantic poses, cinematic close-ups. Professional European BD quality.", emotional: "Tender romantic illustration. Soft watercolor washes in warm golden and rose tones. Gentle linework, intimate close-ups. Golden hour lighting. Painterly, like a romantic illustrated novel.", humor: "Playful romantic comedy comic. Bright cheerful colors, exaggerated lovesick expressions. Bold clean outlines. Fun and lighthearted, like a romantic manga." },
+      familie:  { action: "Energetic family adventure comic. Bold black outlines, vibrant saturated colors, dynamic compositions. Children with exaggerated excited expressions. Motion lines, dramatic angles. Like Asterix or Tintin.", emotional: "Warm family storybook illustration. Soft rounded linework, gentle watercolor colors (warm yellows, soft greens, cozy browns). Tender moments. Professional children's book quality like Pixar concept art.", humor: "Fun family comedy comic. Bold clean outlines, bright pop colors. Kids with wildly exaggerated expressions. Slapstick body language. Like a European family comic strip." },
+      urlaub:   { action: "Adventure travel comic with cinematic energy. Bold outlines, vivid tropical colors (turquoise, coral, golden sand). Dynamic wide-angle compositions. Movie poster quality.", emotional: "Beautiful travel memoir illustration. Luminous watercolor style with Mediterranean light. Soft linework, panoramic compositions. Like a painted travel journal.", humor: "Hilarious vacation comic. Bright saturated holiday colors, exaggerated tourist situations. Bold outlines, cartoon energy. Like a funny postcard." },
+      feier:    { action: "Explosive celebration comic. Bold dynamic outlines, confetti in motion. Vibrant party colors (gold, magenta, electric blue). High energy party comic.", emotional: "Heartwarming celebration illustration. Warm golden lighting, soft watercolor tones. Intimate moments — tearful speeches, group hugs. Like a beautifully illustrated greeting card.", humor: "Hilarious party comic. Bright festive colors, exaggerated celebration chaos. Bold cartoon outlines, maximum fun energy." },
       biografie:{ action: "Epic life story graphic novel. Dramatic cinematic lighting, rich deep colors with sepia undertones. Bold compositions. Movie-quality biographical illustration.", emotional: "Nostalgic memoir illustration. Warm muted earth tones with selective color highlights. Soft editorial linework. Like a New Yorker illustration.", humor: "Charming biographical comic with wit. Warm retro color palette, clean expressive linework. Like an illustrated memoir with a smile." },
       freunde:  { action: "High-energy friendship adventure comic. Bold outlines, vibrant saturated colors. Friends in dynamic group poses. Like a superhero team-up with real friends.", emotional: "Warm friendship illustration. Soft natural colors, gentle linework. Shared laughter, supportive hugs. Like a beautifully illustrated friendship story.", humor: "Hilarious buddy comedy comic. Bright pop colors, exaggerated funny expressions. Bold cartoon outlines, maximum comedic timing." },
-      sonstiges:{ action: "Dynamic storytelling comic. Bold black outlines, rich cinematic colors. Professional comic book quality.", emotional: "Beautiful narrative illustration. Warm atmospheric colors, clean linework. Professional illustrated novel quality.", humor: "Entertaining comic with personality. Clean bold outlines, bright cheerful colors. Professional cartoon quality." },
+      sonstiges:{ action: "Dynamic storytelling comic. Bold black outlines, rich cinematic colors. Professional comic book quality.", emotional: "Beautiful narrative illustration. Warm atmospheric colors, soft painterly linework. Professional illustrated novel quality.", humor: "Entertaining comic with personality. Clean bold outlines, bright cheerful colors. Professional cartoon quality." },
     };
     const artDirection = (SM[category] || SM.sonstiges)[comicStyle] || (SM[category] || SM.sonstiges).emotional;
 
@@ -179,11 +179,6 @@ router.post("/page", async (req, res) => {
     ).join("\n");
 
     const panelCount = page.panels.length;
-    const layoutDesc = panelCount <= 3
-      ? "3-panel comic page: ONE wide cinematic panel spanning full width on top (60% height), TWO equal square panels side by side on bottom row (40% height). Clear 4px black borders between all panels."
-      : panelCount === 5
-      ? "5-panel comic page: TWO panels on top row, ONE wide cinematic panel spanning full width in middle, TWO panels on bottom row. Clear 4px black borders between all panels."
-      : "4-panel comic page: 2×2 grid of equal panels. Clear 4px black borders between all panels. Each panel roughly 50% width × 50% height.";
 
     const fullPrompt = `CRITICAL INSTRUCTION — VISUAL CONSISTENCY:
 All characters must appear IDENTICAL across every single image in this series.
@@ -204,27 +199,19 @@ Every face must be clearly rendered with distinct features — no blurry or gene
 ABSOLUTE RULE: NO text, NO letters, NO words, NO speech bubbles,
 NO captions, NO UI elements anywhere in the image.
 The image must be a pure illustration only.
-Leave approximately 20% empty or visually simple space at the top-left
-corner of each panel for text overlay that will be added separately.
 
-COMIC PAGE COMPOSITION:
-Create ONE single A4 portrait comic book page with exactly ${panelCount} panels.
+COMIC PAGE:
+Create a single comic book page with ${panelCount} panels arranged as: ${panelCount <= 3 ? "one wide panel on top, two panels side by side on bottom" : panelCount === 5 ? "two on top, one wide in middle, two on bottom" : "2×2 grid"}.
+Clean black panel borders. White/light background between panels.
+${page.location ? `Setting: ${page.location}.` : ""}
+${page.timeOfDay ? `Lighting: ${page.timeOfDay}.` : ""}
 
-LAYOUT: ${layoutDesc}
-Page border: 12px cream/warm beige (#F5EDE0) visible around all edges.
-Panel borders: solid black, 4px width, clean and precise.
-Leave an 80px cream-colored header strip at the very top for title overlay (draw NOTHING there).
-
-${page.location ? `LOCATION: ${page.location}` : ""}
-${page.timeOfDay ? `LIGHTING: ${page.timeOfDay} — adjust all panel lighting accordingly.` : ""}
-
-PANEL SCENES (illustrate each with maximum detail and emotion):
+SCENES:
 ${scenes}
 
-QUALITY: Professional comic book page, print-ready A4 quality.
-Rich detailed backgrounds in every panel. Expressive character faces.
-Cinematic camera angles that vary between panels (close-up, medium shot, wide establishing shot).
-NEGATIVE: No text, no speech bubbles, no watermarks, no distorted faces, no extra fingers, no inconsistent characters between panels.`;
+Professional comic book quality. Sharp details. Expressive faces. Rich backgrounds.
+Vary camera angles between panels: close-up, medium shot, wide shot.
+NO text, NO speech bubbles, NO captions anywhere in the image.`;
 
     console.log(`Generating page "${page.title}" (${panelCount} panels)`);
 
@@ -309,7 +296,7 @@ router.post("/cover", async (req, res) => {
     const prompt = `Create a beautiful comic book COVER illustration.
 ${charDesc ? `Main characters: ${charDesc}.` : ""}
 Setting: ${location || "beautiful scenic location"}. Mood: ${mood}.
-Style: professional comic book art, professional cover quality, cinematic composition, portrait orientation.
+Style: warm watercolor comic art, professional cover quality, cinematic composition, portrait orientation.
 Characters prominently featured in foreground. NO text, NO title, NO letters anywhere.`;
 
     const genRes = await openai.images.generate({

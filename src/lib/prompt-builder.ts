@@ -71,12 +71,6 @@ const STYLE_MATRIX: Record<string, Record<string, string>> = {
   },
 };
 
-const PANEL_LAYOUTS: Record<number, string> = {
-  3: "3-panel comic page: ONE wide cinematic panel spanning full width on top (60% height), TWO equal panels side by side on bottom row (40% height). Clear 4px black borders.",
-  4: "4-panel comic page: 2×2 grid of equal panels. Clear 4px black borders. Each panel roughly 50% width × 50% height.",
-  5: "5-panel comic page: TWO panels on top row, ONE wide cinematic panel spanning full width in middle, TWO panels on bottom row. Clear 4px black borders.",
-};
-
 // ══════════════════════════════════════════════════════════════════════════════
 // BLOCK 1: CONSISTENCY — always first, model reads top-down
 // ══════════════════════════════════════════════════════════════════════════════
@@ -114,9 +108,7 @@ Every face must be clearly rendered with distinct features — no blurry or gene
 
 ABSOLUTE RULE: NO text, NO letters, NO words, NO speech bubbles,
 NO captions, NO UI elements anywhere in the image.
-The image must be a pure illustration only.
-Leave approximately 20% empty or visually simple space at the top-left
-corner of each panel for text overlay that will be added separately.`;
+The image must be a pure illustration only.`;
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -125,30 +117,29 @@ corner of each panel for text overlay that will be added separately.`;
 function buildSceneBlock(input: PagePromptInput): string {
   const { panels, location, timeOfDay } = input;
   const panelCount = panels.length;
-  const layout = PANEL_LAYOUTS[panelCount] || PANEL_LAYOUTS[4];
+
+  const layoutDesc = panelCount <= 3
+    ? "3 panels: one wide panel on top, two panels side by side on bottom"
+    : panelCount === 5
+    ? "5 panels: two on top, one wide in middle, two on bottom"
+    : "4 panels in a 2×2 grid";
 
   const panelDescs = panels
     .map((p) => `[Panel ${p.nummer}]: ${p.szene}`)
     .join("\n");
 
-  return `COMIC PAGE COMPOSITION:
-Create ONE single A4 portrait comic book page with exactly ${panelCount} panels.
+  return `COMIC PAGE:
+Create a single comic book page with ${panelCount} panels arranged as: ${layoutDesc}.
+Clean black panel borders. White/light background between panels.
+${location ? `Setting: ${location}.` : ""}
+${timeOfDay ? `Lighting: ${timeOfDay}.` : ""}
 
-LAYOUT: ${layout}
-Page border: 12px cream/warm beige (#F5EDE0) visible around all edges.
-Panel borders: solid black, 4px width, clean and precise.
-Leave an 80px cream-colored header strip at the very top for title overlay (draw NOTHING there).
-
-${location ? `LOCATION: ${location}` : ""}
-${timeOfDay ? `LIGHTING: ${timeOfDay} — adjust all panel lighting accordingly.` : ""}
-
-PANEL SCENES (illustrate each with maximum detail and emotion):
+SCENES:
 ${panelDescs}
 
-QUALITY: Professional comic book page, print-ready A4 quality.
-Rich detailed backgrounds in every panel. Expressive character faces.
-Cinematic camera angles that vary between panels (close-up, medium shot, wide establishing shot).
-NEGATIVE: No text, no speech bubbles, no watermarks, no distorted faces, no extra fingers, no inconsistent characters between panels.`;
+Professional comic book quality. Sharp details. Expressive faces. Rich backgrounds.
+Vary camera angles between panels: close-up, medium shot, wide shot.
+NO text, NO speech bubbles, NO captions anywhere in the image.`;
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
