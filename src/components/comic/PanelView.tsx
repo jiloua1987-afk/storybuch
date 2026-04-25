@@ -84,12 +84,18 @@ export default function PanelView({ imageUrl, title, panels = [], panelPositions
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [editedDialogs, setEditedDialogs] = useState<Record<number, string>>({});
 
-  const getDialog = (panel: PanelData, i: number) =>
-    editedDialogs[i] !== undefined ? editedDialogs[i] : panel.dialog || "";
+  const isValidDialog = (d?: string | null) =>
+    d && d.trim().length > 0 && d.trim().toLowerCase() !== "null";
+
+  const getDialog = (panel: PanelData, i: number) => {
+    const edited = editedDialogs[i];
+    if (edited !== undefined) return edited;
+    return isValidDialog(panel.dialog) ? panel.dialog! : "";
+  };
 
   const dialogPanels = panels
     .map((p, i) => ({ ...p, originalIndex: i }))
-    .filter((p) => p.dialog && p.dialog.trim().length > 0);
+    .filter((p) => isValidDialog(p.dialog));
 
   const hasDetectedPositions = panelPositions && panelPositions.length > 0;
 
@@ -147,7 +153,7 @@ export default function PanelView({ imageUrl, title, panels = [], panelPositions
                   >
                     <p className={`${isCaption ? "text-white" : "text-[#1A1410]"} leading-snug`}
                       style={{ fontFamily: "'Bangers', cursive", fontSize: "12px", letterSpacing: "0.03em" }}>
-                      {panel.speaker && panel.speaker !== "narrator" && (
+                      {panel.speaker && panel.speaker !== "narrator" && panel.speaker.toLowerCase() !== "null" && (
                         <span className="font-bold">{panel.speaker}: </span>
                       )}
                       {dialog}
