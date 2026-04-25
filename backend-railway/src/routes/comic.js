@@ -169,6 +169,10 @@ router.post("/page", async (req, res) => {
     };
     const style = (SM[category] || SM.sonstiges)[comicStyle] || (SM[category] || SM.sonstiges).emotional;
     const charListStr = characters.map(c => `${c.name} (${c.age || ""}, ${c.visual_anchor})`).join(", ");
+    const panelList = page.panels.map(p => `${p.nummer}. ${p.szene}`).join("\n");
+    const panelCount = page.panels.length;
+    const layoutDesc = panelCount <= 3 ? "1 large panel on top, 2 panels on bottom"
+      : panelCount === 5 ? "2 on top, 1 wide middle, 2 on bottom" : "2×2 grid";
 
     // Step 1: GPT-4o Prompt Rewriter — writes like an Art Director
     let imagePrompt = "";
