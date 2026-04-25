@@ -153,11 +153,10 @@ Show each character clearly from head to toe. NO text, NO labels.`,
 });
 
 // ── POST /api/comic/page ──────────────────────────────────────────────────────
-// Generates raw image — NO text overlay, NO SVG compositing
-// Text is rendered in frontend via CSS overlays
 router.post("/page", async (req, res) => {
   try {
-    const { page, characters = [], comicStyle = "emotional", category = "familie", illustrationStyle = "comic" } = req.body;
+    const { page, characters = [], comicStyle = "emotional", category = "familie",
+            illustrationStyle = "comic", referenceImages = [] } = req.body;
 
     const comicMod = COMIC_STYLE_MOD[comicStyle] || COMIC_STYLE_MOD.emotional;
     const mood = CATEGORY_MOOD[category] || CATEGORY_MOOD.familie;
@@ -228,21 +227,52 @@ Rich detailed backgrounds in every panel. Expressive character faces.
 Cinematic camera angles that vary between panels (close-up, medium shot, wide establishing shot).
 NEGATIVE: No text, no speech bubbles, no watermarks, no distorted faces, no extra fingers, no inconsistent characters between panels.`;
 
-    console.log(`Generating page "${page.title}" (${page.panels.length} panels)${STYLE_REF_BUFFER ? " [with style ref]" : ""}`);
+    // Build image inputs: style reference + user reference photos
+    const imageInputs = [];
+
+    // 1. Style reference (Comic.png) — always first for highest fidelity
+    if (STYLE_REF_BUFFER) {
+      const styleBlob = new Blob([STYLE_REF_BUFFER], { type: "image/png" });
+      imageInputs.push(new File([styleBlob], "style-reference.png", { type: "image/png" }));
+    }
+
+    // 2. User reference photos (faces) — for character likeness
+    const primaryRef = referenceImages[0] || characters.find(c => c.refBase64)?.refBase64;
+    if (primaryRef) {
+      try {
+        const refBuf = Buffer.from(primaryRef, "base64");
+        const refBlob = new Blob([refBuf], { type: "image/jpeg" });
+        imageInputs.push(new File([refBlob], "character-reference.jpg", { type: "image/jpeg" }));
+      } catch { /* ignore invalid base64 */ }
+    }
+
+    // 3. Character sheet URL → download and add
+    const sheetUrl = characters[0]?.characterSheetUrl;
+    if (sheetUrl && sheetUrl.startsWith("http")) {
+      try {
+        const sheetRes = await fetch(sheetUrl, { signal: AbortSignal.timeout(10000) });
+        if (sheetRes.ok) {
+          const sheetBuf = Buffer.from(await sheetRes.arrayBuffer());
+          const sheetBlob = new Blob([sheetBuf], { type: "image/jpeg" });
+          imageInputs.push(new File([sheetBlob], "character-sheet.jpg", { type: "image/jpeg" }));
+        }
+      } catch { /* ignore fetch errors */ }
+    }
+
+    console.log(`Generating page "${page.title}" (${panelCount} panels) [${imageInputs.length} ref images]`);
 
     let rawUrl = "";
 
-    // Primary: images.edit() with style reference + input_fidelity
-    if (STYLE_REF_BUFFER) {
+    // Primary: images.edit() with reference images
+    if (imageInputs.length > 0) {
       try {
-        const blob = new Blob([STYLE_REF_BUFFER], { type: "image/png" });
-        const file = new File([blob], "style-reference.png", { type: "image/png" });
-
-        const editPrompt = `Use the EXACT art style, line quality, coloring technique, and panel layout style from this reference image. Match the same level of professional comic book quality — bold outlines, vibrant colors, expressive faces. Then create:\n\n${fullPrompt}`;
+        const editPrompt = imageInputs.length > 1
+          ? `Use the art style from the first reference image. The people in the other reference image(s) are the characters — make them look like those real people drawn in comic style. Then create:\n\n${fullPrompt}`
+          : `Use the EXACT art style, line quality, coloring technique from this reference image. Then create:\n\n${fullPrompt}`;
 
         const editRes = await openai.images.edit({
           model: "gpt-image-1",
-          image: file,
+          image: imageInputs.length === 1 ? imageInputs[0] : imageInputs,
           prompt: editPrompt,
           size: "1024x1536",
           quality: "high",
@@ -252,7 +282,7 @@ NEGATIVE: No text, no speech bubbles, no watermarks, no distorted faces, no extr
         if (item?.url) rawUrl = item.url;
         else if (item?.b64_json) rawUrl = `data:image/png;base64,${item.b64_json}`;
       } catch (e) {
-        console.warn(`Style reference failed for "${page.title}", falling back:`, e.message);
+        console.warn(`Edit API failed for "${page.title}", falling back:`, e.message);
       }
     }
 
@@ -270,16 +300,50 @@ NEGATIVE: No text, no speech bubbles, no watermarks, no distorted faces, no extr
       else if (item?.b64_json) rawUrl = `data:image/png;base64,${item.b64_json}`;
     }
 
-    if (!rawUrl) return res.json({ imageUrl: "", panels: page.panels });
+    if (!rawUrl) return res.json({ imageUrl: "", panels: page.panels, panelPositions: null });
 
-    // Save to Supabase Storage — only resize, NO text overlay
+    // Save to Supabase
     const bookId = page.id?.split("-")[0] || `book-${Date.now()}`;
     const storedUrl = await saveImage(rawUrl, bookId, page.id || `page-${Date.now()}`);
     const finalUrl = storedUrl || rawUrl;
 
+    // ── Panel Position Detection via GPT-4o Vision ──────────────────────────
+    let panelPositions = null;
+    try {
+      // Download the generated image for analysis
+      let imgForAnalysis = finalUrl;
+      if (finalUrl.startsWith("http")) {
+        // Use the Supabase URL directly
+        imgForAnalysis = finalUrl;
+      }
+
+      const visionRes = await openai.chat.completions.create({
+        model: "gpt-4o",
+        messages: [{
+          role: "user",
+          content: [
+            { type: "image_url", image_url: { url: imgForAnalysis, detail: "low" } },
+            { type: "text", text: `This is a comic page with ${panelCount} panels. Analyze the image and return the position of each panel as percentage coordinates.
+Respond ONLY with JSON: {"panels":[{"nummer":1,"top":5,"left":0,"width":100,"height":45},{"nummer":2,"top":52,"left":0,"width":50,"height":46}]}
+top/left/width/height are percentages of the total image. Panel 1 is top-left, numbering goes left-to-right, top-to-bottom.` }
+          ]
+        }],
+        response_format: { type: "json_object" },
+        max_tokens: 200,
+        temperature: 0.1,
+      });
+
+      const posData = JSON.parse(visionRes.choices[0].message.content || "{}");
+      if (posData.panels && posData.panels.length > 0) {
+        panelPositions = posData.panels;
+        console.log(`✓ Panel positions detected for "${page.title}"`);
+      }
+    } catch (e) {
+      console.warn(`Panel detection failed for "${page.title}":`, e.message);
+    }
+
     console.log(`✓ Page "${page.title}" done → ${storedUrl ? "Supabase" : "inline"}`);
-    // Return image URL + panels JSON for frontend CSS overlay
-    res.json({ imageUrl: finalUrl, panels: page.panels });
+    res.json({ imageUrl: finalUrl, panels: page.panels, panelPositions });
   } catch (err) {
     console.error("Page error:", err.message);
     res.status(500).json({ error: err.message, imageUrl: "", panels: [] });

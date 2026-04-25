@@ -120,6 +120,7 @@ export default function Step4Generate() {
             imageUrl: pageData.imageUrl || "",
             imagePrompt: "",
             panels: pageData.panels || page.panels || [],
+            panelPositions: pageData.panelPositions || null,
           };
           chapters.push(chapter);
           previousImageUrl = pageData.imageUrl || null;

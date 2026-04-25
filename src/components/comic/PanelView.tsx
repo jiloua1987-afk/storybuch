@@ -8,10 +8,19 @@ interface PanelData {
   bubble_type?: "speech" | "caption" | "shout" | "thought" | "whisper" | null;
 }
 
+interface PanelPosition {
+  nummer: number;
+  top: number;
+  left: number;
+  width: number;
+  height: number;
+}
+
 interface PanelViewProps {
   imageUrl: string;
   title?: string;
   panels?: PanelData[];
+  panelPositions?: PanelPosition[] | null;
   pageNumber?: number;
 }
 
@@ -28,30 +37,25 @@ function getBubbleStyle(type?: string | null) {
   }
 }
 
-// Position each bubble INSIDE its panel area based on panel grid layout
-// The image has: ~5% header, then panels fill the rest
-function getPanelPosition(panelIndex: number, totalPanels: number): React.CSSProperties {
+// Fallback positions when GPT-4o Vision detection is not available
+function getFallbackPosition(index: number, total: number): React.CSSProperties {
   const base: React.CSSProperties = { position: "absolute", maxWidth: "38%", zIndex: 10 };
-  const h = 5; // header offset %
-
-  // Calculate which row/col this panel is in based on layout
-  if (totalPanels <= 3) {
-    // Row 1: 1 wide panel (h to h+55%), Row 2: 2 panels (h+57% to 100%)
-    if (panelIndex === 0) return { ...base, top: `${h + 3}%`, left: "3%" };
-    if (panelIndex === 1) return { ...base, top: `${h + 58}%`, left: "3%" };
-    return { ...base, top: `${h + 58}%`, right: "3%" };
+  const h = 5;
+  if (total <= 3) {
+    const pos = [
+      { top: `${h + 3}%`, left: "3%" },
+      { top: `${h + 58}%`, left: "3%" },
+      { top: `${h + 58}%`, right: "3%" },
+    ];
+    return { ...base, ...(pos[index] || pos[0]) };
   }
-
-  if (totalPanels === 4) {
-    // 2x2: Row 1 (h to h+47%), Row 2 (h+50% to 97%)
-    const row = Math.floor(panelIndex / 2);
-    const col = panelIndex % 2;
+  if (total === 4) {
+    const row = Math.floor(index / 2);
+    const col = index % 2;
     const top = row === 0 ? `${h + 3}%` : `${h + 50}%`;
     const side = col === 0 ? { left: "3%" } : { right: "3%" };
     return { ...base, top, ...side };
   }
-
-  // 5 panels: 2 top, 1 wide middle, 2 bottom
   const positions = [
     { top: `${h + 3}%`, left: "3%" },
     { top: `${h + 3}%`, right: "3%" },
@@ -59,20 +63,35 @@ function getPanelPosition(panelIndex: number, totalPanels: number): React.CSSPro
     { top: `${h + 67}%`, left: "3%" },
     { top: `${h + 67}%`, right: "3%" },
   ];
-  return { ...base, ...(positions[panelIndex] || positions[0]) };
+  return { ...base, ...(positions[index] || positions[0]) };
 }
 
-export default function PanelView({ imageUrl, title, panels = [], pageNumber }: PanelViewProps) {
+// Use GPT-4o Vision detected positions — place bubble inside the detected panel area
+function getDetectedPosition(panelIndex: number, positions: PanelPosition[]): React.CSSProperties {
+  const pos = positions.find(p => p.nummer === panelIndex + 1) || positions[panelIndex];
+  if (!pos) return { position: "absolute", top: "5%", left: "3%", maxWidth: "38%", zIndex: 10 };
+
+  return {
+    position: "absolute",
+    top: `${pos.top + 2}%`,
+    left: `${pos.left + 2}%`,
+    maxWidth: `${Math.min(pos.width - 4, 40)}%`,
+    zIndex: 10,
+  };
+}
+
+export default function PanelView({ imageUrl, title, panels = [], panelPositions, pageNumber }: PanelViewProps) {
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [editedDialogs, setEditedDialogs] = useState<Record<number, string>>({});
 
   const getDialog = (panel: PanelData, i: number) =>
     editedDialogs[i] !== undefined ? editedDialogs[i] : panel.dialog || "";
 
-  // Only show bubbles for panels that have actual dialog text
   const dialogPanels = panels
     .map((p, i) => ({ ...p, originalIndex: i }))
     .filter((p) => p.dialog && p.dialog.trim().length > 0);
+
+  const hasDetectedPositions = panelPositions && panelPositions.length > 0;
 
   return (
     <div className="relative w-full bg-[#F5EDE0] rounded-xl overflow-hidden shadow-xl">
@@ -85,7 +104,6 @@ export default function PanelView({ imageUrl, title, panels = [], pageNumber }: 
           </div>
         )}
 
-        {/* Title overlay */}
         {title && (
           <div className="absolute top-0 inset-x-0 py-1.5 text-center"
             style={{ background: "linear-gradient(to bottom, #F5EDE0 50%, transparent)" }}>
@@ -96,12 +114,13 @@ export default function PanelView({ imageUrl, title, panels = [], pageNumber }: 
           </div>
         )}
 
-        {/* Bubbles — positioned per panel area */}
         {dialogPanels.map((panel) => {
           const i = panel.originalIndex;
           const dialog = getDialog(panel, i);
           const isEditing = editingIndex === i;
-          const posStyle = getPanelPosition(i, panels.length);
+          const posStyle = hasDetectedPositions
+            ? getDetectedPosition(i, panelPositions!)
+            : getFallbackPosition(i, panels.length);
           const { bg, radius } = getBubbleStyle(panel.bubble_type);
           const isCaption = panel.bubble_type === "caption";
           const hasTail = !isCaption && panel.bubble_type !== "thought" && panel.bubble_type !== "whisper";

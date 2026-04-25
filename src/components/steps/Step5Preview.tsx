@@ -156,6 +156,7 @@ export default function Step5Preview() {
                     imageUrl={page.imageUrl || ""}
                     title={page.title}
                     panels={page.panels || []}
+                    panelPositions={page.panelPositions}
                     pageNumber={currentPage + 1}
                   />
                 )}

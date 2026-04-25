@@ -19,6 +19,14 @@ export interface ChapterPanel {
   bubble_type?: "speech" | "caption" | "shout" | "thought";
 }
 
+export interface PanelPosition {
+  nummer: number;
+  top: number;
+  left: number;
+  width: number;
+  height: number;
+}
+
 export interface Chapter {
   id: string;
   title: string;
@@ -26,6 +34,7 @@ export interface Chapter {
   imageUrl?: string;
   imagePrompt?: string;
   panels?: ChapterPanel[];
+  panelPositions?: PanelPosition[] | null;
 }
 
 export type ComicStyle = "action" | "emotional" | "humor";
