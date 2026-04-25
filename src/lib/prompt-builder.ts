@@ -199,42 +199,68 @@ export function buildGPTStructurePrompt(
   numPages: number,
   category: string = "familie"
 ): string {
-  // Use the style matrix for consistent art direction in scene descriptions
   const catStyles = STYLE_MATRIX[category] || STYLE_MATRIX.sonstiges;
   const artDirection = catStyles[comicStyle] || catStyles.emotional;
 
   const categoryHints: Record<string, string> = {
-    liebe:      "Focus on romantic moments: first meeting, tender looks, meaningful gestures, relationship milestones",
-    familie:    "Focus on family bonding: children's reactions, parental love, shared adventures, cozy moments",
-    urlaub:     "Focus on travel: arrival excitement, discoveries, local culture, memorable moments, departure",
-    feier:      "Focus on celebration: preparation, emotional speeches, fun moments, group joy, surprise",
-    biografie:  "Focus on life journey: childhood memory, key milestone, relationship, achievement, reflection",
-    freunde:    "Focus on friendship: shared adventure, inside joke, support moment, celebration, loyalty",
-    sonstiges:  "Focus on the most emotionally resonant and visually interesting moments",
+    liebe:      "Focus on romantic moments: first meeting, tender looks, meaningful gestures, the moment they knew, relationship milestones. Include small intimate details (hands touching, a shared glance, a whispered word).",
+    familie:    "Focus on family bonding: children's unique reactions and personalities, parental love, shared adventures, cozy chaotic moments. Each child should have their own little personality quirk visible in their behavior.",
+    urlaub:     "Focus on travel: arrival excitement and first impressions, discoveries and adventures, local culture (food, places), funny or chaotic travel situations, emotional moments between travelers, departure with nostalgia.",
+    feier:      "Focus on celebration: secret preparation and anticipation, the big surprise moment, emotional speeches and reactions, fun party chaos, intimate moments between guests, the toast or final group moment.",
+    biografie:  "Focus on life journey: a vivid childhood memory, a key turning point, an important relationship moment, a proud achievement, a reflective present-day scene. Show how the person changed over time.",
+    freunde:    "Focus on friendship: a shared adventure or misadventure, an inside joke moment, supporting each other through difficulty, celebrating together, a quiet moment of loyalty and connection.",
+    sonstiges:  "Focus on the most emotionally resonant and visually interesting moments. Find the humor, the tenderness, and the drama in the story.",
   };
   const catHint = categoryHints[category] || categoryHints.familie;
 
-  return `You are a professional comic book author and visual storyteller.
-Create a ${numPages}-page comic book structure in ${lang}.
+  const comicStyleHints: Record<string, string> = {
+    action:    "Make scenes DYNAMIC: characters in motion, dramatic angles, high energy moments, exaggerated reactions, things happening fast.",
+    emotional: "Make scenes INTIMATE: close-ups of faces showing emotion, tender gestures, quiet meaningful moments, warm lighting, characters connecting.",
+    humor:     "Make scenes FUNNY: exaggerated expressions, comedic timing, small disasters, playful chaos, characters in ridiculous situations, visual gags.",
+  };
+  const styleHint = comicStyleHints[comicStyle] || comicStyleHints.emotional;
 
-VISUAL STYLE FOR THIS BOOK: ${artDirection}
+  return `You are a professional comic book author, visual storyteller, and dramaturg.
+Your job: Transform a personal story into a vivid, emotional, and visually stunning ${numPages}-page comic book in ${lang}.
+
+THE STORY SHOULD FEEL LIKE A PERSONAL MEMORY — warm, authentic, specific.
+Not generic. Not kitschig. Real moments that make people laugh and cry.
+
+VISUAL STYLE: ${artDirection}
 NARRATIVE FOCUS: ${catHint}
+COMIC STYLE DIRECTION: ${styleHint}
 ${mustHaveSentences ? `\nMUST INCLUDE these key moments or sentences: "${mustHaveSentences}"` : ""}
 
-CRITICAL RULES FOR PANEL SCENES:
-- Each panel "szene" must be a COMPLETE, SELF-CONTAINED image description in English
-- Include: WHO is in the scene, WHAT they are doing, WHERE they are, their FACIAL EXPRESSION, BODY LANGUAGE, and the LIGHTING/MOOD
-- Be cinematically specific: "Helga (80) opening garden gate, hands flying to her face in shock, tears of joy, 20 family members behind decorated table with lanterns, warm golden afternoon light" — NOT "Helga sees the surprise"
-- Think like a film director: vary camera angles (close-up, medium shot, wide establishing shot, over-shoulder)
-- Each scene must be visually distinct from the others
+CRITICAL RULES FOR PANEL SCENE DESCRIPTIONS ("szene"):
+Each "szene" is a COMPLETE illustration brief for an artist. It must contain ALL of these:
+1. WHO: Which characters are in the scene, by name, with their appearance details
+2. WHAT: Exact action — not "they arrive" but "Leon (6) runs ahead dragging his suitcase, stumbling over the cobblestones"
+3. WHERE: Specific environment details — "sunlit garden with old apple tree, wooden fence with peeling paint, string lights between branches"
+4. EXPRESSION: Facial expression and body language — "eyes wide with wonder, mouth open in a delighted O, arms spread wide"
+5. MOOD/LIGHT: Time of day and atmosphere — "warm golden afternoon light filtering through leaves, long shadows on grass"
+6. CAMERA: Vary angles across panels — close-up face, medium two-shot, wide establishing shot, over-shoulder, bird's eye view
 
-STRUCTURE RULES:
+BAD example: "The family arrives at the beach"
+GOOD example: "Wide establishing shot: Family of four walking toward a stunning turquoise Sardinian beach, viewed from behind. Leon (6, messy brown hair, blue striped shirt) and Mia (4, blonde pigtails, pink dress) hold hands and run slightly ahead. Papa and Mama follow with beach bags, smiling at each other. Rocky Mediterranean cliffs frame the scene, colorful beach umbrellas visible in the distance. Bright afternoon sunlight, warm golden tones."
+
+DIALOG RULES:
+- Max 8 words per speech bubble, natural ${lang}
+- Dialogs should reveal CHARACTER — each person speaks differently
+- Include small loving exchanges, funny remarks, emotional outbursts
+- Not every panel needs dialog — some moments are better silent
+
+STRUCTURE:
 - ${numPages} pages, each with 3-5 panels
-- Page 1: establish characters and setting (4 panels)
-- Middle pages: develop the story with emotional peaks (3-5 panels, vary!)
-- Last page: emotional conclusion, memorable final image (3-4 panels)
-- Dialogs: max 8 words, natural ${lang}, emotionally fitting
+- Page 1: establish characters, setting, and mood (4 panels)
+- Middle pages: develop story with emotional peaks AND funny/chaotic moments (vary 3-5 panels!)
+- Last page: emotional conclusion with a memorable final image (3-4 panels)
 - Page titles: 3-5 words, dramatic or funny, in ${lang}
+- Each page should feel like a mini-chapter with its own arc
+
+GIVE EACH CHARACTER A PERSONALITY:
+- Children should have distinct behaviors (the brave one, the shy one, the funny one)
+- Adults should show real emotions (not just smiling — also worried, surprised, moved to tears)
+- Show relationships through body language (who holds whose hand, who looks at whom)
 
 Respond ONLY with valid JSON:
 {
@@ -248,9 +274,9 @@ Respond ONLY with valid JSON:
       "panels": [
         {
           "nummer": 1,
-          "szene": "Complete English scene description with characters, action, setting, expressions, lighting — ready for image AI",
-          "dialog": "Short ${lang} dialog max 8 words",
-          "speaker": "Character name or null for no dialog",
+          "szene": "Complete English illustration brief with ALL 6 elements above",
+          "dialog": "Short ${lang} dialog max 8 words or null",
+          "speaker": "Character name or null",
           "bubble_type": "speech|caption|shout|thought"
         }
       ]
