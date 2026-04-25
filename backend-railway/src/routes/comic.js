@@ -158,56 +158,59 @@ router.post("/page", async (req, res) => {
     const { page, characters = [], comicStyle = "emotional", category = "familie",
             illustrationStyle = "comic", referenceImages = [] } = req.body;
 
-    // Style Matrix: category × comicStyle → art direction
     const SM = {
-      liebe:    { action: "Romantic comic art with dynamic energy. Bold black outlines, rich warm colors (deep reds, golds, sunset oranges). Dramatic romantic poses, cinematic close-ups. Professional European BD quality.", emotional: "Tender romantic illustration. Soft watercolor washes in warm golden and rose tones. Gentle linework, intimate close-ups. Golden hour lighting. Painterly, like a romantic illustrated novel.", humor: "Playful romantic comedy comic. Bright cheerful colors, exaggerated lovesick expressions. Bold clean outlines. Fun and lighthearted, like a romantic manga." },
-      familie:  { action: "Energetic family adventure comic. Bold black outlines, vibrant saturated colors, dynamic compositions. Children with exaggerated excited expressions. Motion lines, dramatic angles. Like Asterix or Tintin.", emotional: "Warm family storybook illustration. Soft rounded linework, gentle watercolor colors (warm yellows, soft greens, cozy browns). Tender moments. Professional children's book quality like Pixar concept art.", humor: "Fun family comedy comic. Bold clean outlines, bright pop colors. Kids with wildly exaggerated expressions. Slapstick body language. Like a European family comic strip." },
-      urlaub:   { action: "Adventure travel comic with cinematic energy. Bold outlines, vivid tropical colors (turquoise, coral, golden sand). Dynamic wide-angle compositions. Movie poster quality.", emotional: "Beautiful travel memoir illustration. Luminous watercolor style with Mediterranean light. Soft linework, panoramic compositions. Like a painted travel journal.", humor: "Hilarious vacation comic. Bright saturated holiday colors, exaggerated tourist situations. Bold outlines, cartoon energy. Like a funny postcard." },
-      feier:    { action: "Explosive celebration comic. Bold dynamic outlines, confetti in motion. Vibrant party colors (gold, magenta, electric blue). High energy party comic.", emotional: "Heartwarming celebration illustration. Warm golden lighting, soft watercolor tones. Intimate moments — tearful speeches, group hugs. Like a beautifully illustrated greeting card.", humor: "Hilarious party comic. Bright festive colors, exaggerated celebration chaos. Bold cartoon outlines, maximum fun energy." },
-      biografie:{ action: "Epic life story graphic novel. Dramatic cinematic lighting, rich deep colors with sepia undertones. Bold compositions. Movie-quality biographical illustration.", emotional: "Nostalgic memoir illustration. Warm muted earth tones with selective color highlights. Soft editorial linework. Like a New Yorker illustration.", humor: "Charming biographical comic with wit. Warm retro color palette, clean expressive linework. Like an illustrated memoir with a smile." },
-      freunde:  { action: "High-energy friendship adventure comic. Bold outlines, vibrant saturated colors. Friends in dynamic group poses. Like a superhero team-up with real friends.", emotional: "Warm friendship illustration. Soft natural colors, gentle linework. Shared laughter, supportive hugs. Like a beautifully illustrated friendship story.", humor: "Hilarious buddy comedy comic. Bright pop colors, exaggerated funny expressions. Bold cartoon outlines, maximum comedic timing." },
-      sonstiges:{ action: "Dynamic storytelling comic. Bold black outlines, rich cinematic colors. Professional comic book quality.", emotional: "Beautiful narrative illustration. Warm atmospheric colors, soft painterly linework. Professional illustrated novel quality.", humor: "Entertaining comic with personality. Clean bold outlines, bright cheerful colors. Professional cartoon quality." },
+      liebe:     { action: "dramatic romantic energy, bold colors, cinematic angles", emotional: "intimate golden light, elegant linework, romantic atmosphere", humor: "bright cheerful colors, exaggerated lovesick expressions, manga energy" },
+      familie:   { action: "vibrant saturated colors, dynamic compositions, Asterix/Tintin energy", emotional: "rich warm colors, rounded characters, Pixar concept art quality", humor: "bright pop colors, exaggerated expressions, European comic strip style" },
+      urlaub:    { action: "vivid tropical colors, dynamic wide-angle compositions, movie poster quality", emotional: "luminous Mediterranean colors, panoramic compositions, travel book quality", humor: "bright holiday colors, exaggerated tourist situations, funny postcard style" },
+      feier:     { action: "vibrant party colors, confetti in motion, high energy", emotional: "golden lighting, intimate moments, greeting card quality", humor: "bright festive colors, exaggerated celebration chaos, maximum fun" },
+      biografie: { action: "dramatic cinematic lighting, deep colors, prestige graphic novel", emotional: "muted earth tones, editorial linework, New Yorker illustration quality", humor: "retro color palette, expressive linework, illustrated memoir style" },
+      freunde:   { action: "vibrant colors, dynamic group poses, superhero team-up energy", emotional: "natural colors, intimate moments, warm ambient lighting", humor: "bright pop colors, exaggerated expressions, webcomic quality" },
+      sonstiges: { action: "bold outlines, rich cinematic colors, high contrast", emotional: "atmospheric colors, precise linework, cinematic lighting", humor: "bold outlines, bright colors, professional cartoon quality" },
     };
-    const artDirection = (SM[category] || SM.sonstiges)[comicStyle] || (SM[category] || SM.sonstiges).emotional;
+    const style = (SM[category] || SM.sonstiges)[comicStyle] || (SM[category] || SM.sonstiges).emotional;
 
-    const charDescs = characters.map(c =>
-      `CHARACTER "${c.name}": ${c.visual_anchor}`
-    ).join("\n\n");
-
-    const scenes = page.panels.map(p =>
-      `[Panel ${p.nummer}]: ${p.szene}`
-    ).join("\n");
-
+    const charList = characters.map(c => `${c.name}: ${c.visual_anchor}`).join(". ");
+    const panelList = page.panels.map(p => `Panel ${p.nummer}: ${p.szene}`).join("\n");
     const panelCount = page.panels.length;
-    const layoutDesc = panelCount <= 3
-      ? "1 large panel on top half, 2 equal panels on bottom half"
-      : panelCount === 5
-      ? "2 small on top row, 1 wide in middle row, 2 small on bottom row"
-      : "4 panels in a 2×2 grid, all panels equal size";
+    const layoutDesc = panelCount <= 3 ? "1 large panel on top, 2 panels on bottom"
+      : panelCount === 5 ? "2 on top, 1 wide middle, 2 on bottom" : "2×2 grid";
 
-    // Quality-First Prompt Architecture: Quality → Style → Layout → Characters → Scene → Negatives
-    const fullPrompt = `PREMIUM EUROPEAN COMIC PAGE.
-Professional graphic novel illustration. Crisp black ink outlines. Clean contour linework. Sharp facial rendering. High detail. Strong color separation. Print-quality comic rendering. Clear forms.
+    // Step 1: GPT-4o Prompt Rewriter — condense scenes for image AI
+    let imagePrompt = "";
+    try {
+      const rewriteRes = await openai.chat.completions.create({
+        model: "gpt-4o",
+        messages: [{
+          role: "system",
+          content: `You rewrite comic scene descriptions into optimized image generation prompts. Output a SINGLE prompt, max 150 words. Start with quality/style, then layout, then scenes (1 sentence each). Purely visual — no narrative.`,
+        }, {
+          role: "user",
+          content: `Characters: ${charList}\nLocation: ${page.location || "not specified"}\nTime: ${page.timeOfDay || "daytime"}\nPanels:\n${panelList}\n\nOutput: A single prompt starting with "Create a premium European comic book page..."`,
+        }],
+        max_tokens: 250,
+        temperature: 0.3,
+      });
+      imagePrompt = rewriteRes.choices[0].message.content || "";
+      if (imagePrompt.length < 50) imagePrompt = "";
+    } catch (e) {
+      console.warn("Prompt rewrite failed:", e.message);
+    }
 
-STYLE: ${artDirection}
-Polished graphic novel finish. Clean inked outlines. Expressive faces. Vivid controlled colors. Cinematic lighting. Detailed but clean backgrounds. Professional print-quality rendering.
+    // Fallback: build prompt directly
+    if (!imagePrompt) {
+      imagePrompt = `Create a premium European comic book page with ${panelCount} panels in a ${layoutDesc}. Each panel shows a different scene — no duplicates, no cropping.
 
-LAYOUT: Single comic page with exactly ${panelCount} distinct panels. ${layoutDesc}. Each panel shows a DIFFERENT scene — no repeated content. Bold black borders separating every panel. Every panel must be fully visible, not cropped or cut off.
-${page.location ? `Setting: ${page.location}.` : ""}${page.timeOfDay ? ` Lighting: ${page.timeOfDay}.` : ""}
+${charList ? `Characters (keep identical in every panel): ${charList}\n` : ""}${panelList}
+${page.location ? `\nSetting: ${page.location}.` : ""}${page.timeOfDay ? ` ${page.timeOfDay} lighting.` : ""}
 
-CHARACTERS (visually identical in every panel — same face, hair, clothes, proportions):
-${charDescs || "Characters as described in the scene."}
+Style: crisp black ink outlines, ${style}, expressive faces, bold panel borders, professional graphic novel quality. No watercolor. No soft blur. No text in image.`;
+    }
 
-SCENE:
-${scenes}
-
-NEGATIVE: No watercolor. No painterly blur. No soft wash. No muddy beige cast. No blurry faces. No generic faces. No distorted anatomy. No text. No captions. No speech bubbles.`;
-
-    console.log(`Generating page "${page.title}" (${panelCount} panels)`);
+    console.log(`Generating page "${page.title}" (${panelCount} panels, prompt: ${imagePrompt.length} chars)`);
 
     let rawUrl = "";
 
-    // Primary: images.edit() with user reference photo for character likeness
+    // Primary: images.edit() with user reference photo
     const primaryRef = referenceImages[0] || characters.find(c => c.refBase64)?.refBase64;
     if (primaryRef) {
       try {
@@ -218,7 +221,7 @@ NEGATIVE: No watercolor. No painterly blur. No soft wash. No muddy beige cast. N
         const editRes = await openai.images.edit({
           model: "gpt-image-1",
           image: refFile,
-          prompt: `The people in this photo are the main characters. Draw them as premium European comic illustrations — keep their exact faces, hair, and features recognizable but rendered in crisp comic style with bold ink outlines.\n\n${fullPrompt}`,
+          prompt: `The people in this photo are the main characters. Draw them as premium European comic illustrations — keep their exact faces recognizable in crisp comic style.\n\n${imagePrompt}`,
           size: "1024x1536",
           quality: "high",
         });
@@ -228,6 +231,23 @@ NEGATIVE: No watercolor. No painterly blur. No soft wash. No muddy beige cast. N
         else if (item?.b64_json) rawUrl = `data:image/png;base64,${item.b64_json}`;
         if (rawUrl) console.log(`  → Generated with reference photo`);
       } catch (e) {
+        console.warn(`  → Reference photo failed, falling back:`, e.message);
+      }
+    }
+
+    // Fallback: images.generate()
+    if (!rawUrl) {
+      try {
+        const genRes = await openai.images.generate({
+          model: "gpt-image-1", prompt: imagePrompt, n: 1, size: "1024x1536", quality: "high",
+        });
+        const item = (genRes.data || [])[0];
+        if (item?.url) rawUrl = item.url;
+        else if (item?.b64_json) rawUrl = `data:image/png;base64,${item.b64_json}`;
+      } catch (e) {
+        console.error(`Generation failed for "${page.title}":`, e.message);
+      }
+    }
         console.warn(`  → Reference photo failed, falling back:`, e.message);
       }
     }

@@ -88,9 +88,52 @@ Be very specific: 'Emma: 6-year-old girl, shoulder-length red-brown hair, yellow
   }));
 }
 
+// ── Step 2.5: Prompt Rewriter — GPT-4o condenses scenes for image AI ─────────
+// Like ChatGPT's internal prompt-rewriting: simplify, prioritize, stabilize
+async function rewriteForImageAI(page: StoryPage, characters: Character[], category: string, comicStyle: string): Promise<string> {
+  try {
+    const charList = characters.map(c => `${c.name}: ${c.visual_anchor}`).join(". ");
+    const panelList = page.panels.map(p => `Panel ${p.nummer}: ${p.szene}`).join("\n");
+
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: [{
+        role: "system",
+        content: `You rewrite comic scene descriptions into optimized image generation prompts.
+Your output will go directly to an image AI model (gpt-image-1).
+
+RULES:
+- Output a SINGLE prompt for a multi-panel comic page
+- Keep it SHORT — max 150 words total
+- Start with quality/style instruction, then layout, then scenes
+- Each panel description: max 1 sentence, purely visual
+- No narrative, no emotions in words — only what is VISIBLE
+- Include character names with ONE key visual feature each
+- End with style instruction`,
+      }, {
+        role: "user",
+        content: `Rewrite this into a short, optimized image prompt:
+
+Characters: ${charList}
+Location: ${page.location || "not specified"}
+Time: ${page.timeOfDay || "daytime"}
+Panels:\n${panelList}
+
+Output format: A single prompt starting with "Create a premium European comic book page..."`,
+      }],
+      max_tokens: 250,
+      temperature: 0.3,
+    });
+
+    const rewritten = response.choices[0].message.content || "";
+    if (rewritten.length > 50) return rewritten;
+  } catch (err: any) {
+    console.warn("Prompt rewrite failed, using original:", err.message);
+  }
+  return ""; // fallback to original prompt
+}
+
 // ── Step 3: Generate comic page ──────────────────────────────────────────────
-// Primary: images.edit() with USER PHOTO for character likeness + Quality-First prompt
-// Fallback: images.generate() without reference
 export async function generateComicPage(
   page: StoryPage,
   characters: Character[],
@@ -99,18 +142,24 @@ export async function generateComicPage(
   category: string = "familie",
   referenceImages: string[] = [],
 ): Promise<string> {
-  const prompt = buildComicPagePrompt({
-    title: page.title,
-    panels: page.panels,
-    characters,
-    illustrationStyle,
-    comicStyle,
-    category,
-    location: page.location,
-    timeOfDay: page.timeOfDay,
-  });
+  // Step 3a: Rewrite prompt via GPT-4o (like ChatGPT's internal rewriting)
+  let prompt = await rewriteForImageAI(page, characters, category, comicStyle);
 
-  // Try with user reference photo (like ChatGPT does it)
+  // Fallback to our built prompt if rewriter fails
+  if (!prompt) {
+    prompt = buildComicPagePrompt({
+      title: page.title,
+      panels: page.panels,
+      characters,
+      illustrationStyle,
+      comicStyle,
+      category,
+      location: page.location,
+      timeOfDay: page.timeOfDay,
+    });
+  }
+
+  // Step 3b: Generate image — with user photo if available
   const primaryRef = referenceImages[0] || (characters.find((c) => (c as any).refBase64) as any)?.refBase64;
   if (primaryRef) {
     try {
