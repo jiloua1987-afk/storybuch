@@ -94,13 +94,14 @@ Polished graphic novel finish. Clean inked outlines. Expressive faces. Vivid con
 // BLOCK 3: LAYOUT — panel structure
 // ══════════════════════════════════════════════════════════════════════════════
 function buildLayoutBlock(panelCount: number, location?: string, timeOfDay?: string): string {
+  // Simpler layout instructions — less confusion for the model
   const layoutDesc = panelCount <= 3
-    ? "one wide panel on top, two panels side by side on bottom"
+    ? "3 panels: 1 large panel on top half, 2 equal panels on bottom half"
     : panelCount === 5
-    ? "two on top, one wide in middle, two on bottom"
-    : "2×2 grid";
+    ? "5 panels: 2 small on top row, 1 wide in middle row, 2 small on bottom row"
+    : "4 panels in a 2×2 grid, all panels equal size";
 
-  return `LAYOUT: Single comic page, ${panelCount} panels, ${layoutDesc}. Bold black panel borders. Balanced spacing. Strong readable composition. Varied camera framing per panel.
+  return `LAYOUT: Single comic page with exactly ${panelCount} distinct panels. ${layoutDesc}. Each panel shows a DIFFERENT scene — no repeated content. Bold black borders separating every panel. Every panel must be fully visible, not cropped or cut off.
 ${location ? `Setting: ${location}.` : ""}${timeOfDay ? ` Lighting: ${timeOfDay}.` : ""}`;
 }
 

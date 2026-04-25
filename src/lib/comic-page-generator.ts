@@ -89,8 +89,8 @@ Be very specific: 'Emma: 6-year-old girl, shoulder-length red-brown hair, yellow
 }
 
 // ── Step 3: Generate comic page ──────────────────────────────────────────────
-// Uses images.generate() with detailed prompts for best comic quality
-// images.edit() produces watercolor/painted look — not suitable for comics
+// Primary: images.edit() with USER PHOTO for character likeness + Quality-First prompt
+// Fallback: images.generate() without reference
 export async function generateComicPage(
   page: StoryPage,
   characters: Character[],
@@ -110,7 +110,31 @@ export async function generateComicPage(
     timeOfDay: page.timeOfDay,
   });
 
-  // Always use images.generate() for comic pages — best quality
+  // Try with user reference photo (like ChatGPT does it)
+  const primaryRef = referenceImages[0] || (characters.find((c) => (c as any).refBase64) as any)?.refBase64;
+  if (primaryRef) {
+    try {
+      const refBuf = Buffer.from(primaryRef, "base64");
+      const blob = new Blob([refBuf], { type: "image/jpeg" });
+      const file = new File([blob], "reference.jpg", { type: "image/jpeg" });
+
+      const response = await openai.images.edit({
+        model: "gpt-image-1",
+        image: file,
+        prompt: `The people in this photo are the main characters. Draw them as premium European comic illustrations — keep their exact faces, hair, and features recognizable but rendered in crisp comic style with bold ink outlines.\n\n${prompt}`,
+        size: "1024x1536",
+        quality: "high",
+      } as any);
+
+      const item = (response.data ?? [])[0];
+      if (item?.url) return item.url;
+      if (item?.b64_json) return `data:image/png;base64,${item.b64_json}`;
+    } catch (err: any) {
+      console.warn(`Reference photo failed for page ${page.pageNumber}:`, err.message);
+    }
+  }
+
+  // Fallback: standard generate
   return generateStandard(prompt, page.pageNumber);
 }
 

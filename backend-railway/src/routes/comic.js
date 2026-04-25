@@ -180,10 +180,10 @@ router.post("/page", async (req, res) => {
 
     const panelCount = page.panels.length;
     const layoutDesc = panelCount <= 3
-      ? "one wide panel on top, two panels side by side on bottom"
+      ? "1 large panel on top half, 2 equal panels on bottom half"
       : panelCount === 5
-      ? "two on top, one wide in middle, two on bottom"
-      : "2×2 grid";
+      ? "2 small on top row, 1 wide in middle row, 2 small on bottom row"
+      : "4 panels in a 2×2 grid, all panels equal size";
 
     // Quality-First Prompt Architecture: Quality → Style → Layout → Characters → Scene → Negatives
     const fullPrompt = `PREMIUM EUROPEAN COMIC PAGE.
@@ -192,7 +192,7 @@ Professional graphic novel illustration. Crisp black ink outlines. Clean contour
 STYLE: ${artDirection}
 Polished graphic novel finish. Clean inked outlines. Expressive faces. Vivid controlled colors. Cinematic lighting. Detailed but clean backgrounds. Professional print-quality rendering.
 
-LAYOUT: Single comic page, ${panelCount} panels, ${layoutDesc}. Bold black panel borders. Balanced spacing. Strong readable composition. Varied camera framing per panel.
+LAYOUT: Single comic page with exactly ${panelCount} distinct panels. ${layoutDesc}. Each panel shows a DIFFERENT scene — no repeated content. Bold black borders separating every panel. Every panel must be fully visible, not cropped or cut off.
 ${page.location ? `Setting: ${page.location}.` : ""}${page.timeOfDay ? ` Lighting: ${page.timeOfDay}.` : ""}
 
 CHARACTERS (visually identical in every panel — same face, hair, clothes, proportions):
@@ -207,21 +207,47 @@ NEGATIVE: No watercolor. No painterly blur. No soft wash. No muddy beige cast. N
 
     let rawUrl = "";
 
-    // Always use images.generate() for comic pages
-    // images.edit() produces watercolor/painted look — not suitable for comics
-    try {
-      const genRes = await openai.images.generate({
-        model: "gpt-image-1",
-        prompt: fullPrompt,
-        n: 1,
-        size: "1024x1536",
-        quality: "high",
-      });
-      const item = (genRes.data || [])[0];
-      if (item?.url) rawUrl = item.url;
-      else if (item?.b64_json) rawUrl = `data:image/png;base64,${item.b64_json}`;
-    } catch (e) {
-      console.error(`Generation failed for "${page.title}":`, e.message);
+    // Primary: images.edit() with user reference photo for character likeness
+    const primaryRef = referenceImages[0] || characters.find(c => c.refBase64)?.refBase64;
+    if (primaryRef) {
+      try {
+        const refBuf = Buffer.from(primaryRef, "base64");
+        const refBlob = new Blob([refBuf], { type: "image/jpeg" });
+        const refFile = new File([refBlob], "reference.jpg", { type: "image/jpeg" });
+
+        const editRes = await openai.images.edit({
+          model: "gpt-image-1",
+          image: refFile,
+          prompt: `The people in this photo are the main characters. Draw them as premium European comic illustrations — keep their exact faces, hair, and features recognizable but rendered in crisp comic style with bold ink outlines.\n\n${fullPrompt}`,
+          size: "1024x1536",
+          quality: "high",
+        });
+
+        const item = (editRes.data || [])[0];
+        if (item?.url) rawUrl = item.url;
+        else if (item?.b64_json) rawUrl = `data:image/png;base64,${item.b64_json}`;
+        if (rawUrl) console.log(`  → Generated with reference photo`);
+      } catch (e) {
+        console.warn(`  → Reference photo failed, falling back:`, e.message);
+      }
+    }
+
+    // Fallback: images.generate() without reference
+    if (!rawUrl) {
+      try {
+        const genRes = await openai.images.generate({
+          model: "gpt-image-1",
+          prompt: fullPrompt,
+          n: 1,
+          size: "1024x1536",
+          quality: "high",
+        });
+        const item = (genRes.data || [])[0];
+        if (item?.url) rawUrl = item.url;
+        else if (item?.b64_json) rawUrl = `data:image/png;base64,${item.b64_json}`;
+      } catch (e) {
+        console.error(`Generation failed for "${page.title}":`, e.message);
+      }
     }
 
     if (!rawUrl) return res.json({ imageUrl: "", panels: page.panels, panelPositions: null });
