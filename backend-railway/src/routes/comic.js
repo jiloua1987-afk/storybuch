@@ -179,39 +179,29 @@ router.post("/page", async (req, res) => {
     ).join("\n");
 
     const panelCount = page.panels.length;
+    const layoutDesc = panelCount <= 3
+      ? "one wide panel on top, two panels side by side on bottom"
+      : panelCount === 5
+      ? "two on top, one wide in middle, two on bottom"
+      : "2×2 grid";
 
-    const fullPrompt = `CRITICAL INSTRUCTION — VISUAL CONSISTENCY:
-All characters must appear IDENTICAL across every single image in this series.
-Maintain with absolute precision:
-- Same face: identical facial structure, eyes, nose, mouth, skin tone
-- Same hair: exact color, length, texture, style — no variations whatsoever
-- Same body: proportions and height ratios between all characters
-- Same clothing: identical colors and style throughout
-Treat every image as a frame from the same animated film.
-Any deviation from these character descriptions is an error.
+    // Quality-First Prompt Architecture: Quality → Style → Layout → Characters → Scene → Negatives
+    const fullPrompt = `PREMIUM EUROPEAN COMIC PAGE.
+Professional graphic novel illustration. Crisp black ink outlines. Clean contour linework. Sharp facial rendering. High detail. Strong color separation. Print-quality comic rendering. Clear forms.
 
+STYLE: ${artDirection}
+Polished graphic novel finish. Clean inked outlines. Expressive faces. Vivid controlled colors. Cinematic lighting. Detailed but clean backgrounds. Professional print-quality rendering.
+
+LAYOUT: Single comic page, ${panelCount} panels, ${layoutDesc}. Bold black panel borders. Balanced spacing. Strong readable composition. Varied camera framing per panel.
+${page.location ? `Setting: ${page.location}.` : ""}${page.timeOfDay ? ` Lighting: ${page.timeOfDay}.` : ""}
+
+CHARACTERS (visually identical in every panel — same face, hair, clothes, proportions):
 ${charDescs || "Characters as described in the scene."}
 
-ART DIRECTION: ${artDirection}
-IMPORTANT: High resolution, sharp details, professional print quality.
-Every face must be clearly rendered with distinct features — no blurry or generic faces.
-
-ABSOLUTE RULE: NO text, NO letters, NO words, NO speech bubbles,
-NO captions, NO UI elements anywhere in the image.
-The image must be a pure illustration only.
-
-COMIC PAGE:
-Create a single comic book page with ${panelCount} panels arranged as: ${panelCount <= 3 ? "one wide panel on top, two panels side by side on bottom" : panelCount === 5 ? "two on top, one wide in middle, two on bottom" : "2×2 grid"}.
-Clean black panel borders. White/light background between panels.
-${page.location ? `Setting: ${page.location}.` : ""}
-${page.timeOfDay ? `Lighting: ${page.timeOfDay}.` : ""}
-
-SCENES:
+SCENE:
 ${scenes}
 
-Professional comic book quality. Sharp details. Expressive faces. Rich backgrounds.
-Vary camera angles between panels: close-up, medium shot, wide shot.
-NO text, NO speech bubbles, NO captions anywhere in the image.`;
+NEGATIVE: No watercolor. No painterly blur. No soft wash. No muddy beige cast. No blurry faces. No generic faces. No distorted anatomy. No text. No captions. No speech bubbles.`;
 
     console.log(`Generating page "${page.title}" (${panelCount} panels)`);
 

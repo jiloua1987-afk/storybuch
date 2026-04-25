@@ -1,6 +1,6 @@
-// Prompt Builder v4 — Dedizierte Prompts pro Kategorie × Comic-Stil
-// 7 Kategorien × 3 Comic-Stile = 21 Kombinationen
-// Kein separater Tonalitäts-Layer mehr — alles in einer Matrix
+// Prompt Builder v7 — Quality-First Architecture
+// Priority order: Quality → Style → Layout → Characters → Scene → Negatives
+// Based on GPT analysis: model allocates attention top-down
 
 export interface Character {
   name: string;
@@ -26,133 +26,131 @@ export interface PagePromptInput {
   category?: string;
   location?: string;
   timeOfDay?: string;
-  tone?: string; // legacy, ignored — category determines tone
+  tone?: string;
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// STYLE MATRIX: category × comicStyle → full art direction string
-// Each combination gets a unique, detailed prompt optimized for gpt-image-1
+// STYLE MATRIX: category × comicStyle → style lock string
+// No "warm", "cozy", "soft", "storybook", "children's book" — these cause blur
 // ══════════════════════════════════════════════════════════════════════════════
 const STYLE_MATRIX: Record<string, Record<string, string>> = {
   liebe: {
-    action:    "Romantic comic art with dynamic energy. Bold black outlines, rich warm colors (deep reds, golds, sunset oranges). Dramatic romantic poses — wind in hair, passionate gestures, cinematic close-ups. High contrast lighting with lens flares and bokeh effects. Professional European BD quality.",
-    emotional: "Tender romantic illustration with clean linework. Warm golden and rose color palette, gentle shading. Intimate close-ups of hands touching, eyes meeting. Soft-focus backgrounds with golden hour lighting. Professional illustrated novel quality, like a high-end graphic novel.",
-    humor:     "Playful romantic comedy comic style. Bright cheerful colors, exaggerated lovesick expressions, cartoon hearts and sparkles. Bold clean outlines, expressive body language. Characters with oversized eyes and comedic reactions. Fun and lighthearted, like a romantic manga.",
+    action:    "Romantic graphic novel. Rich reds, golds, sunset oranges. Dramatic poses, cinematic close-ups. High contrast lighting. Polished European BD finish.",
+    emotional: "Elegant romantic illustration. Golden and rose palette, precise shading. Intimate compositions. Clean rendering, graphic novel quality.",
+    humor:     "Romantic comedy comic. Bright cheerful colors, exaggerated lovesick expressions. Bold outlines, expressive body language. Manga-inspired energy.",
   },
   familie: {
-    action:    "Energetic family adventure comic. Bold black outlines, vibrant saturated colors, dynamic compositions. Children with exaggerated excited expressions, parents in heroic poses. Motion lines, dramatic angles. Professional comic book quality like Asterix or Tintin.",
-    emotional: "Warm family storybook illustration with clean linework. Rich warm colors (golden yellows, soft greens, cozy browns). Soft rounded character designs. Tender moments between parents and children. Warm natural lighting, cozy domestic settings. Professional children's book quality like Pixar concept art.",
-    humor:     "Fun family comedy comic. Bold clean outlines, bright pop colors. Kids with wildly exaggerated expressions, parents with comedic reactions. Slapstick body language, playful chaos. Cartoon-style with professional quality. Like a European family comic strip.",
+    action:    "Energetic family adventure comic. Vibrant saturated colors, dynamic compositions. Exaggerated excited expressions. Motion lines, dramatic angles. Asterix/Tintin quality.",
+    emotional: "Premium family illustration. Rich golden yellows, greens, browns. Rounded character designs. Detailed domestic settings. Pixar concept art quality.",
+    humor:     "Family comedy comic. Bold outlines, bright pop colors. Wildly exaggerated expressions, slapstick body language. European comic strip quality.",
   },
   urlaub: {
-    action:    "Adventure travel comic with cinematic energy. Bold outlines, vivid tropical and Mediterranean colors (turquoise, coral, golden sand). Dynamic wide-angle compositions, dramatic landscapes. Characters in action — running, jumping, exploring. Movie poster quality.",
-    emotional: "Beautiful travel illustration with warm luminous colors. Mediterranean light — turquoise seas, golden sunsets, terracotta villages. Clean linework, panoramic compositions. Nostalgic and dreamy atmosphere. Rich atmospheric detail, like a high-quality illustrated travel book.",
-    humor:     "Hilarious vacation comic. Bright saturated holiday colors, exaggerated tourist situations. Characters with oversized sunglasses, comically overloaded luggage, funny tan lines. Bold outlines, cartoon energy. Like a funny postcard come to life.",
+    action:    "Adventure travel comic. Vivid tropical colors — turquoise, coral, golden sand. Dynamic wide-angle compositions. Dramatic landscapes. Movie poster quality.",
+    emotional: "Travel illustration. Luminous Mediterranean colors — turquoise seas, golden sunsets, terracotta. Panoramic compositions. Rich atmospheric detail.",
+    humor:     "Vacation comedy comic. Bright saturated holiday colors, exaggerated tourist situations. Bold outlines, cartoon energy. Funny postcard quality.",
   },
   feier: {
-    action:    "Explosive celebration comic. Bold dynamic outlines, confetti and streamers in motion. Vibrant party colors (gold, magenta, electric blue). Characters in dramatic surprise poses, champagne splashing. High energy, like a party captured in comic book form.",
-    emotional: "Heartwarming celebration illustration with warm golden lighting. Rich warm tones, gentle shading. Intimate moments — tearful speeches, group hugs, candle-lit faces. Clean linework with rich emotional detail. Like a beautifully illustrated greeting card.",
-    humor:     "Hilarious party comic. Bright festive colors, exaggerated celebration chaos. Characters with comically surprised faces, cake disasters, dance floor fails. Bold cartoon outlines, maximum fun energy. Like a funny birthday card illustration.",
+    action:    "Celebration comic. Bold dynamic outlines, confetti in motion. Vibrant party colors — gold, magenta, electric blue. Dramatic surprise poses. High energy.",
+    emotional: "Celebration illustration. Golden lighting, rich tones. Intimate moments — tearful speeches, group hugs. Detailed emotional rendering.",
+    humor:     "Party comedy comic. Bright festive colors, exaggerated chaos. Comically surprised faces, cake disasters. Bold cartoon outlines, maximum fun.",
   },
   biografie: {
-    action:    "Epic life story graphic novel. Dramatic cinematic lighting, rich deep colors with sepia undertones. Bold compositions showing key life moments. Strong black outlines, detailed backgrounds. Movie-quality biographical illustration, like a prestige graphic novel.",
-    emotional: "Nostalgic memoir illustration with warm muted earth tones mixed with selective color highlights. Clean editorial linework, intimate portrait compositions. Timeless settings, emotional depth in every face. Like a New Yorker illustration or illustrated autobiography.",
-    humor:     "Charming biographical comic with wit. Warm retro color palette, clean expressive linework. Characters shown at different life stages with gentle humor. Exaggerated period details, playful anachronisms. Like an illustrated memoir with a smile.",
+    action:    "Epic biographical graphic novel. Dramatic cinematic lighting, deep colors with sepia undertones. Bold compositions. Prestige graphic novel quality.",
+    emotional: "Memoir illustration. Muted earth tones with selective color highlights. Editorial linework, intimate portraits. New Yorker illustration quality.",
+    humor:     "Biographical comic with wit. Retro color palette, expressive linework. Characters at different life stages with gentle humor.",
   },
   freunde: {
-    action:    "High-energy friendship adventure comic. Bold outlines, vibrant saturated colors. Friends in dynamic group poses, high-fiving, running together. Motion lines, dramatic angles, comic book energy. Like a superhero team-up but with real friends.",
-    emotional: "Warm friendship illustration with soft natural colors and clean linework. Intimate moments — shared laughter, supportive hugs, quiet conversations. Warm ambient lighting, cozy settings. Like a beautifully illustrated friendship story.",
-    humor:     "Hilarious buddy comedy comic. Bright pop colors, exaggerated funny expressions. Friends in ridiculous situations, inside jokes visualized. Bold cartoon outlines, maximum comedic timing. Like a funny webcomic with professional quality.",
+    action:    "Friendship adventure comic. Vibrant saturated colors. Dynamic group poses, high-fiving. Motion lines, dramatic angles. Superhero team-up energy.",
+    emotional: "Friendship illustration. Natural colors, precise linework. Shared laughter, supportive moments. Ambient lighting, detailed settings.",
+    humor:     "Buddy comedy comic. Bright pop colors, exaggerated funny expressions. Ridiculous situations. Bold outlines, maximum comedic timing.",
   },
   sonstiges: {
-    action:    "Dynamic storytelling comic. Bold black outlines, rich cinematic colors. Dramatic compositions with varied camera angles. Professional comic book quality with high contrast and sharp details. Expressive characters, detailed backgrounds.",
-    emotional: "Beautiful narrative illustration with warm atmospheric colors and clean linework. Intimate character moments with emotional depth. Cinematic lighting, rich environmental detail. Professional illustrated novel quality.",
-    humor:     "Entertaining comic with personality. Clean bold outlines, bright cheerful colors. Expressive exaggerated characters, playful compositions. Fun visual storytelling with comedic timing. Professional cartoon quality.",
+    action:    "Dynamic storytelling comic. Bold outlines, rich cinematic colors. Dramatic compositions, varied camera angles. High contrast, sharp details.",
+    emotional: "Narrative illustration. Atmospheric colors, precise linework. Intimate character moments. Cinematic lighting, rich detail.",
+    humor:     "Entertaining comic. Bold outlines, bright cheerful colors. Exaggerated characters, playful compositions. Professional cartoon quality.",
   },
 };
 
 // ══════════════════════════════════════════════════════════════════════════════
-// BLOCK 1: CONSISTENCY — always first, model reads top-down
+// BLOCK 1 (TOP PRIORITY): RENDER QUALITY — model reads this first
 // ══════════════════════════════════════════════════════════════════════════════
-function buildConsistencyBlock(characters: Character[]): string {
+function buildQualityBlock(): string {
+  return `PREMIUM EUROPEAN COMIC PAGE.
+Professional graphic novel illustration. Crisp black ink outlines. Clean contour linework. Sharp facial rendering. High detail. Strong color separation. Print-quality comic rendering. Clear forms.`;
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// BLOCK 2: STYLE LOCK — hard visual style definition
+// ══════════════════════════════════════════════════════════════════════════════
+function buildStyleBlock(category: string, comicStyle: string): string {
+  const catStyles = STYLE_MATRIX[category] || STYLE_MATRIX.sonstiges;
+  const styleDirection = catStyles[comicStyle] || catStyles.emotional;
+
+  return `STYLE: ${styleDirection}
+Polished graphic novel finish. Clean inked outlines. Expressive faces. Vivid controlled colors. Cinematic lighting. Detailed but clean backgrounds. Professional print-quality rendering.`;
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// BLOCK 3: LAYOUT — panel structure
+// ══════════════════════════════════════════════════════════════════════════════
+function buildLayoutBlock(panelCount: number, location?: string, timeOfDay?: string): string {
+  const layoutDesc = panelCount <= 3
+    ? "one wide panel on top, two panels side by side on bottom"
+    : panelCount === 5
+    ? "two on top, one wide in middle, two on bottom"
+    : "2×2 grid";
+
+  return `LAYOUT: Single comic page, ${panelCount} panels, ${layoutDesc}. Bold black panel borders. Balanced spacing. Strong readable composition. Varied camera framing per panel.
+${location ? `Setting: ${location}.` : ""}${timeOfDay ? ` Lighting: ${timeOfDay}.` : ""}`;
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// BLOCK 4: CHARACTER CONSISTENCY
+// ══════════════════════════════════════════════════════════════════════════════
+function buildCharacterBlock(characters: Character[]): string {
   if (characters.length === 0) return "";
 
   const charDescs = characters
-    .map((c) => `CHARACTER "${c.name}": ${c.visual_anchor}`)
-    .join("\n\n");
+    .map((c) => `${c.name}: ${c.visual_anchor}`)
+    .join("\n");
 
-  return `CRITICAL INSTRUCTION — VISUAL CONSISTENCY:
-All characters must appear IDENTICAL across every single image in this series.
-Maintain with absolute precision:
-- Same face: identical facial structure, eyes, nose, mouth, skin tone
-- Same hair: exact color, length, texture, style — no variations whatsoever
-- Same body: proportions and height ratios between all characters
-- Same clothing: identical colors and style throughout
-Treat every image as a frame from the same animated film.
-Any deviation from these character descriptions is an error.
-
+  return `CHARACTERS (visually identical in every panel — same face, hair, clothes, proportions):
 ${charDescs}`;
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// BLOCK 2: ART DIRECTION — from the style matrix
+// BLOCK 5: SCENE CONTENT — short, visual only
 // ══════════════════════════════════════════════════════════════════════════════
-function buildArtDirectionBlock(category: string, comicStyle: string): string {
-  const catStyles = STYLE_MATRIX[category] || STYLE_MATRIX.sonstiges;
-  const artDirection = catStyles[comicStyle] || catStyles.emotional;
-
-  return `ART DIRECTION: ${artDirection}
-
-IMPORTANT: High resolution, sharp details, professional print quality.
-Every face must be clearly rendered with distinct features — no blurry or generic faces.
-
-ABSOLUTE RULE: NO text, NO letters, NO words, NO speech bubbles,
-NO captions, NO UI elements anywhere in the image.
-The image must be a pure illustration only.`;
-}
-
-// ══════════════════════════════════════════════════════════════════════════════
-// BLOCK 3: SCENE — the flexible part that changes per page
-// ══════════════════════════════════════════════════════════════════════════════
-function buildSceneBlock(input: PagePromptInput): string {
-  const { panels, location, timeOfDay } = input;
-  const panelCount = panels.length;
-
-  const layoutDesc = panelCount <= 3
-    ? "3 panels: one wide panel on top, two panels side by side on bottom"
-    : panelCount === 5
-    ? "5 panels: two on top, one wide in middle, two on bottom"
-    : "4 panels in a 2×2 grid";
-
+function buildSceneBlock(panels: Panel[]): string {
   const panelDescs = panels
     .map((p) => `[Panel ${p.nummer}]: ${p.szene}`)
     .join("\n");
 
-  return `COMIC PAGE:
-Create a single comic book page with ${panelCount} panels arranged as: ${layoutDesc}.
-Clean black panel borders. White/light background between panels.
-${location ? `Setting: ${location}.` : ""}
-${timeOfDay ? `Lighting: ${timeOfDay}.` : ""}
+  return `SCENE:\n${panelDescs}`;
+}
 
-SCENES:
-${panelDescs}
-
-Professional comic book quality. Sharp details. Expressive faces. Rich backgrounds.
-Vary camera angles between panels: close-up, medium shot, wide shot.
-NO text, NO speech bubbles, NO captions anywhere in the image.`;
+// ══════════════════════════════════════════════════════════════════════════════
+// BLOCK 6: HARD NEGATIVES — at the end
+// ══════════════════════════════════════════════════════════════════════════════
+function buildNegativeBlock(): string {
+  return `NEGATIVE: No watercolor. No painterly blur. No soft wash. No muddy beige cast. No blurry faces. No generic faces. No distorted anatomy. No text. No captions. No speech bubbles.`;
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
 // MAIN EXPORT: buildComicPagePrompt
+// Priority: Quality → Style → Layout → Characters → Scene → Negatives
 // ══════════════════════════════════════════════════════════════════════════════
 export function buildComicPagePrompt(input: PagePromptInput): string {
-  const { characters, comicStyle, category } = input;
+  const { panels, characters, comicStyle, category, location, timeOfDay } = input;
 
-  const block1 = buildConsistencyBlock(characters);
-  const block2 = buildArtDirectionBlock(category || "familie", comicStyle);
-  const block3 = buildSceneBlock(input);
-
-  return [block1, block2, block3].filter(Boolean).join("\n\n");
+  return [
+    buildQualityBlock(),
+    buildStyleBlock(category || "familie", comicStyle),
+    buildLayoutBlock(panels.length, location, timeOfDay),
+    buildCharacterBlock(characters),
+    buildSceneBlock(panels),
+    buildNegativeBlock(),
+  ].filter(Boolean).join("\n\n");
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -167,16 +165,13 @@ export function buildScenePrompt(
   location?: string,
   timeOfDay?: string,
 ): string {
-  const block1 = buildConsistencyBlock(characters);
-  const block2 = buildArtDirectionBlock(category, comicStyle);
-  const block3 = `SCENE TO ILLUSTRATE:
-${scene}
-${location ? `Location: ${location}.` : ""}
-${timeOfDay ? `Lighting: ${timeOfDay} light.` : ""}
-Composition: cinematic wide shot.
-Leave 25% empty/lighter space at top-left for caption overlay.`;
-
-  return [block1, block2, block3].filter(Boolean).join("\n\n");
+  return [
+    buildQualityBlock(),
+    buildStyleBlock(category, comicStyle),
+    buildCharacterBlock(characters),
+    `SCENE: ${scene}${location ? ` Setting: ${location}.` : ""}${timeOfDay ? ` Lighting: ${timeOfDay}.` : ""}`,
+    buildNegativeBlock(),
+  ].filter(Boolean).join("\n\n");
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -193,165 +188,40 @@ export function buildGPTStructurePrompt(
   const catStyles = STYLE_MATRIX[category] || STYLE_MATRIX.sonstiges;
   const artDirection = catStyles[comicStyle] || catStyles.emotional;
 
-  // ── STORY MODULE (from GPT suggestion — dramaturgy per category) ────────────
   const storyModules: Record<string, string> = {
-    liebe: `STORY TYPE: Romantic personal story about two people.
-Key dramatic elements:
-- The first meeting or a special early moment — capture the spark
-- Small intimate details: hands touching, a shared glance, a whispered word
-- Closeness, tension, eye contact — show the chemistry
-- Emotional development — how feelings deepen
-- A meaningful conclusion that feels like a promise
-The story should feel real, intimate, and grown-up. Not cheesy — warm, elegant, emotional.`,
-
-    familie: `STORY TYPE: Warm family story about shared moments, closeness, and everyday adventures.
-Key dramatic elements:
-- The dynamic between parents and children — who is the brave one, the shy one, the funny one?
-- Different personalities visible in behavior and reactions
-- Small chaotic situations that every family knows
-- Humorous family moments mixed with tender ones
-- Emotional closeness — a hug, a look, holding hands
-The story should feel warm, lively, and authentic.`,
-
-    urlaub: `STORY TYPE: Personal travel story full of shared experiences, impressions, and small adventures.
-Key dramatic elements:
-- Arrival and first impressions — the excitement of somewhere new
-- Discovering together — an excursion, a local market, trying new food
-- Spontaneous moments that weren't planned
-- Small mishaps or funny situations (lost luggage, wrong turn, sunburn)
-- An emotional look back — the moment you realize this was special
-The story should transport wanderlust, warmth, and the feeling of a treasured memory.`,
-
-    feier: `STORY TYPE: A special story around an event or a memorable day.
-Key dramatic elements:
-- Anticipation and secret preparation — who is planning what?
-- Special encounters and arrivals
-- Small surprises and unexpected moments
-- Emotional highlights — a speech, tears of joy, a toast
-- A memorable conclusion that everyone will remember
-The story should feel lively, festive, and deeply emotional.`,
-
-    biografie: `STORY TYPE: Important life stations as a personal visual memory journey.
-Key dramatic elements:
-- A vivid childhood memory with sensory details
-- A key turning point or challenge that shaped the person
-- An important relationship moment
-- A proud achievement or milestone
-- A reflective present-day scene showing growth
-The story should feel appreciative, personal, and meaningful. Show how the person evolved.`,
-
-    freunde: `STORY TYPE: Personal story about connection, shared memories, and real closeness.
-Key dramatic elements:
-- How the friendship started — the first connection
-- A shared adventure or misadventure
-- An insider moment that only they understand
-- Loyalty and support through a difficult time
-- An emotional conclusion celebrating the bond
-The story should feel honest, warm, and relatable.`,
-
-    sonstiges: `STORY TYPE: A personal memory with a clear emotional core.
-Key dramatic elements:
-- The specific situation that makes this story unique
-- Personal dynamics between the people involved
-- Concrete small moments — not abstract feelings
-- Clear emotional development from beginning to end
-- A strong, memorable conclusion`,
+    liebe:     "Romantic personal story. Key moments: first spark, intimate detail, emotional development, meaningful conclusion.",
+    familie:   "Family story. Key moments: children's unique personalities, chaotic situations, humor mixed with tenderness, emotional closeness.",
+    urlaub:    "Travel story. Key moments: arrival excitement, discoveries, spontaneous adventures, funny mishaps, emotional farewell.",
+    feier:     "Celebration story. Key moments: secret preparation, the big surprise, emotional reactions, memorable conclusion.",
+    biografie: "Life journey. Key moments: vivid childhood memory, turning point, important relationship, proud achievement, reflection.",
+    freunde:   "Friendship story. Key moments: how it started, shared adventure, insider moment, loyalty, emotional bond.",
+    sonstiges: "Personal memory with clear emotional core. Concrete moments, personal dynamics, strong conclusion.",
   };
-  const storyModule = storyModules[category] || storyModules.sonstiges;
 
-  // ── STYLE MODULE (from GPT suggestion — narrative rhythm per comic style) ──
   const styleModules: Record<string, string> = {
-    action: `NARRATIVE STYLE: Dynamic, lively, full of movement.
-- Use active verbs, quick scene changes, physical movement
-- Characters should be DOING things, not just standing
-- Dialogs: short, direct, lively — like movie one-liners
-- Illustrations should emphasize: movement, perspective, dynamic energy, dramatic angles
-- Pacing: fast, punchy, each panel drives the story forward`,
-
-    emotional: `NARRATIVE STYLE: Warm, atmospheric, emotionally deep.
-- Focus on closeness: glances, gestures, mood, atmosphere
-- Quiet meaningful moments matter more than action
-- Dialogs: fewer but more personal — each word counts
-- Illustrations should emphasize: light, intimacy, atmosphere, facial expressions
-- Pacing: slow, contemplative, let moments breathe`,
-
-    humor: `NARRATIVE STYLE: Charming, playful, and humorous.
-- Include small mishaps, charming observations, sympathetic chaos
-- Characters react with exaggerated expressions and funny body language
-- Dialogs: casual, witty, natural — like real people joking
-- Illustrations should emphasize: facial expressions, situational comedy, lively details
-- Pacing: comedic timing — setup, beat, punchline`,
+    action:    "DYNAMIC style: active verbs, quick scene changes, physical movement, dramatic angles. Dialogs: short, direct.",
+    emotional: "INTIMATE style: glances, gestures, atmosphere, quiet meaningful moments. Dialogs: fewer but personal.",
+    humor:     "HUMOROUS style: mishaps, witty observations, sympathetic chaos, comedic timing. Dialogs: casual, witty.",
   };
-  const styleModule = styleModules[comicStyle] || styleModules.emotional;
 
-  return `You are a professional comic book author, visual storyteller, and dramaturg.
-Your job: Transform a personal story into a vivid, emotional, and visually stunning ${numPages}-page comic book in ${lang}.
+  return `You are a comic book author. Create a ${numPages}-page comic in ${lang}.
 
-QUALITY RULES — NON-NEGOTIABLE:
-- The story must feel like a PERSONAL MEMORY — warm, authentic, specific
-- Use natural, warm language — no generic phrases, no Disney clichés
-- Emotionally rich but not kitschig — real moments that make people laugh and cry
-- Each person must have a recognizable personality visible in their behavior and speech
-- Build in concrete small details: glances, gestures, small mishaps, real emotions
-- Every scene must be clearly and vividly illustratable
+${storyModules[category] || storyModules.sonstiges}
+${styleModules[comicStyle] || styleModules.emotional}
+${mustHaveSentences ? `MUST INCLUDE: "${mustHaveSentences}"` : ""}
 
-VISUAL STYLE: ${artDirection}
+CRITICAL — SCENE DESCRIPTIONS ("szene"):
+Each "szene" is a SHORT visual description for an image AI. Keep it concise and visual:
+- WHO (by name + key visual feature), WHAT (action), WHERE, EXPRESSION, LIGHTING
+- Max 2 sentences per scene. Visual only — no narrative, no emotions in words.
+- BAD: "Helga feels overwhelmed with joy as she sees her family gathered in the garden"
+- GOOD: "Wide shot: Helga (80, white curly hair, glasses) at garden gate, hands over mouth, tears on cheeks. Behind her: decorated table with lanterns, 20 family members cheering. Golden afternoon light."
 
-${storyModule}
+RULES:
+- ${numPages} pages, 3-5 panels each. Vary panel count.
+- Dialogs: max 8 words, natural ${lang}. Not every panel needs dialog.
+- Page titles: 3-5 words, ${lang}.
 
-${styleModule}
-${mustHaveSentences ? `\nMUST INCLUDE these key moments or sentences: "${mustHaveSentences}"` : ""}
-
-CRITICAL RULES FOR PANEL SCENE DESCRIPTIONS ("szene"):
-Each "szene" is a COMPLETE illustration brief for an artist. It must contain ALL of these:
-1. WHO: Which characters are in the scene, by name, with their appearance details
-2. WHAT: Exact action — not "they arrive" but "Leon (6) runs ahead dragging his suitcase, stumbling over the cobblestones"
-3. WHERE: Specific environment details — "sunlit garden with old apple tree, wooden fence with peeling paint, string lights between branches"
-4. EXPRESSION: Facial expression and body language — "eyes wide with wonder, mouth open in a delighted O, arms spread wide"
-5. MOOD/LIGHT: Time of day and atmosphere — "warm golden afternoon light filtering through leaves, long shadows on grass"
-6. CAMERA: Vary angles across panels — close-up face, medium two-shot, wide establishing shot, over-shoulder, bird's eye view
-
-BAD example: "The family arrives at the beach"
-GOOD example: "Wide establishing shot: Family of four walking toward a stunning turquoise Sardinian beach, viewed from behind. Leon (6, messy brown hair, blue striped shirt) and Mia (4, blonde pigtails, pink dress) hold hands and run slightly ahead. Papa and Mama follow with beach bags, smiling at each other. Rocky Mediterranean cliffs frame the scene, colorful beach umbrellas visible in the distance. Bright afternoon sunlight, warm golden tones."
-
-DIALOG RULES:
-- Max 8 words per speech bubble, natural ${lang}
-- Dialogs should reveal CHARACTER — each person speaks differently
-- Include small loving exchanges, funny remarks, emotional outbursts
-- Not every panel needs dialog — some moments are better silent
-
-STRUCTURE:
-- ${numPages} pages, each with 3-5 panels
-- Page 1: establish characters, setting, and mood (4 panels)
-- Middle pages: develop story with emotional peaks AND funny/chaotic moments (vary 3-5 panels!)
-- Last page: emotional conclusion with a memorable final image (3-4 panels)
-- Page titles: 3-5 words, dramatic or funny, in ${lang}
-- Each page should feel like a mini-chapter with its own arc
-
-GIVE EACH CHARACTER A PERSONALITY:
-- Children should have distinct behaviors (the brave one, the shy one, the funny one)
-- Adults should show real emotions (not just smiling — also worried, surprised, moved to tears)
-- Show relationships through body language (who holds whose hand, who looks at whom)
-
-Respond ONLY with valid JSON:
-{
-  "pages": [
-    {
-      "id": "page1",
-      "pageNumber": 1,
-      "title": "Page title in ${lang}",
-      "location": "Specific English location description for the artist",
-      "timeOfDay": "morning|afternoon|golden hour|sunset|night",
-      "panels": [
-        {
-          "nummer": 1,
-          "szene": "Complete English illustration brief with ALL 6 elements above",
-          "dialog": "Short ${lang} dialog max 8 words or null",
-          "speaker": "Character name or null",
-          "bubble_type": "speech|caption|shout|thought"
-        }
-      ]
-    }
-  ]
-}`;
+JSON only:
+{"pages":[{"id":"page1","pageNumber":1,"title":"...","location":"English location","timeOfDay":"morning|afternoon|golden hour|sunset|night","panels":[{"nummer":1,"szene":"Short visual scene description","dialog":"Short ${lang} dialog or null","speaker":"Name or null","bubble_type":"speech|caption|shout|thought"}]}]}`;
 }
