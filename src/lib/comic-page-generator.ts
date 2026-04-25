@@ -142,6 +142,39 @@ export async function generateComicPage(
 }
 
 async function generateStandard(prompt: string, pageNumber: number): Promise<string> {
+  try {
+    const response = await openai.images.generate({
+      model: "gpt-image-1",
+      prompt,
+      n: 1,
+      size: "1024x1536",
+      quality: "high",
+    });
+    const item = (response.data ?? [])[0];
+    if (item?.url) return item.url;
+    if (item?.b64_json) return `data:image/png;base64,${item.b64_json}`;
+    return "";
+  } catch (err: any) {
+    console.error(`Page ${pageNumber} error:`, err.message);
+    // Single retry
+    try {
+      const response = await openai.images.generate({
+        model: "gpt-image-1",
+        prompt,
+        n: 1,
+        size: "1024x1536",
+        quality: "high",
+      });
+      const item = (response.data ?? [])[0];
+      if (item?.url) return item.url;
+      if (item?.b64_json) return `data:image/png;base64,${item.b64_json}`;
+    } catch { /* ignore */ }
+    return "";
+  }
+}
+
+// ── Helper ───────────────────────────────────────────────────────────────────
+function buildContext(storyInput: string, guidedAnswers: Record<string, string>): string {
   let ctx = storyInput || "";
   const fields = [
     "personen", "characters", "ort", "location",
