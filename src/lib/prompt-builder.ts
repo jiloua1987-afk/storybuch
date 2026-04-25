@@ -1,6 +1,6 @@
-// Prompt Builder v3 — Based on Spec Section 8 + 12
-// Block order matters: Consistency → Characters → Style → Scene
-// Model reads top-down, most important instructions first
+// Prompt Builder v4 — Dedizierte Prompts pro Kategorie × Comic-Stil
+// 7 Kategorien × 3 Comic-Stile = 21 Kombinationen
+// Kein separater Tonalitäts-Layer mehr — alles in einer Matrix
 
 export interface Character {
   name: string;
@@ -26,58 +26,65 @@ export interface PagePromptInput {
   category?: string;
   location?: string;
   timeOfDay?: string;
-  tone?: string;
+  tone?: string; // legacy, ignored — category determines tone
 }
 
-// ── Style-Lock Strings per Tonalität (Spec Section 8.2) ─────────────────────
-const TONE_STYLE_LOCKS: Record<string, string> = {
-  kindgerecht: "warm watercolor children's book illustration, soft rounded lines, bright cheerful colors, gentle lighting, storybook quality, professional illustration",
-  humorvoll:   "vibrant European comic BD style, bold clean outlines, saturated colors, expressive exaggerated poses, dynamic energy, Asterix/Tintin quality",
-  romantisch:  "romantic illustrated novel style, golden hour warm lighting, soft watercolor washes, cinematic composition, intimate atmosphere, painterly",
-  episch:      "epic graphic novel illustration, dramatic cinematic lighting, highly detailed backgrounds, rich deep colors, wide angle panoramic, movie poster quality",
-  biografisch: "illustrated memoir style, warm muted earth tones, editorial linework, nostalgic atmosphere, New Yorker illustration quality",
-};
-
-const ILLUSTRATION_STYLE_LOCKS: Record<string, string> = {
-  comic:       "professional comic book illustration, bold clean black outlines, vibrant saturated colors, cel-shaded coloring, dynamic compositions, high contrast, sharp details, European BD quality (Asterix/Tintin level)",
-  aquarell:    "soft watercolor illustration, pastel colors, gentle brushstrokes, dreamy romantic atmosphere, painterly texture, no harsh outlines",
-  bleistift:   "detailed pencil sketch comic, crosshatching for shadows, hand-drawn linework, black and white with subtle warm tones",
-  realistisch: "realistic comic art style, detailed digital painting, warm cinematic lighting, photorealistic faces with comic proportions",
-};
-
-const COMIC_MOOD: Record<string, string> = {
-  action:    "dynamic poses, motion lines, exaggerated expressions, high energy, dramatic angles, bold compositions",
-  emotional: "tender moments, soft lighting, close-up facial expressions showing emotion, warm intimate atmosphere",
-  humor:     "exaggerated funny expressions, comedic timing, playful body language, bright cheerful colors, cartoon-like reactions",
-};
-
-const CATEGORY_ATMOSPHERE: Record<string, string> = {
-  liebe:      "romantic warm lighting, soft golden tones, intimate close-ups, tender gestures between characters",
-  familie:    "warm family atmosphere, joyful interactions, cozy settings, children's playful energy",
-  urlaub:     "bright sunny Mediterranean colors, turquoise water, golden sand, vacation joy and freedom",
-  feier:      "festive colorful atmosphere, balloons or decorations, happy celebrations, party energy",
-  biografie:  "nostalgic warm sepia tones mixed with color, timeless settings, emotional depth",
-  freunde:    "casual fun atmosphere, laughter, shared adventures, vibrant social energy",
-  sonstiges:  "warm inviting atmosphere, personal and intimate storytelling",
+// ══════════════════════════════════════════════════════════════════════════════
+// STYLE MATRIX: category × comicStyle → full art direction string
+// Each combination gets a unique, detailed prompt optimized for gpt-image-1
+// ══════════════════════════════════════════════════════════════════════════════
+const STYLE_MATRIX: Record<string, Record<string, string>> = {
+  liebe: {
+    action:    "Romantic comic art with dynamic energy. Bold black outlines, rich warm colors (deep reds, golds, sunset oranges). Dramatic romantic poses — wind in hair, passionate gestures, cinematic close-ups. High contrast lighting with lens flares and bokeh effects. Professional European BD quality.",
+    emotional: "Tender romantic illustration. Soft watercolor washes in warm golden and rose tones. Gentle linework, intimate close-ups of hands touching, eyes meeting. Dreamy soft-focus backgrounds. Golden hour lighting throughout. Painterly, like a romantic illustrated novel.",
+    humor:     "Playful romantic comedy comic style. Bright cheerful colors, exaggerated lovesick expressions, cartoon hearts and sparkles. Bold clean outlines, expressive body language. Characters with oversized eyes and comedic reactions. Fun and lighthearted, like a romantic manga.",
+  },
+  familie: {
+    action:    "Energetic family adventure comic. Bold black outlines, vibrant saturated colors, dynamic compositions. Children with exaggerated excited expressions, parents in heroic poses. Motion lines, dramatic angles. Professional comic book quality like Asterix or Tintin.",
+    emotional: "Warm family storybook illustration. Soft rounded linework, gentle watercolor colors (warm yellows, soft greens, cozy browns). Tender moments between parents and children. Soft natural lighting, cozy domestic settings. Professional children's book quality like a Pixar concept art.",
+    humor:     "Fun family comedy comic. Bold clean outlines, bright pop colors. Kids with wildly exaggerated expressions, parents with comedic reactions. Slapstick body language, playful chaos. Cartoon-style with professional quality. Like a European family comic strip.",
+  },
+  urlaub: {
+    action:    "Adventure travel comic with cinematic energy. Bold outlines, vivid tropical and Mediterranean colors (turquoise, coral, golden sand). Dynamic wide-angle compositions, dramatic landscapes. Characters in action — running, jumping, exploring. Movie poster quality.",
+    emotional: "Beautiful travel memoir illustration. Luminous watercolor style with Mediterranean light — turquoise seas, golden sunsets, terracotta villages. Soft linework, panoramic compositions. Nostalgic and dreamy, like a painted travel journal. Rich atmospheric detail.",
+    humor:     "Hilarious vacation comic. Bright saturated holiday colors, exaggerated tourist situations. Characters with oversized sunglasses, comically overloaded luggage, funny tan lines. Bold outlines, cartoon energy. Like a funny postcard come to life.",
+  },
+  feier: {
+    action:    "Explosive celebration comic. Bold dynamic outlines, confetti and streamers in motion. Vibrant party colors (gold, magenta, electric blue). Characters in dramatic surprise poses, champagne splashing. High energy, like a party captured in comic book form.",
+    emotional: "Heartwarming celebration illustration. Warm golden lighting, soft watercolor tones. Intimate moments — tearful speeches, group hugs, candle-lit faces. Gentle linework with rich emotional detail. Like a beautifully illustrated greeting card.",
+    humor:     "Hilarious party comic. Bright festive colors, exaggerated celebration chaos. Characters with comically surprised faces, cake disasters, dance floor fails. Bold cartoon outlines, maximum fun energy. Like a funny birthday card illustration.",
+  },
+  biografie: {
+    action:    "Epic life story graphic novel. Dramatic cinematic lighting, rich deep colors with sepia undertones. Bold compositions showing key life moments. Strong black outlines, detailed backgrounds. Movie-quality biographical illustration, like a prestige graphic novel.",
+    emotional: "Nostalgic memoir illustration. Warm muted earth tones mixed with selective color highlights. Soft editorial linework, intimate portrait compositions. Timeless settings, emotional depth in every face. Like a New Yorker illustration or illustrated autobiography.",
+    humor:     "Charming biographical comic with wit. Warm retro color palette, clean expressive linework. Characters shown at different life stages with gentle humor. Exaggerated period details, playful anachronisms. Like an illustrated memoir with a smile.",
+  },
+  freunde: {
+    action:    "High-energy friendship adventure comic. Bold outlines, vibrant saturated colors. Friends in dynamic group poses, high-fiving, running together. Motion lines, dramatic angles, comic book energy. Like a superhero team-up but with real friends.",
+    emotional: "Warm friendship illustration. Soft natural colors, gentle linework. Intimate moments — shared laughter, supportive hugs, quiet conversations. Warm ambient lighting, cozy settings. Like a beautifully illustrated friendship story.",
+    humor:     "Hilarious buddy comedy comic. Bright pop colors, exaggerated funny expressions. Friends in ridiculous situations, inside jokes visualized. Bold cartoon outlines, maximum comedic timing. Like a funny webcomic with professional quality.",
+  },
+  sonstiges: {
+    action:    "Dynamic storytelling comic. Bold black outlines, rich cinematic colors. Dramatic compositions with varied camera angles. Professional comic book quality with high contrast and sharp details. Expressive characters, detailed backgrounds.",
+    emotional: "Beautiful narrative illustration. Warm atmospheric colors, soft painterly linework. Intimate character moments with emotional depth. Cinematic lighting, rich environmental detail. Professional illustrated novel quality.",
+    humor:     "Entertaining comic with personality. Clean bold outlines, bright cheerful colors. Expressive exaggerated characters, playful compositions. Fun visual storytelling with comedic timing. Professional cartoon quality.",
+  },
 };
 
 const PANEL_LAYOUTS: Record<number, string> = {
-  3: "3-panel comic page: ONE wide cinematic panel spanning full width on top (60% height), TWO equal square panels side by side on bottom row (40% height). Clear 4px black borders between all panels.",
-  4: "4-panel comic page: 2×2 grid of equal panels. Clear 4px black borders between all panels. Each panel roughly 50% width × 50% height.",
-  5: "5-panel comic page: TWO panels on top row, ONE wide cinematic panel spanning full width in middle, TWO panels on bottom row. Clear 4px black borders between all panels.",
+  3: "3-panel comic page: ONE wide cinematic panel spanning full width on top (60% height), TWO equal panels side by side on bottom row (40% height). Clear 4px black borders.",
+  4: "4-panel comic page: 2×2 grid of equal panels. Clear 4px black borders. Each panel roughly 50% width × 50% height.",
+  5: "5-panel comic page: TWO panels on top row, ONE wide cinematic panel spanning full width in middle, TWO panels on bottom row. Clear 4px black borders.",
 };
 
 // ══════════════════════════════════════════════════════════════════════════════
 // BLOCK 1: CONSISTENCY — always first, model reads top-down
-// Replicates the ChatGPT internal system prompt for character consistency
 // ══════════════════════════════════════════════════════════════════════════════
 function buildConsistencyBlock(characters: Character[]): string {
   if (characters.length === 0) return "";
 
   const charDescs = characters
-    .map((c) => {
-      return `CHARACTER "${c.name}": ${c.visual_anchor}`;
-    })
+    .map((c) => `CHARACTER "${c.name}": ${c.visual_anchor}`)
     .join("\n\n");
 
   return `CRITICAL INSTRUCTION — VISUAL CONSISTENCY:
@@ -94,24 +101,14 @@ ${charDescs}`;
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// BLOCK 2: STYLE LOCK — art direction that stays constant across all pages
+// BLOCK 2: ART DIRECTION — from the style matrix
 // ══════════════════════════════════════════════════════════════════════════════
-function buildStyleBlock(
-  illustrationStyle: string,
-  comicStyle: string,
-  category: string,
-  tone?: string
-): string {
-  // Tone overrides illustration style if set (Spec Section 8.2)
-  const artStyle = (tone && TONE_STYLE_LOCKS[tone])
-    || ILLUSTRATION_STYLE_LOCKS[illustrationStyle]
-    || ILLUSTRATION_STYLE_LOCKS.comic;
-  const mood = COMIC_MOOD[comicStyle] || COMIC_MOOD.emotional;
-  const atmosphere = CATEGORY_ATMOSPHERE[category] || CATEGORY_ATMOSPHERE.familie;
+function buildArtDirectionBlock(category: string, comicStyle: string): string {
+  const catStyles = STYLE_MATRIX[category] || STYLE_MATRIX.sonstiges;
+  const artDirection = catStyles[comicStyle] || catStyles.emotional;
 
-  return `ART STYLE: ${artStyle}
-Mood/tone: ${mood}
-Atmosphere: ${atmosphere}
+  return `ART DIRECTION: ${artDirection}
+
 IMPORTANT: High resolution, sharp details, professional print quality.
 Every face must be clearly rendered with distinct features — no blurry or generic faces.
 
@@ -125,16 +122,13 @@ corner of each panel for text overlay that will be added separately.`;
 // ══════════════════════════════════════════════════════════════════════════════
 // BLOCK 3: SCENE — the flexible part that changes per page
 // ══════════════════════════════════════════════════════════════════════════════
-function buildMultiPanelSceneBlock(input: PagePromptInput): string {
+function buildSceneBlock(input: PagePromptInput): string {
   const { panels, location, timeOfDay } = input;
   const panelCount = panels.length;
   const layout = PANEL_LAYOUTS[panelCount] || PANEL_LAYOUTS[4];
 
-  // Each panel gets a rich scene description
   const panelDescs = panels
-    .map((p) => {
-      return `[Panel ${p.nummer}]: ${p.szene}`;
-    })
+    .map((p) => `[Panel ${p.nummer}]: ${p.szene}`)
     .join("\n");
 
   return `COMIC PAGE COMPOSITION:
@@ -159,20 +153,19 @@ NEGATIVE: No text, no speech bubbles, no watermarks, no distorted faces, no extr
 
 // ══════════════════════════════════════════════════════════════════════════════
 // MAIN EXPORT: buildComicPagePrompt
-// Assembles all blocks in the correct order for gpt-image-1
 // ══════════════════════════════════════════════════════════════════════════════
 export function buildComicPagePrompt(input: PagePromptInput): string {
-  const { characters, illustrationStyle, comicStyle, category, tone } = input;
+  const { characters, comicStyle, category } = input;
 
   const block1 = buildConsistencyBlock(characters);
-  const block2 = buildStyleBlock(illustrationStyle, comicStyle, category || "familie", tone);
-  const block3 = buildMultiPanelSceneBlock(input);
+  const block2 = buildArtDirectionBlock(category || "familie", comicStyle);
+  const block3 = buildSceneBlock(input);
 
   return [block1, block2, block3].filter(Boolean).join("\n\n");
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// SINGLE SCENE PROMPT (prepared for future single-image-per-panel mode)
+// SINGLE SCENE PROMPT (for future single-image-per-panel mode)
 // ══════════════════════════════════════════════════════════════════════════════
 export function buildScenePrompt(
   scene: string,
@@ -182,23 +175,14 @@ export function buildScenePrompt(
   category: string,
   location?: string,
   timeOfDay?: string,
-  tone?: string,
-  layout: "wide" | "tall" | "hero" = "wide"
 ): string {
   const block1 = buildConsistencyBlock(characters);
-  const block2 = buildStyleBlock(illustrationStyle, comicStyle, category, tone);
-
-  const composition = layout === "wide"
-    ? "cinematic wide shot, 16:9 landscape ratio"
-    : layout === "tall"
-    ? "portrait vertical composition"
-    : "full page hero shot";
-
+  const block2 = buildArtDirectionBlock(category, comicStyle);
   const block3 = `SCENE TO ILLUSTRATE:
 ${scene}
 ${location ? `Location: ${location}.` : ""}
 ${timeOfDay ? `Lighting: ${timeOfDay} light.` : ""}
-Composition: ${composition}
+Composition: cinematic wide shot.
 Leave 25% empty/lighter space at top-left for caption overlay.`;
 
   return [block1, block2, block3].filter(Boolean).join("\n\n");
@@ -206,7 +190,6 @@ Leave 25% empty/lighter space at top-left for caption overlay.`;
 
 // ══════════════════════════════════════════════════════════════════════════════
 // GPT-4o STORY STRUCTURE PROMPT
-// Generates the page/panel structure from user's story input
 // ══════════════════════════════════════════════════════════════════════════════
 export function buildGPTStructurePrompt(
   lang: string,
@@ -216,12 +199,9 @@ export function buildGPTStructurePrompt(
   numPages: number,
   category: string = "familie"
 ): string {
-  const styleDesc: Record<string, string> = {
-    action:    "dynamic, high-energy, dramatic moments, action-focused",
-    emotional: "warm, tender, character-driven, emotional depth",
-    humor:     "funny, playful, comedic situations, exaggerated reactions",
-  };
-  const style = styleDesc[comicStyle] || styleDesc.emotional;
+  // Use the style matrix for consistent art direction in scene descriptions
+  const catStyles = STYLE_MATRIX[category] || STYLE_MATRIX.sonstiges;
+  const artDirection = catStyles[comicStyle] || catStyles.emotional;
 
   const categoryHints: Record<string, string> = {
     liebe:      "Focus on romantic moments: first meeting, tender looks, meaningful gestures, relationship milestones",
@@ -237,15 +217,14 @@ export function buildGPTStructurePrompt(
   return `You are a professional comic book author and visual storyteller.
 Create a ${numPages}-page comic book structure in ${lang}.
 
-STORY TONE: ${tone}
-VISUAL STYLE: ${style}
+VISUAL STYLE FOR THIS BOOK: ${artDirection}
 NARRATIVE FOCUS: ${catHint}
 ${mustHaveSentences ? `\nMUST INCLUDE these key moments or sentences: "${mustHaveSentences}"` : ""}
 
 CRITICAL RULES FOR PANEL SCENES:
 - Each panel "szene" must be a COMPLETE, SELF-CONTAINED image description in English
 - Include: WHO is in the scene, WHAT they are doing, WHERE they are, their FACIAL EXPRESSION, BODY LANGUAGE, and the LIGHTING/MOOD
-- Be cinematically specific: "Leon (6) running toward turquoise water with arms spread wide, laughing, golden afternoon light, Sophie watching from beach blanket smiling" — NOT "Leon goes to the beach"
+- Be cinematically specific: "Helga (80) opening garden gate, hands flying to her face in shock, tears of joy, 20 family members behind decorated table with lanterns, warm golden afternoon light" — NOT "Helga sees the surprise"
 - Think like a film director: vary camera angles (close-up, medium shot, wide establishing shot, over-shoulder)
 - Each scene must be visually distinct from the others
 

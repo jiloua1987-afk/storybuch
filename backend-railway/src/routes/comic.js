@@ -158,16 +158,17 @@ router.post("/page", async (req, res) => {
     const { page, characters = [], comicStyle = "emotional", category = "familie",
             illustrationStyle = "comic", referenceImages = [] } = req.body;
 
-    const comicMod = COMIC_STYLE_MOD[comicStyle] || COMIC_STYLE_MOD.emotional;
-    const mood = CATEGORY_MOOD[category] || CATEGORY_MOOD.familie;
-
-    const STYLE_LOCKS = {
-      comic:       "professional comic book illustration, bold clean black outlines, vibrant saturated colors, cel-shaded coloring, dynamic compositions, high contrast, sharp details, European BD quality (Asterix/Tintin level)",
-      aquarell:    "soft watercolor illustration, pastel colors, gentle brushstrokes, dreamy romantic atmosphere, painterly texture, no harsh outlines",
-      bleistift:   "detailed pencil sketch comic, crosshatching for shadows, hand-drawn linework, black and white with subtle warm tones",
-      realistisch: "realistic comic art style, detailed digital painting, warm cinematic lighting, photorealistic faces with comic proportions",
+    // Style Matrix: category × comicStyle → art direction
+    const SM = {
+      liebe:    { action: "Romantic comic art with dynamic energy. Bold black outlines, rich warm colors (deep reds, golds, sunset oranges). Dramatic romantic poses, cinematic close-ups. Professional European BD quality.", emotional: "Tender romantic illustration. Soft watercolor washes in warm golden and rose tones. Gentle linework, intimate close-ups. Golden hour lighting. Painterly, like a romantic illustrated novel.", humor: "Playful romantic comedy comic. Bright cheerful colors, exaggerated lovesick expressions. Bold clean outlines. Fun and lighthearted, like a romantic manga." },
+      familie:  { action: "Energetic family adventure comic. Bold black outlines, vibrant saturated colors, dynamic compositions. Children with exaggerated excited expressions. Motion lines, dramatic angles. Like Asterix or Tintin.", emotional: "Warm family storybook illustration. Soft rounded linework, gentle watercolor colors (warm yellows, soft greens, cozy browns). Tender moments. Professional children's book quality like Pixar concept art.", humor: "Fun family comedy comic. Bold clean outlines, bright pop colors. Kids with wildly exaggerated expressions. Slapstick body language. Like a European family comic strip." },
+      urlaub:   { action: "Adventure travel comic with cinematic energy. Bold outlines, vivid tropical colors (turquoise, coral, golden sand). Dynamic wide-angle compositions. Movie poster quality.", emotional: "Beautiful travel memoir illustration. Luminous watercolor style with Mediterranean light. Soft linework, panoramic compositions. Like a painted travel journal.", humor: "Hilarious vacation comic. Bright saturated holiday colors, exaggerated tourist situations. Bold outlines, cartoon energy. Like a funny postcard." },
+      feier:    { action: "Explosive celebration comic. Bold dynamic outlines, confetti in motion. Vibrant party colors (gold, magenta, electric blue). High energy party comic.", emotional: "Heartwarming celebration illustration. Warm golden lighting, soft watercolor tones. Intimate moments — tearful speeches, group hugs. Like a beautifully illustrated greeting card.", humor: "Hilarious party comic. Bright festive colors, exaggerated celebration chaos. Bold cartoon outlines, maximum fun energy." },
+      biografie:{ action: "Epic life story graphic novel. Dramatic cinematic lighting, rich deep colors with sepia undertones. Bold compositions. Movie-quality biographical illustration.", emotional: "Nostalgic memoir illustration. Warm muted earth tones with selective color highlights. Soft editorial linework. Like a New Yorker illustration.", humor: "Charming biographical comic with wit. Warm retro color palette, clean expressive linework. Like an illustrated memoir with a smile." },
+      freunde:  { action: "High-energy friendship adventure comic. Bold outlines, vibrant saturated colors. Friends in dynamic group poses. Like a superhero team-up with real friends.", emotional: "Warm friendship illustration. Soft natural colors, gentle linework. Shared laughter, supportive hugs. Like a beautifully illustrated friendship story.", humor: "Hilarious buddy comedy comic. Bright pop colors, exaggerated funny expressions. Bold cartoon outlines, maximum comedic timing." },
+      sonstiges:{ action: "Dynamic storytelling comic. Bold black outlines, rich cinematic colors. Professional comic book quality.", emotional: "Beautiful narrative illustration. Warm atmospheric colors, soft painterly linework. Professional illustrated novel quality.", humor: "Entertaining comic with personality. Clean bold outlines, bright cheerful colors. Professional cartoon quality." },
     };
-    const artStyle = STYLE_LOCKS[illustrationStyle] || STYLE_LOCKS.comic;
+    const artDirection = (SM[category] || SM.sonstiges)[comicStyle] || (SM[category] || SM.sonstiges).emotional;
 
     const charDescs = characters.map(c =>
       `CHARACTER "${c.name}": ${c.visual_anchor}`
@@ -196,9 +197,7 @@ Any deviation from these character descriptions is an error.
 
 ${charDescs || "Characters as described in the scene."}
 
-ART STYLE: ${artStyle}
-Mood: ${comicMod}
-Atmosphere: ${mood}
+ART DIRECTION: ${artDirection}
 IMPORTANT: High resolution, sharp details, professional print quality.
 Every face must be clearly rendered with distinct features — no blurry or generic faces.
 
