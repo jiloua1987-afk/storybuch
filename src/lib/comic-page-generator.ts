@@ -88,15 +88,16 @@ Be very specific: 'Emma: 6-year-old girl, shoulder-length red-brown hair, yellow
   }));
 }
 
-// ── Step 3: Generate comic page via images.generate() ────────────────────────
-// Pure prompt-based generation — no images.edit(), no style reference image
-// Quality comes from the detailed Style Matrix prompts
+// ── Step 3: Generate comic page ──────────────────────────────────────────────
+// Primary: images.edit() with USER PHOTO for character likeness (like ChatGPT)
+// Fallback: images.generate() without reference
 export async function generateComicPage(
   page: StoryPage,
   characters: Character[],
   illustrationStyle: string,
   comicStyle: string,
   category: string = "familie",
+  referenceImages: string[] = [],
 ): Promise<string> {
   const prompt = buildComicPagePrompt({
     title: page.title,
@@ -109,39 +110,38 @@ export async function generateComicPage(
     timeOfDay: page.timeOfDay,
   });
 
-  try {
-    const response = await openai.images.generate({
-      model: "gpt-image-1",
-      prompt,
-      n: 1,
-      size: "1024x1536",
-      quality: "high",
-    });
-    const item = (response.data ?? [])[0];
-    if (item?.url) return item.url;
-    if (item?.b64_json) return `data:image/png;base64,${item.b64_json}`;
-    return "";
-  } catch (err: any) {
-    console.error(`Page ${page.pageNumber} error:`, err.message);
-    // Single retry
+  // Try with user reference photo first (like ChatGPT does it)
+  const primaryRef = referenceImages[0] || characters.find((c: any) => c.refBase64)?.refBase64;
+  if (primaryRef) {
     try {
-      const response = await openai.images.generate({
+      const refBuf = Buffer.from(primaryRef, "base64");
+      const blob = new Blob([refBuf], { type: "image/jpeg" });
+      const file = new File([blob], "reference-photo.jpg", { type: "image/jpeg" });
+
+      const editPrompt = `The people in this reference photo are the characters in this comic. Draw them in comic style but keep their EXACT facial features, hair, and body proportions recognizable. Transform this photo into a professional comic book page:\n\n${prompt}`;
+
+      const response = await openai.images.edit({
         model: "gpt-image-1",
-        prompt,
-        n: 1,
+        image: file,
+        prompt: editPrompt,
         size: "1024x1536",
         quality: "high",
-      });
+        input_fidelity: "high",
+      } as any);
+
       const item = (response.data ?? [])[0];
       if (item?.url) return item.url;
       if (item?.b64_json) return `data:image/png;base64,${item.b64_json}`;
-    } catch { /* ignore */ }
-    return "";
+    } catch (err: any) {
+      console.warn(`Reference photo failed for page ${page.pageNumber}:`, err.message);
+    }
   }
+
+  // Fallback: standard generate
+  return generateStandard(prompt, page.pageNumber);
 }
 
-// ── Helper ───────────────────────────────────────────────────────────────────
-function buildContext(storyInput: string, guidedAnswers: Record<string, string>): string {
+async function generateStandard(prompt: string, pageNumber: number): Promise<string> {
   let ctx = storyInput || "";
   const fields = [
     "personen", "characters", "ort", "location",

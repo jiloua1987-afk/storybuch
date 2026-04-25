@@ -6,15 +6,16 @@ export const maxDuration = 60;
 
 export async function POST(req: NextRequest) {
   try {
-    const { page, characters, illustrationStyle, comicStyle, category } = await req.json();
+    const { page, characters, illustrationStyle, comicStyle, category, referenceImages } = await req.json();
 
-    // Generate raw image
+    // Generate raw image — with user reference photo if available
     const rawUrl = await generateComicPage(
       page,
       characters || [],
       illustrationStyle || "comic",
       comicStyle || "emotional",
-      category || "familie"
+      category || "familie",
+      referenceImages || []
     );
 
     if (!rawUrl) {

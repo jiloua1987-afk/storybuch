@@ -230,20 +230,51 @@ NEGATIVE: No text, no speech bubbles, no watermarks, no distorted faces, no extr
 
     let rawUrl = "";
 
-    // images.generate() with detailed prompt — no reference images
-    try {
-      const genRes = await openai.images.generate({
-        model: "gpt-image-1",
-        prompt: fullPrompt,
-        n: 1,
-        size: "1024x1536",
-        quality: "high",
-      });
-      const item = (genRes.data || [])[0];
-      if (item?.url) rawUrl = item.url;
-      else if (item?.b64_json) rawUrl = `data:image/png;base64,${item.b64_json}`;
-    } catch (e) {
-      console.error(`Generation failed for "${page.title}":`, e.message);
+    // Primary: images.edit() with USER REFERENCE PHOTO for character likeness
+    // This is how ChatGPT does it — photo as input, comic as output
+    const primaryRef = referenceImages[0] || characters.find(c => c.refBase64)?.refBase64;
+    if (primaryRef) {
+      try {
+        const refBuf = Buffer.from(primaryRef, "base64");
+        const refBlob = new Blob([refBuf], { type: "image/jpeg" });
+        const refFile = new File([refBlob], "reference-photo.jpg", { type: "image/jpeg" });
+
+        const editPrompt = `The people in this reference photo are the characters in this comic. Draw them in comic style but keep their EXACT facial features, hair, and body proportions recognizable. Transform this photo into a professional comic book page:\n\n${fullPrompt}`;
+
+        const editRes = await openai.images.edit({
+          model: "gpt-image-1",
+          image: refFile,
+          prompt: editPrompt,
+          size: "1024x1536",
+          quality: "high",
+          input_fidelity: "high",
+        });
+
+        const item = (editRes.data || [])[0];
+        if (item?.url) rawUrl = item.url;
+        else if (item?.b64_json) rawUrl = `data:image/png;base64,${item.b64_json}`;
+        if (rawUrl) console.log(`  → Generated with reference photo`);
+      } catch (e) {
+        console.warn(`  → Reference photo failed, falling back:`, e.message);
+      }
+    }
+
+    // Fallback: images.generate() without reference
+    if (!rawUrl) {
+      try {
+        const genRes = await openai.images.generate({
+          model: "gpt-image-1",
+          prompt: fullPrompt,
+          n: 1,
+          size: "1024x1536",
+          quality: "high",
+        });
+        const item = (genRes.data || [])[0];
+        if (item?.url) rawUrl = item.url;
+        else if (item?.b64_json) rawUrl = `data:image/png;base64,${item.b64_json}`;
+      } catch (e) {
+        console.error(`Generation failed for "${page.title}":`, e.message);
+      }
     }
 
     if (!rawUrl) return res.json({ imageUrl: "", panels: page.panels, panelPositions: null });
