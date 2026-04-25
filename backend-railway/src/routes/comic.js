@@ -226,67 +226,12 @@ Rich detailed backgrounds in every panel. Expressive character faces.
 Cinematic camera angles that vary between panels (close-up, medium shot, wide establishing shot).
 NEGATIVE: No text, no speech bubbles, no watermarks, no distorted faces, no extra fingers, no inconsistent characters between panels.`;
 
-    // Build image inputs: style reference + user reference photos
-    const imageInputs = [];
-
-    // 1. Style reference (Comic.png) — always first for highest fidelity
-    if (STYLE_REF_BUFFER) {
-      const styleBlob = new Blob([STYLE_REF_BUFFER], { type: "image/png" });
-      imageInputs.push(new File([styleBlob], "style-reference.png", { type: "image/png" }));
-    }
-
-    // 2. User reference photos (faces) — for character likeness
-    const primaryRef = referenceImages[0] || characters.find(c => c.refBase64)?.refBase64;
-    if (primaryRef) {
-      try {
-        const refBuf = Buffer.from(primaryRef, "base64");
-        const refBlob = new Blob([refBuf], { type: "image/jpeg" });
-        imageInputs.push(new File([refBlob], "character-reference.jpg", { type: "image/jpeg" }));
-      } catch { /* ignore invalid base64 */ }
-    }
-
-    // 3. Character sheet URL → download and add
-    const sheetUrl = characters[0]?.characterSheetUrl;
-    if (sheetUrl && sheetUrl.startsWith("http")) {
-      try {
-        const sheetRes = await fetch(sheetUrl, { signal: AbortSignal.timeout(10000) });
-        if (sheetRes.ok) {
-          const sheetBuf = Buffer.from(await sheetRes.arrayBuffer());
-          const sheetBlob = new Blob([sheetBuf], { type: "image/jpeg" });
-          imageInputs.push(new File([sheetBlob], "character-sheet.jpg", { type: "image/jpeg" }));
-        }
-      } catch { /* ignore fetch errors */ }
-    }
-
-    console.log(`Generating page "${page.title}" (${panelCount} panels) [${imageInputs.length} ref images]`);
+    console.log(`Generating page "${page.title}" (${panelCount} panels)`);
 
     let rawUrl = "";
 
-    // Primary: images.edit() with reference images
-    if (imageInputs.length > 0) {
-      try {
-        const editPrompt = imageInputs.length > 1
-          ? `Use the art style from the first reference image. The people in the other reference image(s) are the characters — make them look like those real people drawn in comic style. Then create:\n\n${fullPrompt}`
-          : `Use the EXACT art style, line quality, coloring technique from this reference image. Then create:\n\n${fullPrompt}`;
-
-        const editRes = await openai.images.edit({
-          model: "gpt-image-1",
-          image: imageInputs.length === 1 ? imageInputs[0] : imageInputs,
-          prompt: editPrompt,
-          size: "1024x1536",
-          quality: "high",
-        });
-
-        const item = (editRes.data || [])[0];
-        if (item?.url) rawUrl = item.url;
-        else if (item?.b64_json) rawUrl = `data:image/png;base64,${item.b64_json}`;
-      } catch (e) {
-        console.warn(`Edit API failed for "${page.title}", falling back:`, e.message);
-      }
-    }
-
-    // Fallback: standard generate without reference
-    if (!rawUrl) {
+    // images.generate() with detailed prompt — no reference images
+    try {
       const genRes = await openai.images.generate({
         model: "gpt-image-1",
         prompt: fullPrompt,
@@ -297,6 +242,8 @@ NEGATIVE: No text, no speech bubbles, no watermarks, no distorted faces, no extr
       const item = (genRes.data || [])[0];
       if (item?.url) rawUrl = item.url;
       else if (item?.b64_json) rawUrl = `data:image/png;base64,${item.b64_json}`;
+    } catch (e) {
+      console.error(`Generation failed for "${page.title}":`, e.message);
     }
 
     if (!rawUrl) return res.json({ imageUrl: "", panels: page.panels, panelPositions: null });

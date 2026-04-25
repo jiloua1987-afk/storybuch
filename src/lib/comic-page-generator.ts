@@ -1,19 +1,7 @@
 import OpenAI from "openai";
 import { buildComicPagePrompt, buildGPTStructurePrompt, type Character, type Panel } from "./prompt-builder";
-import fs from "fs";
-import path from "path";
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-
-// ── Load style reference image once at startup ───────────────────────────────
-let STYLE_REF_BUFFER: Buffer | null = null;
-try {
-  const refPath = path.join(process.cwd(), "public", "Comic.png");
-  if (fs.existsSync(refPath)) {
-    STYLE_REF_BUFFER = fs.readFileSync(refPath);
-    console.log("✓ Style reference image loaded (Comic.png)");
-  }
-} catch { /* ignore */ }
 
 export interface StoryPage {
   id: string;
@@ -100,9 +88,9 @@ Be very specific: 'Emma: 6-year-old girl, shoulder-length red-brown hair, yellow
   }));
 }
 
-// ── Step 3: Generate comic page ──────────────────────────────────────────────
-// Primary: images.edit() with Comic.png as style reference + input_fidelity
-// Fallback: images.generate() without reference
+// ── Step 3: Generate comic page via images.generate() ────────────────────────
+// Pure prompt-based generation — no images.edit(), no style reference image
+// Quality comes from the detailed Style Matrix prompts
 export async function generateComicPage(
   page: StoryPage,
   characters: Character[],
@@ -121,44 +109,6 @@ export async function generateComicPage(
     timeOfDay: page.timeOfDay,
   });
 
-  // Try with style reference via images.edit()
-  if (STYLE_REF_BUFFER) {
-    try {
-      const result = await generateWithStyleRef(prompt);
-      if (result) return result;
-    } catch (err: any) {
-      console.warn(`Style ref failed for page ${page.pageNumber}, falling back:`, err.message);
-    }
-  }
-
-  // Fallback: standard generate
-  return generateStandard(prompt, page.pageNumber);
-}
-
-// ── images.edit() with style reference ───────────────────────────────────────
-async function generateWithStyleRef(prompt: string): Promise<string> {
-  // Convert Buffer to File object for the API
-  const blob = new Blob([STYLE_REF_BUFFER!], { type: "image/png" });
-  const file = new File([blob], "style-reference.png", { type: "image/png" });
-
-  const editPrompt = `Use the EXACT art style, line quality, coloring technique, and panel layout style from this reference image. Match the same level of professional comic book quality — bold outlines, vibrant colors, expressive faces. Then create:\n\n${prompt}`;
-
-  const response = await openai.images.edit({
-    model: "gpt-image-1",
-    image: file,
-    prompt: editPrompt,
-    size: "1024x1536",
-    quality: "high",
-  } as any);
-
-  const item = (response.data ?? [])[0];
-  if (item?.url) return item.url;
-  if (item?.b64_json) return `data:image/png;base64,${item.b64_json}`;
-  return "";
-}
-
-// ── Standard generate without reference ──────────────────────────────────────
-async function generateStandard(prompt: string, pageNumber: number): Promise<string> {
   try {
     const response = await openai.images.generate({
       model: "gpt-image-1",
@@ -172,7 +122,8 @@ async function generateStandard(prompt: string, pageNumber: number): Promise<str
     if (item?.b64_json) return `data:image/png;base64,${item.b64_json}`;
     return "";
   } catch (err: any) {
-    console.error(`Page ${pageNumber} generation error:`, err.message);
+    console.error(`Page ${page.pageNumber} error:`, err.message);
+    // Single retry
     try {
       const response = await openai.images.generate({
         model: "gpt-image-1",
