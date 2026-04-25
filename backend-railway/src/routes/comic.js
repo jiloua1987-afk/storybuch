@@ -117,7 +117,7 @@ Respond ONLY with JSON: {"pages": [{"id":"page1","pageNumber":1,"title":"Title i
       try {
         console.log("Generating character reference sheet...");
         const sheetRes = await openai.images.generate({
-          model: "gpt-image-1",
+          model: "gpt-image-1.5",
           prompt: `Character reference sheet showing all characters standing side by side, full body view, neutral background.
 Characters: ${characters.map(c => `${c.name}: ${c.visual_anchor}`).join(". ")}.
 Style: warm watercolor comic illustration, high quality.
@@ -177,7 +177,7 @@ router.post("/page", async (req, res) => {
         model: "gpt-4o",
         messages: [{
           role: "system",
-          content: `You rewrite comic scene descriptions into short, natural image prompts for gpt-image-1.
+          content: `You rewrite comic scene descriptions into short, natural image prompts for gpt-image-1.5.
 
 Write like an art director briefing an illustrator — NOT like a prompt engineer.
 
@@ -228,7 +228,7 @@ ${panelList}`,
         const refBlob = new Blob([refBuf], { type: "image/jpeg" });
         const refFile = new File([refBlob], "reference.jpg", { type: "image/jpeg" });
         const editRes = await openai.images.edit({
-          model: "gpt-image-1",
+          model: "gpt-image-1.5",
           image: refFile,
           prompt: `The people in this photo are the main characters. Draw them as premium European comic illustrations — keep their exact faces recognizable in crisp comic style.\n\n${imagePrompt}`,
           size: "1024x1536",
@@ -247,7 +247,7 @@ ${panelList}`,
     if (!rawUrl) {
       try {
         const genRes = await openai.images.generate({
-          model: "gpt-image-1", prompt: imagePrompt, n: 1, size: "1024x1536", quality: "high",
+          model: "gpt-image-1.5", prompt: imagePrompt, n: 1, size: "1024x1536", quality: "high",
         });
         const item = (genRes.data || [])[0];
         if (item?.url) rawUrl = item.url;
@@ -310,7 +310,7 @@ Style: warm watercolor comic art, professional cover quality, cinematic composit
 Characters prominently featured in foreground. NO text, NO title, NO letters anywhere.`;
 
     const genRes = await openai.images.generate({
-      model: "gpt-image-1", prompt, n: 1, size: "1024x1536", quality: "high"
+      model: "gpt-image-1.5", prompt, n: 1, size: "1024x1536", quality: "high"
     });
     const item = (genRes.data || [])[0];
     let rawUrl = item?.url || "";

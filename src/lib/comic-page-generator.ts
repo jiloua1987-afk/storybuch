@@ -101,7 +101,7 @@ async function rewriteForImageAI(page: StoryPage, characters: Character[], categ
       model: "gpt-4o",
       messages: [{
         role: "system",
-        content: `You rewrite comic scene descriptions into short, natural image prompts for gpt-image-1.
+        content: `You rewrite comic scene descriptions into short, natural image prompts for gpt-image-1.5.
 
 Write like an art director briefing an illustrator — NOT like a prompt engineer.
 
@@ -175,7 +175,7 @@ export async function generateComicPage(
       const file = new File([blob], "reference.jpg", { type: "image/jpeg" });
 
       const response = await openai.images.edit({
-        model: "gpt-image-1",
+        model: "gpt-image-1.5",
         image: file,
         prompt: `The people in this photo are the main characters. Draw them as premium European comic illustrations — keep their exact faces, hair, and features recognizable but rendered in crisp comic style with bold ink outlines.\n\n${prompt}`,
         size: "1024x1536",
@@ -197,7 +197,7 @@ export async function generateComicPage(
 async function generateStandard(prompt: string, pageNumber: number): Promise<string> {
   try {
     const response = await openai.images.generate({
-      model: "gpt-image-1",
+      model: "gpt-image-1.5",
       prompt,
       n: 1,
       size: "1024x1536",
@@ -212,7 +212,7 @@ async function generateStandard(prompt: string, pageNumber: number): Promise<str
     // Single retry
     try {
       const response = await openai.images.generate({
-        model: "gpt-image-1",
+        model: "gpt-image-1.5",
         prompt,
         n: 1,
         size: "1024x1536",
