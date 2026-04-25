@@ -178,20 +178,48 @@ router.post("/page", async (req, res) => {
     // Step 1: GPT-4o Prompt Rewriter — condense scenes for image AI
     let imagePrompt = "";
     try {
+      const charList = characters.map(c => `${c.name}: ${c.age || ""}, ${c.visual_anchor}`).join("\n- ");
       const rewriteRes = await openai.chat.completions.create({
         model: "gpt-4o",
         messages: [{
           role: "system",
-          content: `You rewrite comic scene descriptions into optimized image generation prompts. Output a SINGLE prompt, max 150 words. Start with quality/style, then layout, then scenes (1 sentence each). Purely visual — no narrative.`,
+          content: `You are a prompt rewriter for a high-quality multi-panel comic image generation pipeline.
+
+Your task is to convert narrative story content into a highly optimized image-generation prompt for gpt-image-1.
+
+You do NOT write stories. You do NOT write prose. You do NOT write emotional narration. You do NOT write dialogue.
+You ONLY rewrite structured story content into a visual image prompt optimized for multi-panel comic rendering.
+
+REWRITE RULES:
+- Aggressively compress narrative content into visual instructions
+- Visually concrete, short, image-first, composition-first, renderable, unambiguous
+- Write like a comic art director, not a storyteller
+- Convert emotions into visible expressions, poses, gestures, body language
+- Each panel: camera framing, visible action, key subject, environment, lighting — 1-2 sentences max
+
+PROMPT STRUCTURE (always this order):
+1. QUALITY BLOCK — crisp linework, clean rendering, sharp faces, print quality
+2. STYLE BLOCK — visual style only
+3. LAYOUT BLOCK — comic page layout, clean panel composition
+4. CHARACTER CONSISTENCY BLOCK — characters identical in every panel
+5. SCENE BLOCK — each panel as visual direction only
+6. NEGATIVE BLOCK — strict visual negatives
+
+STYLE TRANSLATION:
+- emotional → soft facial expressions, warm light, gentle body language
+- humor → expressive poses, playful motion, exaggerated reactions
+- action → dynamic angles, movement, strong poses, cinematic energy
+
+Output ONLY the final image prompt as plain text. No markdown, no commentary.`,
         }, {
           role: "user",
-          content: `Characters: ${charList}\nLocation: ${page.location || "not specified"}\nTime: ${page.timeOfDay || "daytime"}\nPanels:\n${panelList}\n\nOutput: A single prompt starting with "Create a premium European comic book page..."`,
+          content: `Story Type: ${category}\nComic Style: ${comicStyle}\n\nCharacters:\n- ${charList}\n\nPanels:\n${panelList}`,
         }],
-        max_tokens: 250,
-        temperature: 0.3,
+        max_tokens: 400,
+        temperature: 0.2,
       });
       imagePrompt = rewriteRes.choices[0].message.content || "";
-      if (imagePrompt.length < 50) imagePrompt = "";
+      if (imagePrompt.length < 100) imagePrompt = "";
     } catch (e) {
       console.warn("Prompt rewrite failed:", e.message);
     }

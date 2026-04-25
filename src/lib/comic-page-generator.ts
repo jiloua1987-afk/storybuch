@@ -89,48 +89,61 @@ Be very specific: 'Emma: 6-year-old girl, shoulder-length red-brown hair, yellow
 }
 
 // ── Step 2.5: Prompt Rewriter — GPT-4o condenses scenes for image AI ─────────
-// Like ChatGPT's internal prompt-rewriting: simplify, prioritize, stabilize
 async function rewriteForImageAI(page: StoryPage, characters: Character[], category: string, comicStyle: string): Promise<string> {
   try {
-    const charList = characters.map(c => `${c.name}: ${c.visual_anchor}`).join(". ");
-    const panelList = page.panels.map(p => `Panel ${p.nummer}: ${p.szene}`).join("\n");
+    const charList = characters.map(c => `${c.name}: ${c.age}, ${c.visual_anchor}`).join("\n- ");
+    const panelList = page.panels.map(p => `${p.nummer}. ${p.szene}`).join("\n");
 
     const response = await openai.chat.completions.create({
       model: "gpt-4o",
       messages: [{
         role: "system",
-        content: `You rewrite comic scene descriptions into optimized image generation prompts.
-Your output will go directly to an image AI model (gpt-image-1).
+        content: `You are a prompt rewriter for a high-quality multi-panel comic image generation pipeline.
 
-RULES:
-- Output a SINGLE prompt for a multi-panel comic page
-- Keep it SHORT — max 150 words total
-- Start with quality/style instruction, then layout, then scenes
-- Each panel description: max 1 sentence, purely visual
-- No narrative, no emotions in words — only what is VISIBLE
-- Include character names with ONE key visual feature each
-- End with style instruction`,
+Your task is to convert narrative story content into a highly optimized image-generation prompt for gpt-image-1.
+
+You do NOT write stories. You do NOT write prose. You do NOT write emotional narration. You do NOT write dialogue.
+You ONLY rewrite structured story content into a visual image prompt optimized for multi-panel comic rendering.
+
+Your output will be used directly with gpt-image-1.
+
+REWRITE RULES:
+- Aggressively compress narrative content into visual instructions
+- Visually concrete, short, image-first, composition-first, renderable, unambiguous
+- Write like a comic art director, not a storyteller
+- Convert emotions into visible expressions, poses, gestures, body language
+- Never describe feelings abstractly
+- Each panel: camera framing, visible action, key subject, environment, lighting — 1-2 sentences max
+
+PROMPT STRUCTURE (always this order):
+1. QUALITY BLOCK — crisp linework, clean rendering, sharp faces, print quality
+2. STYLE BLOCK — visual style only, no story tone, no literary language
+3. LAYOUT BLOCK — comic page layout, readability, clean panel composition
+4. CHARACTER CONSISTENCY BLOCK — characters identical in every panel, concise
+5. SCENE BLOCK — each panel as visual direction only
+6. NEGATIVE BLOCK — strict visual negatives
+
+STYLE TRANSLATION:
+- emotional → soft facial expressions, warm light, gentle body language
+- humor → expressive poses, playful motion, exaggerated reactions
+- action → dynamic angles, movement, strong poses, cinematic energy
+
+FORBIDDEN: markdown, bullet explanations, commentary, JSON, prose, dialogue, titles.
+Output ONLY the final image prompt as plain text.`,
       }, {
         role: "user",
-        content: `Rewrite this into a short, optimized image prompt:
-
-Characters: ${charList}
-Location: ${page.location || "not specified"}
-Time: ${page.timeOfDay || "daytime"}
-Panels:\n${panelList}
-
-Output format: A single prompt starting with "Create a premium European comic book page..."`,
+        content: `Story Type: ${category}\nComic Style: ${comicStyle}\n\nCharacters:\n- ${charList}\n\nPanels:\n${panelList}`,
       }],
-      max_tokens: 250,
-      temperature: 0.3,
+      max_tokens: 400,
+      temperature: 0.2,
     });
 
     const rewritten = response.choices[0].message.content || "";
-    if (rewritten.length > 50) return rewritten;
+    if (rewritten.length > 100) return rewritten;
   } catch (err: any) {
     console.warn("Prompt rewrite failed, using original:", err.message);
   }
-  return ""; // fallback to original prompt
+  return "";
 }
 
 // ── Step 3: Generate comic page ──────────────────────────────────────────────
