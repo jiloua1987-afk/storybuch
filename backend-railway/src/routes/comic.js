@@ -302,27 +302,51 @@ ${panelList}`,
 });
 router.post("/cover", async (req, res) => {
   try {
-    const { title, characters = [], category = "familie", illustrationStyle = "comic", location = "" } = req.body;
+    const { title, characters = [], category = "familie", illustrationStyle = "comic", location = "", referenceImages = [] } = req.body;
 
-    const mood = CATEGORY_MOOD[category] || CATEGORY_MOOD.familie;
     const charDesc = characters.map(c => `${c.name}: ${c.visual_anchor}`).join(", ");
 
-    const prompt = `Create a beautiful comic book COVER illustration.
-${charDesc ? `Main characters: ${charDesc}.` : ""}
-Setting: ${location || "beautiful scenic location"}. Mood: ${mood}.
-Style: warm watercolor comic art, professional cover quality, cinematic composition, portrait orientation.
-Characters prominently featured in foreground. NO text, NO title, NO letters anywhere.`;
+    const prompt = `Create a premium European comic book COVER illustration showing ${charDesc || "a family"} in ${location || "a beautiful setting"}.
+Characters prominently featured in foreground, looking at the viewer. Cinematic composition, portrait orientation.
+Style: crisp ink outlines, vivid saturated colors, expressive faces, professional graphic novel cover quality. No watercolor. No soft blur. No text, no title, no letters.`;
 
-    const genRes = await openai.images.generate({
-      model: "gpt-image-1.5", prompt, n: 1, size: "1024x1536", quality: "high"
-    });
-    const item = (genRes.data || [])[0];
-    let rawUrl = item?.url || "";
-    if (!rawUrl && item?.b64_json) rawUrl = `data:image/png;base64,${item.b64_json}`;
+    let rawUrl = "";
+
+    // Primary: images.edit() with user photo for character likeness
+    const primaryRef = referenceImages[0] || characters.find(c => c.refBase64)?.refBase64;
+    if (primaryRef) {
+      try {
+        const refBuf = Buffer.from(primaryRef, "base64");
+        const refBlob = new Blob([refBuf], { type: "image/jpeg" });
+        const refFile = new File([refBlob], "reference.jpg", { type: "image/jpeg" });
+        const editRes = await openai.images.edit({
+          model: "gpt-image-1.5",
+          image: refFile,
+          prompt: `The people in this photo are the main characters. Create a premium European comic book COVER showing them in ${location || "a beautiful setting"}. Keep their exact faces recognizable in crisp comic style. Portrait orientation, characters in foreground.\nStyle: crisp ink outlines, vivid colors, expressive faces, professional graphic novel cover. No watercolor. No soft blur. No text.`,
+          size: "1024x1536",
+          quality: "high",
+        });
+        const item = (editRes.data || [])[0];
+        if (item?.url) rawUrl = item.url;
+        else if (item?.b64_json) rawUrl = `data:image/png;base64,${item.b64_json}`;
+        if (rawUrl) console.log("  → Cover generated with reference photo");
+      } catch (e) {
+        console.warn("  → Cover reference photo failed:", e.message);
+      }
+    }
+
+    // Fallback: images.generate()
+    if (!rawUrl) {
+      const genRes = await openai.images.generate({
+        model: "gpt-image-1.5", prompt, n: 1, size: "1024x1536", quality: "high"
+      });
+      const item = (genRes.data || [])[0];
+      if (item?.url) rawUrl = item.url;
+      else if (item?.b64_json) rawUrl = `data:image/png;base64,${item.b64_json}`;
+    }
 
     if (!rawUrl) return res.json({ coverImageUrl: "" });
 
-    // Save to Supabase — only resize, NO title overlay
     const coverUrl = await saveImage(rawUrl, "covers", `cover-${Date.now()}`);
     res.json({ coverImageUrl: coverUrl || rawUrl });
   } catch (err) {

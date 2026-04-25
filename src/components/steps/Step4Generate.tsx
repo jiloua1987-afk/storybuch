@@ -84,6 +84,7 @@ export default function Step4Generate() {
           category:         project?.guidedAnswers?.category || "familie",
           illustrationStyle: project?.illustrationStyle || "comic",
           location:         project?.guidedAnswers?.ort || project?.guidedAnswers?.location || "",
+          referenceImages:  project?.referenceImages || [],
         });
         coverImageUrl = coverData.coverImageUrl || "";
         updateProject({ coverImageUrl: coverImageUrl || undefined });

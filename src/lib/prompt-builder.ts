@@ -137,6 +137,12 @@ Write SHORT visual descriptions for an image AI. Max 2 sentences. Visual only.
 
 Include: WHO (name + key visual), WHAT (action), WHERE, LIGHTING. No narrative. No emotions in words — show them through expressions and body language.
 
+CRITICAL — VARIETY:
+- Every panel on a page must show a COMPLETELY DIFFERENT scene, angle, and moment
+- NEVER repeat the same activity in two panels (e.g. not 2× looking at album, not 2× hanging decorations)
+- Vary: close-up face, wide group shot, action moment, quiet detail, over-shoulder view
+- Only include characters that are mentioned in the story — do NOT invent extra people
+
 RULES:
 - ${numPages} pages, 3-4 panels each (prefer 4)
 - Dialogs: max 8 words, natural ${lang}. Not every panel needs dialog.
