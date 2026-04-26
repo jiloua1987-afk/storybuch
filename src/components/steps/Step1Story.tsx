@@ -208,12 +208,30 @@ export default function Step1Story() {
             )}
           </AnimatePresence>
 
-          {/* 3. Fragen */}
+          {/* 3. Titel */}
+          <AnimatePresence>
+            {category && (
+              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-2">
+                <label className="text-sm font-semibold text-brand-700">
+                  3. Titel deines Comics
+                </label>
+                <input
+                  value={comicTitle}
+                  onChange={(e) => setComicTitle(e.target.value)}
+                  placeholder="z. B. Operation Gartenfest, Für die beste Oma der Welt"
+                  className="w-full p-3 rounded-xl border-2 border-brand-100 focus:border-brand-400 focus:outline-none text-gray-700 bg-white transition-all"
+                />
+                <p className="text-xs text-gray-400">Wird auf dem Cover und als Buchtitel verwendet.</p>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* 4. Fragen */}
           <AnimatePresence>
             {category && (
               <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-4">
                 <label className="text-sm font-semibold text-brand-700">
-                  3. Ein paar Infos <span className="font-normal text-gray-400">(alles optional – Stichpunkte reichen)</span>
+                  4. Ein paar Infos <span className="font-normal text-gray-400">(alles optional – Stichpunkte reichen)</span>
                 </label>
                 {questions.map(({ key, label, placeholder }) => (
                   <div key={key} className="space-y-1">
@@ -235,7 +253,7 @@ export default function Step1Story() {
             {category && (
               <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-3">
                 <label className="text-sm font-semibold text-brand-700">
-                  4. Besondere Momente / Szenen{" "}
+                  5. Besondere Momente / Szenen{" "}
                   <span className="font-normal text-gray-400">(jeder Moment wird ein Panel)</span>
                 </label>
                 <p className="text-xs text-gray-400">Jeder Moment bekommt seine eigene Illustration.</p>

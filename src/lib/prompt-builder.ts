@@ -32,13 +32,13 @@ export interface PagePromptInput {
 // STYLE per category × comicStyle — short, punchy, no filler words
 // ══════════════════════════════════════════════════════════════════════════════
 const STYLE_MATRIX: Record<string, Record<string, string>> = {
-  liebe:     { action: "dramatic romantic energy, bold colors, cinematic angles", emotional: "intimate golden light, elegant linework, romantic atmosphere", humor: "bright cheerful colors, exaggerated lovesick expressions, manga energy" },
-  familie:   { action: "vibrant saturated colors, dynamic compositions, Asterix/Tintin energy", emotional: "rich warm colors, rounded characters, Pixar concept art quality", humor: "bright pop colors, exaggerated expressions, European comic strip style" },
-  urlaub:    { action: "vivid tropical colors, dynamic wide-angle compositions, movie poster quality", emotional: "luminous Mediterranean colors, panoramic compositions, travel book quality", humor: "bright holiday colors, exaggerated tourist situations, funny postcard style" },
-  feier:     { action: "vibrant party colors, confetti in motion, high energy", emotional: "golden lighting, intimate moments, greeting card quality", humor: "bright festive colors, exaggerated celebration chaos, maximum fun" },
-  biografie: { action: "dramatic cinematic lighting, deep colors, prestige graphic novel", emotional: "muted earth tones, editorial linework, New Yorker illustration quality", humor: "retro color palette, expressive linework, illustrated memoir style" },
-  freunde:   { action: "vibrant colors, dynamic group poses, superhero team-up energy", emotional: "natural colors, intimate moments, warm ambient lighting", humor: "bright pop colors, exaggerated expressions, webcomic quality" },
-  sonstiges: { action: "bold outlines, rich cinematic colors, high contrast", emotional: "atmospheric colors, precise linework, cinematic lighting", humor: "bold outlines, bright colors, professional cartoon quality" },
+  liebe:     { action: "dynamic superhero comic style, bold primary colors, wide action shots, Marvel/DC energy", emotional: "intimate golden light, elegant linework, romantic atmosphere", humor: "bright cheerful colors, exaggerated lovesick expressions, manga energy" },
+  familie:   { action: "classic adventure comic style, rich colors, varied camera angles, Tintin meets Spider-Man", emotional: "rich warm colors, rounded characters, Pixar concept art quality", humor: "bright pop colors, exaggerated expressions, European comic strip style" },
+  urlaub:    { action: "epic adventure comic style, saturated colors, cinematic wide shots, Indiana Jones energy", emotional: "luminous Mediterranean colors, panoramic compositions, travel book quality", humor: "bright holiday colors, exaggerated tourist situations, funny postcard style" },
+  feier:     { action: "explosive celebration comic style, dynamic angles, motion lines, superhero party energy", emotional: "golden lighting, intimate moments, greeting card quality", humor: "bright festive colors, exaggerated celebration chaos, maximum fun" },
+  biografie: { action: "graphic novel action style, dramatic shadows, varied perspectives, prestige comic energy", emotional: "muted earth tones, editorial linework, New Yorker illustration quality", humor: "retro color palette, expressive linework, illustrated memoir style" },
+  freunde:   { action: "team-up comic style, dynamic group compositions, X-Men energy, varied shot types", emotional: "natural colors, intimate moments, warm ambient lighting", humor: "bright pop colors, exaggerated expressions, webcomic quality" },
+  sonstiges: { action: "classic comic book style, varied camera angles, dynamic poses, professional superhero quality", emotional: "atmospheric colors, precise linework, cinematic lighting", humor: "bold outlines, bright colors, professional cartoon quality" },
 };
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -71,7 +71,7 @@ export function buildComicPagePrompt(input: PagePromptInput): string {
 ${charBlock ? `Characters (keep identical in every panel): ${charBlock}\n` : ""}${panelDescs}
 ${location ? `\nSetting: ${location}.` : ""}${timeOfDay ? ` ${timeOfDay} lighting.` : ""}
 
-Style: crisp black ink outlines, ${style}, expressive faces, bold panel borders, professional graphic novel quality. No watercolor. No soft blur. No text in image.`;
+Style: varied camera angles (close-ups, wide shots, over-shoulder views), ${style}, expressive faces, soft panel borders, professional graphic novel quality. Mix perspectives: not all close-ups, include establishing shots. No watercolor. No soft blur. No text in image.`;
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -94,7 +94,7 @@ export function buildScenePrompt(
 
   return `Create a premium European comic illustration. ${scene}${location ? ` Setting: ${location}.` : ""}${timeOfDay ? ` ${timeOfDay} lighting.` : ""}
 ${charBlock ? `Characters: ${charBlock}\n` : ""}
-Style: crisp black ink outlines, ${style}, expressive faces, professional graphic novel quality. No watercolor. No soft blur. No text.`;
+Style: varied camera angles (close-ups, wide shots, medium shots), ${style}, expressive faces, soft panel borders, professional graphic novel quality. No watercolor. No soft blur. No text.`;
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -145,7 +145,7 @@ CRITICAL — VARIETY:
 
 RULES:
 - ${numPages} pages, 3-4 panels each (prefer 4)
-- Dialogs: max 8 words, natural ${lang}. Not every panel needs dialog.
+- Dialogs: max 15 words, natural ${lang}. Not every panel needs dialog.
 - Page titles: 3-5 words, ${lang}.
 
 JSON only:
