@@ -15,12 +15,14 @@ export default function Step3Style() {
   const { setStep, project, updateProject } = useBookStore();
   const [bookTitle, setBookTitle]   = useState(project?.title || "");
   const [dedication, setDedication] = useState(project?.dedication || "");
+  const [dedicationFrom, setDedicationFrom] = useState(project?.dedicationFrom || "");
   const [language, setLanguage]     = useState<BookLanguage>(project?.language || "de");
 
   const handleNext = () => {
     updateProject({
       title: bookTitle || "Mein persönlicher Comic",
       dedication,
+      dedicationFrom,
       language,
     });
     setStep(3);
@@ -58,11 +60,17 @@ export default function Step3Style() {
         <textarea
           value={dedication}
           onChange={(e) => setDedication(e.target.value)}
-          placeholder="z. B. Für Lisa – in Erinnerung an unsere schönsten Momente. In Liebe, Max."
-          rows={2}
+          placeholder="z. B. Für Dich, lieber Werner, möge die Erinnerung an Deinen Hochzeitstanz mit Helga unter den Lampions immer in Deinem Herzen leuchten..."
+          rows={3}
           className="w-full p-3 rounded-xl border-2 border-brand-100 focus:border-brand-400 focus:outline-none text-gray-700 bg-white resize-none transition-all"
         />
-        <p className="text-xs text-gray-400">Erscheint auf der ersten Seite deines Comics.</p>
+        <input
+          value={dedicationFrom}
+          onChange={(e) => setDedicationFrom(e.target.value)}
+          placeholder="Von wem? z. B. Deine Familie, Anna & Max, In Liebe, Sabine"
+          className="w-full p-3 rounded-xl border-2 border-brand-100 focus:border-brand-400 focus:outline-none text-gray-700 bg-white transition-all"
+        />
+        <p className="text-xs text-gray-400">Erscheint auf der letzten Seite deines Comics.</p>
       </div>
 
       {/* 7. Sprache */}

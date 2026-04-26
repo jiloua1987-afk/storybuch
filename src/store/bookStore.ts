@@ -52,12 +52,14 @@ export type BookLanguage = "de" | "en" | "fr" | "es";
 export interface EndingData {
   endingText: string;
   dedication: string;
+  dedicationFrom?: string;
 }
 
 export interface BookProject {
   id: string;
   title: string;
   dedication?: string;
+  dedicationFrom?: string;
   endingData?: EndingData;
   illustrationStyle?: IllustrationStyle;
   language?: BookLanguage;

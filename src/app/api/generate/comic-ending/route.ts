@@ -7,7 +7,7 @@ const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 export async function POST(req: NextRequest) {
   try {
-    const { storyInput, guidedAnswers, tone, language, dedication } = await req.json();
+    const { storyInput, guidedAnswers, tone, language, dedication, dedicationFrom } = await req.json();
     const langMap: Record<string, string> = { de: "German", en: "English", fr: "French", es: "Spanish" };
     const lang = langMap[language] || "German";
 
@@ -17,6 +17,7 @@ export async function POST(req: NextRequest) {
         .filter(([k, v]) => v && k !== "category")
         .map(([k, v]) => `${k}: ${v}`),
       dedication ? `Widmung vom Nutzer: ${dedication}` : "",
+      dedicationFrom ? `Von: ${dedicationFrom}` : "",
     ].filter(Boolean).join("\n");
 
     const res = await openai.chat.completions.create({
@@ -31,7 +32,8 @@ WICHTIG — Das ist eine WIDMUNG, keine Zusammenfassung!
 - Sprich die Hauptperson DIREKT an (z.B. "Für Dich, liebe Helga...")
 - Erwähne EIN konkretes Detail aus der Geschichte
 - Ton: ${tone || "liebevoll, persönlich, warm"}
-- VERBOTEN: "Liebe Leserinnen", "[Dein Name]", "dieses Buch", "diese Geschichte"
+${dedicationFrom ? `- Ende die Widmung mit: "Von: ${dedicationFrom}"` : '- VERBOTEN: "[Dein Name]", "[Familienmitglied]" als Absender'}
+- VERBOTEN: "Liebe Leserinnen", "dieses Buch", "diese Geschichte"
 - VERBOTEN: Zusammenfassungen der Handlung
 - Schreibe so, als würde ein Familienmitglied die Widmung von Hand schreiben`,
       }, {
@@ -45,6 +47,7 @@ WICHTIG — Das ist eine WIDMUNG, keine Zusammenfassung!
     return NextResponse.json({
       endingText: res.choices[0].message.content || "",
       dedication: dedication || "",
+      dedicationFrom: dedicationFrom || "",
     });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });

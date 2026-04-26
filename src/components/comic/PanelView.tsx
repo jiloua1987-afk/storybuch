@@ -163,15 +163,6 @@ export default function PanelView({ imageUrl, title, panels = [], panelPositions
       onMouseUp={handleMouseUp}
       onMouseLeave={handleMouseUp}
     >
-      {title && (
-        <div className="py-2 text-center bg-[#F5EDE0] border-b border-[#E5D5C8]">
-          <h3 className="text-[#1A1410] tracking-wider text-sm uppercase"
-            style={{ fontFamily: "'Bangers', cursive", letterSpacing: "0.12em" }}>
-            {title}
-          </h3>
-        </div>
-      )}
-      
       <div className="relative">
         {imageUrl ? (
           <img src={imageUrl} alt={title || "Comic page"} className="w-full h-auto block" />
@@ -214,7 +205,11 @@ export default function PanelView({ imageUrl, title, panels = [], panelPositions
                   <div
                     onClick={() => setEditingIndex(i)}
                     className={`${bg} ${radius} px-2.5 py-1 cursor-pointer hover:scale-[1.03] transition-transform ${isDragging ? 'scale-105 shadow-lg' : ''}`}
-                    style={{ boxShadow: isCaption ? "none" : "1px 2px 0px rgba(26,20,16,0.25)" }}
+                    style={{ 
+                      boxShadow: isCaption ? "none" : "1px 2px 0px rgba(26,20,16,0.25)",
+                      minWidth: dialog.length < 20 ? "80px" : dialog.length < 40 ? "120px" : "160px",
+                      maxWidth: "200px"
+                    }}
                   >
                     <p className={`${isCaption ? "text-white" : "text-[#1A1410]"} leading-snug`}
                       style={{ fontFamily: "'Bangers', cursive", fontSize: "12px", letterSpacing: "0.03em" }}>

@@ -129,11 +129,16 @@ export async function generateDialogs(
 Figuren: ${charList}
 ${mustHaveSentences ? `Wichtige Sätze die vorkommen sollen: ${mustHaveSentences}` : ""}
 
-Schreibe 2-3 kurze, lebendige Dialoge für die Szene.
+CRITICAL: Write CONVERSATIONS, not monologues. Characters should talk TO EACH OTHER, not just make statements.
+- Create 2-4 dialog exchanges (back-and-forth between characters)
+- Each dialog: max 15 words, natural ${lang}
+- Make it feel like a real conversation with questions, answers, reactions
+- Vary bubble types: speech (normal), thought (internal), shout (excited), caption (narrator)
+
 Antworte NUR mit JSON-Objekt mit "dialogs" Array:
 {"dialogs": [{
   "speaker": "Name",
-  "text": "Dialog-Text (max 8 Wörter)",
+  "text": "Dialog-Text (max 15 Wörter, natürlich gesprochen)",
   "position": "${positions.join("|")}",
   "bubble_type": "${bubbleTypes.join("|")}",
   "bubble_color": "#hex aus Figuren-Liste",

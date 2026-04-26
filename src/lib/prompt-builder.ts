@@ -142,6 +142,7 @@ CRITICAL — VARIETY:
 - NEVER repeat the same activity in two panels (e.g. not 2× looking at album, not 2× hanging decorations)
 - Vary: close-up face, wide group shot, action moment, quiet detail, over-shoulder view
 - Only include characters that are mentioned in the story — do NOT invent extra people
+- Background people (strangers on street, crowd) are OK, but NO new named characters
 
 RULES:
 - ${numPages} pages, 3-4 panels each (prefer 4)
