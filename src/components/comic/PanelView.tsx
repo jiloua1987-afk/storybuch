@@ -163,22 +163,21 @@ export default function PanelView({ imageUrl, title, panels = [], panelPositions
       onMouseUp={handleMouseUp}
       onMouseLeave={handleMouseUp}
     >
+      {title && (
+        <div className="py-2 text-center bg-[#F5EDE0] border-b border-[#E5D5C8]">
+          <h3 className="text-[#1A1410] tracking-wider text-sm uppercase"
+            style={{ fontFamily: "'Bangers', cursive", letterSpacing: "0.12em" }}>
+            {title}
+          </h3>
+        </div>
+      )}
+      
       <div className="relative">
         {imageUrl ? (
           <img src={imageUrl} alt={title || "Comic page"} className="w-full h-auto block" />
         ) : (
           <div className="w-full aspect-[2/3] bg-gray-100 flex items-center justify-center">
             <p className="text-gray-400 text-sm">Kein Bild</p>
-          </div>
-        )}
-
-        {title && (
-          <div className="absolute top-0 inset-x-0 py-1.5 text-center"
-            style={{ background: "linear-gradient(to bottom, #F5EDE0 50%, transparent)" }}>
-            <h3 className="text-[#1A1410] tracking-wider text-sm uppercase"
-              style={{ fontFamily: "'Bangers', cursive", letterSpacing: "0.12em" }}>
-              {title}
-            </h3>
           </div>
         )}
 
