@@ -159,6 +159,7 @@ export default function PanelView({ imageUrl, title, panels = [], panelPositions
     <div 
       ref={containerRef}
       className="relative w-full bg-[#F5EDE0] rounded-xl overflow-hidden shadow-xl"
+      style={{ maxHeight: "65vh" }}
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
       onMouseLeave={handleMouseUp}

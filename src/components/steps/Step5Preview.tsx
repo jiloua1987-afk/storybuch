@@ -9,7 +9,7 @@ import toast from "react-hot-toast";
 // ── Cover with CSS title overlay ─────────────────────────────────────────────
 function CoverView({ imageUrl, title, subtitle }: { imageUrl?: string; title: string; subtitle?: string }) {
   return (
-    <div className="relative w-full max-w-2xl mx-auto overflow-hidden rounded-xl" style={{ aspectRatio: "1024/1792" }}>
+    <div className="relative w-full mx-auto overflow-hidden rounded-xl" style={{ aspectRatio: "1024/1792", maxHeight: "65vh" }}>
       {imageUrl ? (
         <img src={imageUrl} alt="Cover" className="w-full h-full object-cover" />
       ) : (
@@ -39,8 +39,8 @@ function CoverView({ imageUrl, title, subtitle }: { imageUrl?: string; title: st
 // ── Ending page — pure CSS/HTML, no image ────────────────────────────────────
 function EndingView({ endingText, dedication, dedicationFrom }: { endingText: string; dedication?: string; dedicationFrom?: string }) {
   return (
-    <div className="w-full max-w-2xl mx-auto bg-[#FDF8F2] rounded-xl overflow-hidden border border-[#E8D9C0] shadow-lg"
-      style={{ aspectRatio: "1024/1536" }}>
+    <div className="w-full mx-auto bg-[#FDF8F2] rounded-xl overflow-hidden border border-[#E8D9C0] shadow-lg"
+      style={{ aspectRatio: "1024/1536", maxHeight: "65vh" }}>
       <div className="flex flex-col items-center justify-center h-full px-8 py-12 text-center">
         <p className="text-[#C9963A] text-xs tracking-[0.3em] uppercase mb-2"
           style={{ fontFamily: "'Playfair Display', Georgia, serif" }}>
