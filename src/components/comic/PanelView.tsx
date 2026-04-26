@@ -27,13 +27,29 @@ interface PanelViewProps {
 function getBubbleStyle(type?: string | null) {
   switch (type) {
     case "shout":
-      return { bg: "bg-[#FFFDE8] border-[2.5px] border-[#1A1410]", radius: "rounded-sm" };
+      return { 
+        bg: "bg-[#FFFDE8] border-[3px] border-[#1A1410]", 
+        radius: "rounded-sm",
+        filter: "drop-shadow(2px 2px 0px rgba(26,20,16,0.3))"
+      };
     case "thought":
-      return { bg: "bg-white/90 border-2 border-dashed border-[#555]", radius: "rounded-[18px]" };
+      return { 
+        bg: "bg-white/95 border-[2.5px] border-dashed border-[#333]", 
+        radius: "rounded-[20px]",
+        filter: "drop-shadow(1px 2px 0px rgba(0,0,0,0.15))"
+      };
     case "caption":
-      return { bg: "bg-[#2d1b4e]/90", radius: "rounded-md" };
+      return { 
+        bg: "bg-[#2d1b4e]/90", 
+        radius: "rounded-md",
+        filter: "none"
+      };
     default:
-      return { bg: "bg-white border-2 border-[#1A1410]", radius: "rounded-[16px]" };
+      return { 
+        bg: "bg-[#FFFEF8] border-[3px] border-[#1A1410]", 
+        radius: "rounded-[12px]",
+        filter: "drop-shadow(2px 2px 0px rgba(26,20,16,0.25))"
+      };
   }
 }
 
@@ -178,7 +194,7 @@ export default function PanelView({ imageUrl, title, panels = [], panelPositions
           const dialog = getDialog(panel, i);
           const isEditing = editingIndex === i;
           const posStyle = getFinalPosition(i);
-          const { bg, radius } = getBubbleStyle(panel.bubble_type);
+          const { bg, radius, filter } = getBubbleStyle(panel.bubble_type);
           const isCaption = panel.bubble_type === "caption";
           const hasTail = !isCaption && panel.bubble_type !== "thought" && panel.bubble_type !== "whisper";
           const isDragging = dragging === i;
@@ -205,15 +221,21 @@ export default function PanelView({ imageUrl, title, panels = [], panelPositions
                 <div className="relative">
                   <div
                     onClick={() => setEditingIndex(i)}
-                    className={`${bg} ${radius} px-2.5 py-1 cursor-pointer hover:scale-[1.03] transition-transform ${isDragging ? 'scale-105 shadow-lg' : ''}`}
+                    className={`${bg} ${radius} px-3 py-2 cursor-pointer hover:scale-[1.02] transition-transform ${isDragging ? 'scale-105 shadow-lg' : ''}`}
                     style={{ 
-                      boxShadow: isCaption ? "none" : "1px 2px 0px rgba(26,20,16,0.25)",
-                      minWidth: dialog.length < 20 ? "80px" : dialog.length < 40 ? "120px" : "160px",
-                      maxWidth: "200px"
+                      filter,
+                      minWidth: dialog.length < 20 ? "90px" : dialog.length < 40 ? "140px" : "180px",
+                      maxWidth: "220px",
+                      borderRadius: "12px 14px 11px 13px", // Leicht unregelmäßig
                     }}
                   >
                     <p className={`${isCaption ? "text-white" : "text-[#1A1410]"} leading-snug`}
-                      style={{ fontFamily: "'Bangers', cursive", fontSize: "12px", letterSpacing: "0.03em" }}>
+                      style={{ 
+                        fontFamily: "'Comic Neue', 'Bangers', cursive", 
+                        fontSize: "13px", 
+                        letterSpacing: "0.02em",
+                        fontWeight: "500"
+                      }}>
                       {panel.speaker && panel.speaker !== "narrator" && panel.speaker.toLowerCase() !== "null" && (
                         <span className="font-bold">{panel.speaker}: </span>
                       )}
@@ -221,12 +243,13 @@ export default function PanelView({ imageUrl, title, panels = [], panelPositions
                     </p>
                   </div>
                   {hasTail && (
-                    <div className="absolute -bottom-[6px] left-4"
+                    <div className="absolute -bottom-[8px] left-5"
                       style={{
                         width: 0, height: 0,
-                        borderLeft: "6px solid transparent",
+                        borderLeft: "8px solid transparent",
                         borderRight: "6px solid transparent",
-                        borderTop: panel.bubble_type === "shout" ? "8px solid #FFFDE8" : "8px solid white",
+                        borderTop: panel.bubble_type === "shout" ? "10px solid #FFFDE8" : "10px solid #FFFEF8",
+                        filter: "drop-shadow(1px 1px 0px rgba(26,20,16,0.3))"
                       }}
                     />
                   )}
