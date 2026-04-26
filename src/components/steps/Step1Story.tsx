@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useBookStore, ComicStyle, DialogMode, CustomDialog } from "@/store/bookStore";
 import Button from "@/components/ui/Button";
@@ -65,6 +65,7 @@ interface Moment { id: string; title: string; description: string; }
 
 export default function Step1Story() {
   const { setStep, setProject } = useBookStore();
+  const containerRef = useRef<HTMLDivElement>(null);
   const [mode, setMode]             = useState<"frei" | "gefuehrt">("gefuehrt");
   const [category, setCategory]     = useState<string | null>(null);
   const [comicStyle, setComicStyle] = useState<ComicStyle>("emotional");
@@ -75,6 +76,19 @@ export default function Step1Story() {
   const [dialogMode, setDialogMode] = useState<DialogMode>("auto");
   const [customDialogs, setCustomDialogs] = useState<CustomDialog[]>([{ id: "d1", speaker: "", text: "" }]);
   const [mustHaveSentences, setMustHaveSentences] = useState("");
+
+  // Auto-scroll when user starts typing
+  useEffect(() => {
+    const hasContent = storyInput.trim() || 
+      Object.values(answers).some(v => v.trim()) || 
+      moments.some(m => m.title.trim() || m.description.trim()) ||
+      customDialogs.some(d => d.speaker.trim() || d.text.trim()) ||
+      mustHaveSentences.trim();
+
+    if (hasContent && containerRef.current) {
+      containerRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }, [storyInput, answers, moments, customDialogs, mustHaveSentences]);
 
   const addDialog = () =>
     setCustomDialogs((prev) => [...prev, { id: `d${Date.now()}`, speaker: "", text: "" }]);
@@ -133,7 +147,12 @@ export default function Step1Story() {
   };
 
   return (
-    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="max-w-2xl mx-auto space-y-8">
+    <motion.div 
+      ref={containerRef}
+      initial={{ opacity: 0, y: 20 }} 
+      animate={{ opacity: 1, y: 0 }} 
+      className="max-w-2xl mx-auto space-y-8"
+    >
 
       <div className="text-center space-y-2">
         <h2 className="text-3xl font-bold text-brand-800" style={{ fontFamily: "var(--font-display)" }}>

@@ -5,7 +5,7 @@ import { clsx } from "clsx";
 const STEPS = [
   { label: "Geschichte", icon: "✍️" },
   { label: "Bilder", icon: "📸" },
-  { label: "Stil", icon: "🎨" },
+  { label: "Widmung", icon: "💌" },
   { label: "Generieren", icon: "✨" },
   { label: "Vorschau", icon: "📖" },
   { label: "Bestellen", icon: "🚀" },

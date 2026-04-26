@@ -13,14 +13,12 @@ const LANGUAGES: { id: BookLanguage; flag: string; label: string }[] = [
 
 export default function Step3Style() {
   const { setStep, project, updateProject } = useBookStore();
-  const [bookTitle, setBookTitle]   = useState(project?.title || "");
   const [dedication, setDedication] = useState(project?.dedication || "");
   const [dedicationFrom, setDedicationFrom] = useState(project?.dedicationFrom || "");
   const [language, setLanguage]     = useState<BookLanguage>(project?.language || "de");
 
   const handleNext = () => {
     updateProject({
-      title: bookTitle || "Mein persönlicher Comic",
       dedication,
       dedicationFrom,
       language,
@@ -36,23 +34,12 @@ export default function Step3Style() {
     >
       <div className="text-center space-y-2">
         <h2 className="text-3xl font-bold text-brand-800" style={{ fontFamily: "var(--font-display)" }}>
-          Gestalte deinen Comic 🎨
+          Widmung & Details 💌
         </h2>
         <p className="text-gray-500">Noch ein paar letzte Details – dann geht's los.</p>
       </div>
 
-      {/* 1. Titel */}
-      <div className="space-y-2">
-        <label className="text-sm font-semibold text-brand-700">📚 Titel</label>
-        <input
-          value={bookTitle}
-          onChange={(e) => setBookTitle(e.target.value)}
-          placeholder="z. B. Unser Sommer auf Sardinien"
-          className="w-full p-3 rounded-xl border-2 border-brand-100 focus:border-brand-400 focus:outline-none text-gray-700 bg-white text-lg transition-all"
-        />
-      </div>
-
-      {/* 2. Widmung */}
+      {/* 1. Widmung */}
       <div className="space-y-2">
         <label className="text-sm font-semibold text-brand-700">
           💌 Widmung <span className="font-normal text-gray-400">(optional)</span>
@@ -73,7 +60,7 @@ export default function Step3Style() {
         <p className="text-xs text-gray-400">Erscheint auf der letzten Seite deines Comics.</p>
       </div>
 
-      {/* 7. Sprache */}
+      {/* Sprache */}
       <div className="space-y-3">
         <label className="text-sm font-semibold text-brand-700">🌍 Sprache</label>
         <div className="flex gap-2 flex-wrap">
