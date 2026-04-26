@@ -26,7 +26,7 @@ async function analyzePhoto(base64: string, name: string): Promise<string> {
 export async function POST(req: NextRequest) {
   try {
     const { storyInput, guidedAnswers, tone, comicStyle, mustHaveSentences,
-      language, category, numPages = 4, referenceImages = [] } = await req.json();
+      language, category, numPages = 5, referenceImages = [] } = await req.json();
 
     const [pages, rawCharacters] = await Promise.all([
       buildComicStructure(storyInput || "", guidedAnswers || {}, tone || "humorvoll",

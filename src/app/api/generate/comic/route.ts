@@ -8,7 +8,7 @@ export async function POST(req: NextRequest) {
     const {
       storyInput, guidedAnswers, tone, comicStyle,
       mustHaveSentences, language, illustrationStyle,
-      category = "familie", numPages = 4,
+      category = "familie", numPages = 5,
     } = await req.json();
 
     if (!storyInput && !Object.values(guidedAnswers || {}).some((v: any) => v)) {

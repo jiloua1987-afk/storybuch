@@ -60,7 +60,7 @@ export async function POST(req: NextRequest) {
   const {
     storyInput, guidedAnswers, tone, comicStyle,
     mustHaveSentences, language, illustrationStyle,
-    category = "familie", numPages = 4,
+    category = "familie", numPages = 5,
     referenceImages = [],
   } = body;
 

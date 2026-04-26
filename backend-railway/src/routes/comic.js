@@ -47,7 +47,7 @@ const COMIC_STYLE_MOD = {
 router.post("/structure", async (req, res) => {
   try {
     const { storyInput, guidedAnswers = {}, tone, comicStyle, mustHaveSentences,
-      language, category, numPages = 4, referenceImages = [] } = req.body;
+      language, category, numPages = 5, referenceImages = [] } = req.body;
 
     const langMap = { de: "German", en: "English", fr: "French", es: "Spanish" };
     const lang = langMap[language] || "German";
@@ -218,7 +218,8 @@ STYLE RULES:
 - No meta-language, no prompt engineering jargon
 - Write naturally, like describing a scene to an artist
 - Each panel: max 1 sentence, purely what is VISIBLE
-- Emphasize variety: close-ups, wide shots, different actions, different angles`,
+- Emphasize variety: close-ups, wide shots, different actions, different angles
+- CRITICAL: End with "NO text, NO speech bubbles, NO letters in image"`,
         }, {
           role: "user",
           content: `${panelCount} panels in a ${layoutDesc}. Category: ${category}, style: ${comicStyle}.
@@ -247,7 +248,7 @@ Characters (keep identical in every panel with recognizable faces): ${characters
 ${page.panels.map(p => `Panel ${p.nummer}: ${p.szene}`).join("\n")}
 ${page.location ? `\nSetting: ${page.location}.` : ""}${page.timeOfDay ? ` ${page.timeOfDay} lighting.` : ""}
 
-Style: crisp black ink outlines, ${style}, expressive faces with clear features, bold panel borders, professional graphic novel quality. No watercolor. No soft blur. No text in image.`;
+Style: crisp black ink outlines, ${style}, expressive faces with clear features, bold panel borders, professional graphic novel quality. No watercolor. No soft blur. CRITICAL: NO text, NO speech bubbles, NO letters in the generated image.`;
     }
 
     console.log(`Generating page "${page.title}" (${panelCount} panels)`);

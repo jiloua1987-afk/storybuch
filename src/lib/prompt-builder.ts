@@ -73,7 +73,7 @@ CRITICAL: Sharp, detailed facial features with clearly defined eyes, nose, mouth
 ${charBlock ? `Characters (keep identical in every panel with recognizable faces): ${charBlock}\n` : ""}${panelDescs}
 ${location ? `\nSetting: ${location}.` : ""}${timeOfDay ? ` ${timeOfDay} lighting.` : ""}
 
-Style: varied camera angles (close-ups, wide shots, over-shoulder views), ${style}, expressive faces with clear features, soft panel borders, professional graphic novel quality. Mix perspectives: not all close-ups, include establishing shots. No watercolor. No soft blur. No text in image.`;
+Style: varied camera angles (close-ups, wide shots, over-shoulder views), ${style}, expressive faces with clear features, soft panel borders, professional graphic novel quality. Mix perspectives: not all close-ups, include establishing shots. No watercolor. No soft blur. CRITICAL: NO text, NO speech bubbles, NO letters in the generated image — text will be added separately.`;
 }
 
 // ══════════════════════════════════════════════════════════════════════════════

@@ -175,7 +175,6 @@ export default function PanelView({ imageUrl, title, panels = [], panelPositions
     <div 
       ref={containerRef}
       className="relative w-full bg-[#F5EDE0] rounded-xl overflow-hidden shadow-xl"
-      style={{ maxHeight: "70vh" }}
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
       onMouseLeave={handleMouseUp}
@@ -221,12 +220,12 @@ export default function PanelView({ imageUrl, title, panels = [], panelPositions
                 <div className="relative">
                   <div
                     onClick={() => setEditingIndex(i)}
-                    className={`${bg} ${radius} px-3 py-2 cursor-pointer hover:scale-[1.02] transition-transform ${isDragging ? 'scale-105 shadow-lg' : ''}`}
+                    className={`${bg} px-3 py-2 cursor-pointer hover:scale-[1.02] transition-transform ${isDragging ? 'scale-105 shadow-lg' : ''}`}
                     style={{ 
                       filter,
                       minWidth: dialog.length < 20 ? "90px" : dialog.length < 40 ? "140px" : "180px",
                       maxWidth: "220px",
-                      borderRadius: "12px 14px 11px 13px", // Leicht unregelmäßig
+                      borderRadius: `${11 + Math.random() * 3}px ${13 + Math.random() * 3}px ${12 + Math.random() * 2}px ${14 + Math.random() * 2}px`,
                     }}
                   >
                     <p className={`${isCaption ? "text-white" : "text-[#1A1410]"} leading-snug`}

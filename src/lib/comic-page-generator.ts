@@ -128,6 +128,7 @@ STYLE RULES:
 - Write naturally, like describing a scene to an artist
 - Each panel: max 1 sentence, purely what is VISIBLE
 - Convert emotions into expressions and body language
+- CRITICAL: End with "NO text, NO speech bubbles, NO letters in image"
 - Emphasize variety: close-ups, wide shots, different actions, different angles`,
       }, {
         role: "user",
