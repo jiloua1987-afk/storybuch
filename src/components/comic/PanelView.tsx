@@ -28,13 +28,13 @@ function getBubbleStyle(type?: string | null) {
   switch (type) {
     case "shout":
       return { 
-        bg: "bg-[#FFFDE8] border-[3px] border-[#1A1410]", 
+        bg: "bg-[#FFFDE8] border border-[#1A1410]", 
         radius: "rounded-sm",
         filter: "drop-shadow(2px 2px 0px rgba(26,20,16,0.3))"
       };
     case "thought":
       return { 
-        bg: "bg-white/95 border-[2.5px] border-dashed border-[#333]", 
+        bg: "bg-white/95 border border-dashed border-[#333]", 
         radius: "rounded-[20px]",
         filter: "drop-shadow(1px 2px 0px rgba(0,0,0,0.15))"
       };
@@ -46,7 +46,7 @@ function getBubbleStyle(type?: string | null) {
       };
     default:
       return { 
-        bg: "bg-[#FFFEF8] border-[3px] border-[#1A1410]", 
+        bg: "bg-[#FFFEF8] border border-[#1A1410]", 
         radius: "rounded-[12px]",
         filter: "drop-shadow(2px 2px 0px rgba(26,20,16,0.25))"
       };
@@ -175,7 +175,7 @@ export default function PanelView({ imageUrl, title, panels = [], panelPositions
     <div 
       ref={containerRef}
       className="relative w-full bg-[#F5EDE0] rounded-xl overflow-hidden shadow-xl"
-      style={{ maxHeight: "65vh" }}
+      style={{ maxHeight: "70vh" }}
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
       onMouseLeave={handleMouseUp}
