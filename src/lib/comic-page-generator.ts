@@ -118,7 +118,9 @@ OUTPUT STRUCTURE (exactly this, nothing else):
 CRITICAL RULES FOR SHARP FACES:
 - ALWAYS include: "Sharp, detailed facial features with clearly defined eyes, nose, mouth, and expressions"
 - ALWAYS include: "Each panel shows a COMPLETELY DIFFERENT scene, angle, and moment"
+- ALWAYS include: "Maximum 2-4 people per panel with visible faces — avoid large crowds"
 - For characters: mention "recognizable face" or "distinct facial features"
+- For crowd scenes: "Background people as silhouettes or out of focus"
 - Total output: max 130 words
 
 STYLE RULES:

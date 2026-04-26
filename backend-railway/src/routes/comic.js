@@ -209,7 +209,9 @@ OUTPUT STRUCTURE (exactly this, nothing else):
 CRITICAL RULES FOR SHARP FACES:
 - ALWAYS include: "Sharp, detailed facial features with clearly defined eyes, nose, mouth, and expressions"
 - ALWAYS include: "Each panel shows a COMPLETELY DIFFERENT scene, angle, and moment"
+- ALWAYS include: "Maximum 2-4 people per panel with visible faces — avoid large crowds"
 - For characters: mention "recognizable face" or "distinct facial features"
+- For crowd scenes: "Background people as silhouettes or out of focus"
 - Total output: max 130 words
 
 STYLE RULES:
@@ -242,13 +244,13 @@ ${panelList}`,
     if (!imagePrompt) {
       imagePrompt = `Create a premium European comic book page with ${panelCount} panels in a ${layoutDesc}. 
 
-CRITICAL: Sharp, detailed facial features with clearly defined eyes, nose, mouth, and expressions. Each panel shows a COMPLETELY DIFFERENT scene, angle, and moment — no duplicates, no similar compositions.
+CRITICAL: Sharp, detailed facial features with clearly defined eyes, nose, mouth, and expressions. Maximum 2-4 people per panel with visible faces. Each panel shows a COMPLETELY DIFFERENT scene, angle, and moment — no duplicates, no similar compositions.
 
 Characters (keep identical in every panel with recognizable faces): ${characters.map(c => `${c.name}: ${c.visual_anchor}`).join(". ")}
 ${page.panels.map(p => `Panel ${p.nummer}: ${p.szene}`).join("\n")}
 ${page.location ? `\nSetting: ${page.location}.` : ""}${page.timeOfDay ? ` ${page.timeOfDay} lighting.` : ""}
 
-Style: crisp black ink outlines, ${style}, expressive faces with clear features, bold panel borders, professional graphic novel quality. No watercolor. No soft blur. CRITICAL: NO text, NO speech bubbles, NO letters in the generated image.`;
+Style: crisp black ink outlines, ${style}, expressive faces with clear features, bold panel borders, professional graphic novel quality. For crowd scenes: background people as silhouettes or out of focus. No watercolor. No soft blur. CRITICAL: NO text, NO speech bubbles, NO letters in the generated image.`;
     }
 
     console.log(`Generating page "${page.title}" (${panelCount} panels)`);

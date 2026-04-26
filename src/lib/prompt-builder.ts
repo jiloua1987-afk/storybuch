@@ -68,12 +68,12 @@ export function buildComicPagePrompt(input: PagePromptInput): string {
   // Short, focused prompt — quality instruction FIRST, then content
   return `Create a premium European comic book page with ${panelCount} panels in a ${layoutDesc}. 
 
-CRITICAL: Sharp, detailed facial features with clearly defined eyes, nose, mouth, and expressions. Each panel shows a COMPLETELY DIFFERENT scene, angle, and moment — no duplicates, no similar compositions.
+CRITICAL: Sharp, detailed facial features with clearly defined eyes, nose, mouth, and expressions. Maximum 2-4 people per panel with visible faces. Each panel shows a COMPLETELY DIFFERENT scene, angle, and moment — no duplicates, no similar compositions.
 
 ${charBlock ? `Characters (keep identical in every panel with recognizable faces): ${charBlock}\n` : ""}${panelDescs}
 ${location ? `\nSetting: ${location}.` : ""}${timeOfDay ? ` ${timeOfDay} lighting.` : ""}
 
-Style: varied camera angles (close-ups, wide shots, over-shoulder views), ${style}, expressive faces with clear features, soft panel borders, professional graphic novel quality. Mix perspectives: not all close-ups, include establishing shots. No watercolor. No soft blur. CRITICAL: NO text, NO speech bubbles, NO letters in the generated image — text will be added separately.`;
+Style: varied camera angles (close-ups, wide shots, over-shoulder views), ${style}, expressive faces with clear features, soft panel borders, professional graphic novel quality. Mix perspectives: not all close-ups, include establishing shots. For crowd scenes: background people as silhouettes or slightly out of focus. No watercolor. No soft blur. CRITICAL: NO text, NO speech bubbles, NO letters in the generated image — text will be added separately.`;
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -145,6 +145,8 @@ CRITICAL — VARIETY:
 - Vary: close-up face, wide group shot, action moment, quiet detail, over-shoulder view
 - Only include characters that are mentioned in the story — do NOT invent extra people
 - Background people (strangers on street, crowd) are OK, but NO new named characters
+- AVOID large crowd scenes with 10+ people — prefer intimate moments with 2-4 people per panel
+- For party/celebration scenes: focus on main characters, show crowd as background silhouettes
 
 RULES:
 - ${numPages} pages, 3-4 panels each (prefer 4)
