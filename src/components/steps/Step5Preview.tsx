@@ -9,7 +9,7 @@ import toast from "react-hot-toast";
 // ── Cover with CSS title overlay ─────────────────────────────────────────────
 function CoverView({ imageUrl, title, subtitle }: { imageUrl?: string; title: string; subtitle?: string }) {
   return (
-    <div className="relative w-full max-w-sm mx-auto overflow-hidden rounded-xl" style={{ aspectRatio: "1024/1792" }}>
+    <div className="relative w-full max-w-2xl mx-auto overflow-hidden rounded-xl" style={{ aspectRatio: "1024/1792" }}>
       {imageUrl ? (
         <img src={imageUrl} alt="Cover" className="w-full h-full object-cover" />
       ) : (
@@ -39,7 +39,7 @@ function CoverView({ imageUrl, title, subtitle }: { imageUrl?: string; title: st
 // ── Ending page — pure CSS/HTML, no image ────────────────────────────────────
 function EndingView({ endingText, dedication, dedicationFrom }: { endingText: string; dedication?: string; dedicationFrom?: string }) {
   return (
-    <div className="w-full max-w-sm mx-auto bg-[#FDF8F2] rounded-xl overflow-hidden border border-[#E8D9C0] shadow-lg"
+    <div className="w-full max-w-2xl mx-auto bg-[#FDF8F2] rounded-xl overflow-hidden border border-[#E8D9C0] shadow-lg"
       style={{ aspectRatio: "1024/1536" }}>
       <div className="flex flex-col items-center justify-center h-full px-8 py-12 text-center">
         <p className="text-[#C9963A] text-xs tracking-[0.3em] uppercase mb-2"
@@ -111,7 +111,7 @@ export default function Step5Preview() {
   const pageLabel = isCover ? "Cover" : isEnding ? "Abschluss" : `Seite ${currentPage + 1} von ${total}`;
 
   return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="max-w-3xl mx-auto space-y-6">
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="max-w-5xl mx-auto space-y-6">
       <div className="text-center space-y-1">
         <h2 className="font-display text-3xl font-semibold text-[#1f1a2e]">{project.title}</h2>
         <p className="text-gray-400 text-sm">{pageLabel}</p>
