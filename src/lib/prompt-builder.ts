@@ -66,7 +66,7 @@ export function buildComicPagePrompt(input: PagePromptInput): string {
     .join("\n");
 
   // Short, focused prompt — quality instruction FIRST, then content
-  return `Create a premium European comic book page with ${panelCount} panels in a ${layoutDesc}. Each panel shows a different scene — no duplicates, no cropping.
+  return `Create a premium European comic book page with ${panelCount} panels in a ${layoutDesc}. CRITICAL: Each panel shows a COMPLETELY DIFFERENT scene, angle, and moment — no duplicates, no similar compositions.
 
 ${charBlock ? `Characters (keep identical in every panel): ${charBlock}\n` : ""}${panelDescs}
 ${location ? `\nSetting: ${location}.` : ""}${timeOfDay ? ` ${timeOfDay} lighting.` : ""}

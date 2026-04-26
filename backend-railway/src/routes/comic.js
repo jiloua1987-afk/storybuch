@@ -191,13 +191,15 @@ OUTPUT STRUCTURE (exactly this, nothing else):
 3. Panel breakdown: one short visual sentence per panel
 4. One style tail: short style keywords + negatives
 
-RULES:
+CRITICAL RULES:
 - Total output: max 120 words
+- ALWAYS include: "Each panel shows a COMPLETELY DIFFERENT scene, angle, and moment"
 - No block headers (no "QUALITY:", "STYLE:", "LAYOUT:" etc.)
 - No redundant synonyms
 - No meta-language, no prompt engineering jargon
 - Write naturally, like describing a scene to an artist
-- Each panel: max 1 sentence, purely what is VISIBLE`,
+- Each panel: max 1 sentence, purely what is VISIBLE
+- Emphasize variety: close-ups, wide shots, different actions, different angles`,
         }, {
           role: "user",
           content: `${panelCount} panels in a ${layoutDesc}. Category: ${category}, style: ${comicStyle}.
