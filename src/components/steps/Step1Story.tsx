@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useRef } from "react";
+import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useBookStore, ComicStyle, DialogMode, CustomDialog } from "@/store/bookStore";
 import Button from "@/components/ui/Button";
@@ -65,7 +65,6 @@ interface Moment { id: string; title: string; description: string; }
 
 export default function Step1Story() {
   const { setStep, setProject } = useBookStore();
-  const containerRef = useRef<HTMLDivElement>(null);
   const [mode, setMode]             = useState<"frei" | "gefuehrt">("gefuehrt");
   const [category, setCategory]     = useState<string | null>(null);
   const [comicStyle, setComicStyle] = useState<ComicStyle>("emotional");
@@ -76,19 +75,6 @@ export default function Step1Story() {
   const [dialogMode, setDialogMode] = useState<DialogMode>("auto");
   const [customDialogs, setCustomDialogs] = useState<CustomDialog[]>([{ id: "d1", speaker: "", text: "" }]);
   const [mustHaveSentences, setMustHaveSentences] = useState("");
-
-  // Auto-scroll when user starts typing
-  useEffect(() => {
-    const hasContent = storyInput.trim() || 
-      Object.values(answers).some(v => v.trim()) || 
-      moments.some(m => m.title.trim() || m.description.trim()) ||
-      customDialogs.some(d => d.speaker.trim() || d.text.trim()) ||
-      mustHaveSentences.trim();
-
-    if (hasContent && containerRef.current) {
-      containerRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
-    }
-  }, [storyInput, answers, moments, customDialogs, mustHaveSentences]);
 
   const addDialog = () =>
     setCustomDialogs((prev) => [...prev, { id: `d${Date.now()}`, speaker: "", text: "" }]);
@@ -120,6 +106,20 @@ export default function Step1Story() {
       .map((m) => `${m.title}: ${m.description}`)
       .join(" | ");
 
+    // Tone mapping: im geführten Modus aus Kategorie, im Freitext aus comicStyle
+    let finalTone = "humorvoll";
+    if (mode === "gefuehrt" && selectedCat) {
+      finalTone = selectedCat.tone;
+    } else if (mode === "frei") {
+      // Im Freitext: tone aus comicStyle ableiten
+      const styleToTone: Record<ComicStyle, string> = {
+        action: "episch",
+        emotional: "romantisch",
+        humor: "humorvoll",
+      };
+      finalTone = styleToTone[comicStyle] || "humorvoll";
+    }
+
     setProject({
       id: `proj-${Date.now()}`,
       title: comicTitle || "Mein persönlicher Comic",
@@ -130,9 +130,9 @@ export default function Step1Story() {
         characters: answers.personen || "",
         location: answers.ort || "",
         timeframe: answers.zeitraum || "",
-        category: category || "familie",
+        category: category || "sonstiges",
       },
-      tone: (selectedCat?.tone as any) || "kindgerecht",
+      tone: finalTone as any,
       comicStyle,
       dialogMode,
       customDialogs: dialogMode === "custom" ? customDialogs : [],
@@ -147,12 +147,7 @@ export default function Step1Story() {
   };
 
   return (
-    <motion.div 
-      ref={containerRef}
-      initial={{ opacity: 0, y: 20 }} 
-      animate={{ opacity: 1, y: 0 }} 
-      className="max-w-2xl mx-auto space-y-8"
-    >
+    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="max-w-2xl mx-auto space-y-8">
 
       <div className="text-center space-y-2">
         <h2 className="text-3xl font-bold text-brand-800" style={{ fontFamily: "var(--font-display)" }}>
@@ -174,15 +169,48 @@ export default function Step1Story() {
       </div>
 
       {mode === "frei" && (
-        <div className="space-y-3">
-          <textarea
-            value={storyInput}
-            onChange={(e) => setStoryInput(e.target.value)}
-            placeholder="Stichpunkte reichen! z. B.: Toskana, Sommer 2023, Emma 6 Jahre, erster Gelato, Sonnenuntergang."
-            rows={10}
-            className="w-full p-4 rounded-2xl border-2 border-brand-100 focus:border-brand-400 focus:outline-none resize-none text-gray-700 bg-white shadow-sm transition-all"
-          />
-          <p className="text-xs text-gray-400 text-right">{storyInput.length} Zeichen</p>
+        <div className="space-y-6">
+          {/* Titel */}
+          <div className="space-y-2">
+            <label className="text-sm font-semibold text-brand-700">📚 Titel deines Comics</label>
+            <input
+              value={comicTitle}
+              onChange={(e) => setComicTitle(e.target.value)}
+              placeholder="z. B. Unser Sommer auf Sardinien"
+              className="w-full p-3 rounded-xl border-2 border-brand-100 focus:border-brand-400 focus:outline-none text-gray-700 bg-white transition-all"
+            />
+          </div>
+
+          {/* Comic-Stil */}
+          <div className="space-y-3">
+            <label className="text-sm font-semibold text-brand-700">🎨 Comic-Stil</label>
+            <div className="grid grid-cols-3 gap-3">
+              {COMIC_STYLES.map((cs) => (
+                <button
+                  key={cs.id}
+                  onClick={() => setComicStyle(cs.id)}
+                  className={`p-4 rounded-2xl border-2 text-center transition-all space-y-1 ${comicStyle === cs.id ? "border-brand-400 bg-brand-50 shadow-md" : "border-gray-100 bg-white hover:border-brand-200"}`}
+                >
+                  <div className="text-2xl">{cs.emoji}</div>
+                  <div className="text-xs font-semibold text-brand-800">{cs.label}</div>
+                  <div className="text-xs text-gray-400 leading-snug">{cs.desc}</div>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Freitext */}
+          <div className="space-y-3">
+            <label className="text-sm font-semibold text-brand-700">✍️ Deine Geschichte</label>
+            <textarea
+              value={storyInput}
+              onChange={(e) => setStoryInput(e.target.value)}
+              placeholder="Stichpunkte reichen! z. B.: Toskana, Sommer 2023, Emma 6 Jahre, erster Gelato, Sonnenuntergang am Strand, Papa hat Pizza verbrannt, Mama hat gelacht..."
+              rows={12}
+              className="w-full p-4 rounded-2xl border-2 border-brand-100 focus:border-brand-400 focus:outline-none resize-none text-gray-700 bg-white shadow-sm transition-all"
+            />
+            <p className="text-xs text-gray-400 text-right">{storyInput.length} Zeichen</p>
+          </div>
         </div>
       )}
 
