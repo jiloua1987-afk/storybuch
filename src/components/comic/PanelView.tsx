@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useRef } from "react";
 
 interface PanelData {
   dialog?: string;
@@ -83,6 +83,10 @@ function getDetectedPosition(panelIndex: number, positions: PanelPosition[]): Re
 export default function PanelView({ imageUrl, title, panels = [], panelPositions, pageNumber }: PanelViewProps) {
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [editedDialogs, setEditedDialogs] = useState<Record<number, string>>({});
+  const [dragPositions, setDragPositions] = useState<Record<number, { top: number; left: number }>>({});
+  const [dragging, setDragging] = useState<number | null>(null);
+  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+  const containerRef = useRef<HTMLDivElement>(null);
 
   const isValidDialog = (d?: string | null) =>
     d && d.trim().length > 0 && d.trim().toLowerCase() !== "null";
@@ -99,8 +103,66 @@ export default function PanelView({ imageUrl, title, panels = [], panelPositions
 
   const hasDetectedPositions = panelPositions && panelPositions.length > 0;
 
+  // Drag & Drop Functions
+  const handleMouseDown = (e: React.MouseEvent, index: number) => {
+    if (editingIndex !== null) return;
+    e.preventDefault();
+    setDragging(index);
+    const rect = e.currentTarget.getBoundingClientRect();
+    const containerRect = containerRef.current?.getBoundingClientRect();
+    if (containerRect) {
+      setDragOffset({
+        x: e.clientX - rect.left,
+        y: e.clientY - rect.top
+      });
+    }
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (dragging === null || !containerRef.current) return;
+    e.preventDefault();
+    const containerRect = containerRef.current.getBoundingClientRect();
+    const newLeft = ((e.clientX - containerRect.left - dragOffset.x) / containerRect.width) * 100;
+    const newTop = ((e.clientY - containerRect.top - dragOffset.y) / containerRect.height) * 100;
+    
+    setDragPositions(prev => ({
+      ...prev,
+      [dragging]: {
+        left: Math.max(0, Math.min(70, newLeft)),
+        top: Math.max(0, Math.min(90, newTop))
+      }
+    }));
+  };
+
+  const handleMouseUp = () => {
+    setDragging(null);
+  };
+
+  const getFinalPosition = (panelIndex: number): React.CSSProperties => {
+    const dragPos = dragPositions[panelIndex];
+    if (dragPos) {
+      return {
+        position: "absolute",
+        top: `${dragPos.top}%`,
+        left: `${dragPos.left}%`,
+        maxWidth: "38%",
+        zIndex: 10,
+      };
+    }
+    
+    return hasDetectedPositions
+      ? getDetectedPosition(panelIndex, panelPositions!)
+      : getFallbackPosition(panelIndex, panels.length);
+  };
+
   return (
-    <div className="relative w-full bg-[#F5EDE0] rounded-xl overflow-hidden shadow-xl">
+    <div 
+      ref={containerRef}
+      className="relative w-full bg-[#F5EDE0] rounded-xl overflow-hidden shadow-xl"
+      onMouseMove={handleMouseMove}
+      onMouseUp={handleMouseUp}
+      onMouseLeave={handleMouseUp}
+    >
       <div className="relative">
         {imageUrl ? (
           <img src={imageUrl} alt={title || "Comic page"} className="w-full h-auto block" />
@@ -124,15 +186,19 @@ export default function PanelView({ imageUrl, title, panels = [], panelPositions
           const i = panel.originalIndex;
           const dialog = getDialog(panel, i);
           const isEditing = editingIndex === i;
-          const posStyle = hasDetectedPositions
-            ? getDetectedPosition(i, panelPositions!)
-            : getFallbackPosition(i, panels.length);
+          const posStyle = getFinalPosition(i);
           const { bg, radius } = getBubbleStyle(panel.bubble_type);
           const isCaption = panel.bubble_type === "caption";
           const hasTail = !isCaption && panel.bubble_type !== "thought" && panel.bubble_type !== "whisper";
+          const isDragging = dragging === i;
 
           return (
-            <div key={i} style={posStyle} className="group">
+            <div 
+              key={i} 
+              style={posStyle} 
+              className={`group ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
+              onMouseDown={(e) => handleMouseDown(e, i)}
+            >
               {isEditing ? (
                 <textarea
                   autoFocus
@@ -148,7 +214,7 @@ export default function PanelView({ imageUrl, title, panels = [], panelPositions
                 <div className="relative">
                   <div
                     onClick={() => setEditingIndex(i)}
-                    className={`${bg} ${radius} px-2.5 py-1 cursor-pointer hover:scale-[1.03] transition-transform`}
+                    className={`${bg} ${radius} px-2.5 py-1 cursor-pointer hover:scale-[1.03] transition-transform ${isDragging ? 'scale-105 shadow-lg' : ''}`}
                     style={{ boxShadow: isCaption ? "none" : "1px 2px 0px rgba(26,20,16,0.25)" }}
                   >
                     <p className={`${isCaption ? "text-white" : "text-[#1A1410]"} leading-snug`}
