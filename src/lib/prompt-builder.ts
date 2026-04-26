@@ -66,12 +66,14 @@ export function buildComicPagePrompt(input: PagePromptInput): string {
     .join("\n");
 
   // Short, focused prompt — quality instruction FIRST, then content
-  return `Create a premium European comic book page with ${panelCount} panels in a ${layoutDesc}. CRITICAL: Each panel shows a COMPLETELY DIFFERENT scene, angle, and moment — no duplicates, no similar compositions.
+  return `Create a premium European comic book page with ${panelCount} panels in a ${layoutDesc}. 
 
-${charBlock ? `Characters (keep identical in every panel): ${charBlock}\n` : ""}${panelDescs}
+CRITICAL: Sharp, detailed facial features with clearly defined eyes, nose, mouth, and expressions. Each panel shows a COMPLETELY DIFFERENT scene, angle, and moment — no duplicates, no similar compositions.
+
+${charBlock ? `Characters (keep identical in every panel with recognizable faces): ${charBlock}\n` : ""}${panelDescs}
 ${location ? `\nSetting: ${location}.` : ""}${timeOfDay ? ` ${timeOfDay} lighting.` : ""}
 
-Style: varied camera angles (close-ups, wide shots, over-shoulder views), ${style}, expressive faces, soft panel borders, professional graphic novel quality. Mix perspectives: not all close-ups, include establishing shots. No watercolor. No soft blur. No text in image.`;
+Style: varied camera angles (close-ups, wide shots, over-shoulder views), ${style}, expressive faces with clear features, soft panel borders, professional graphic novel quality. Mix perspectives: not all close-ups, include establishing shots. No watercolor. No soft blur. No text in image.`;
 }
 
 // ══════════════════════════════════════════════════════════════════════════════

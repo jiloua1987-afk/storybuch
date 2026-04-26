@@ -77,7 +77,22 @@ Respond ONLY with JSON: {"pages": [{"id":"page1","pageNumber":1,"title":"Title i
       openai.chat.completions.create({
         model: "gpt-4o",
         messages: [
-          { role: "system", content: `Extract main characters. Respond ONLY with JSON: {"characters":[{"name":"Name","age":30,"visual_anchor":"Precise English: age, hair color/style, eye color, skin tone, clothing, features. Max 30 words."}]}` },
+          { role: "system", content: `Extract all main characters from the story. For each character create a DETAILED visual description for sharp, high-quality face generation.
+
+CRITICAL: Descriptions must be detailed enough for gpt-image-1.5 to generate sharp, recognizable faces.
+
+Respond ONLY with JSON:
+{
+  "characters": [
+    {
+      "name": "Character name",
+      "age": 30,
+      "visual_anchor": "DETAILED English description for sharp face generation: exact age, precise hair color/length/style, eye color and shape, skin tone, facial features (jawline, cheekbones, nose shape, smile type), distinctive marks, body type, typical clothing colors. 40-50 words."
+    }
+  ]
+}
+
+Example: "Emma: 6-year-old girl with shoulder-length wavy auburn hair, bright hazel eyes, round face with rosy cheeks, small freckles across nose, warm smile showing front teeth gap, fair skin, petite build, usually wears yellow t-shirt and denim shorts"` },
           { role: "user", content: ctx },
         ],
         response_format: { type: "json_object" },
@@ -191,9 +206,13 @@ OUTPUT STRUCTURE (exactly this, nothing else):
 3. Panel breakdown: one short visual sentence per panel
 4. One style tail: short style keywords + negatives
 
-CRITICAL RULES:
-- Total output: max 120 words
+CRITICAL RULES FOR SHARP FACES:
+- ALWAYS include: "Sharp, detailed facial features with clearly defined eyes, nose, mouth, and expressions"
 - ALWAYS include: "Each panel shows a COMPLETELY DIFFERENT scene, angle, and moment"
+- For characters: mention "recognizable face" or "distinct facial features"
+- Total output: max 130 words
+
+STYLE RULES:
 - No block headers (no "QUALITY:", "STYLE:", "LAYOUT:" etc.)
 - No redundant synonyms
 - No meta-language, no prompt engineering jargon
@@ -220,7 +239,15 @@ ${panelList}`,
     }
     // Fallback prompt
     if (!imagePrompt) {
-      imagePrompt = `Create a premium European comic book page with ${panelCount} panels in a ${layoutDesc}. Each panel shows a different scene — no duplicates, no cropping.\n\nCharacters (keep identical in every panel): ${characters.map(c => `${c.name}: ${c.visual_anchor}`).join(". ")}\n${page.panels.map(p => `Panel ${p.nummer}: ${p.szene}`).join("\n")}\n${page.location ? `\nSetting: ${page.location}.` : ""}${page.timeOfDay ? ` ${page.timeOfDay} lighting.` : ""}\n\nStyle: crisp black ink outlines, ${style}, expressive faces, bold panel borders, professional graphic novel quality. No watercolor. No soft blur. No text in image.`;
+      imagePrompt = `Create a premium European comic book page with ${panelCount} panels in a ${layoutDesc}. 
+
+CRITICAL: Sharp, detailed facial features with clearly defined eyes, nose, mouth, and expressions. Each panel shows a COMPLETELY DIFFERENT scene, angle, and moment — no duplicates, no similar compositions.
+
+Characters (keep identical in every panel with recognizable faces): ${characters.map(c => `${c.name}: ${c.visual_anchor}`).join(". ")}
+${page.panels.map(p => `Panel ${p.nummer}: ${p.szene}`).join("\n")}
+${page.location ? `\nSetting: ${page.location}.` : ""}${page.timeOfDay ? ` ${page.timeOfDay} lighting.` : ""}
+
+Style: crisp black ink outlines, ${style}, expressive faces with clear features, bold panel borders, professional graphic novel quality. No watercolor. No soft blur. No text in image.`;
     }
 
     console.log(`Generating page "${page.title}" (${panelCount} panels)`);

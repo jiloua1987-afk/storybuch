@@ -62,18 +62,22 @@ export async function buildCharacterAnchors(
     messages: [
       {
         role: "system",
-        content: `Extract all main characters from the story. For each character create a precise visual description for image generation.
+        content: `Extract all main characters from the story. For each character create a DETAILED visual description for sharp, high-quality face generation.
+
+CRITICAL: Descriptions must be detailed enough for gpt-image-1.5 to generate sharp, recognizable faces.
+
 Respond ONLY with JSON:
 {
   "characters": [
     {
       "name": "Character name",
       "age": 30,
-      "visual_anchor": "Precise English description: age, hair color and style, eye color, skin tone, clothing colors, distinctive features, body type. Max 30 words."
+      "visual_anchor": "DETAILED English description for sharp face generation: exact age, precise hair color/length/style, eye color and shape, skin tone, facial features (jawline, cheekbones, nose shape, smile type), distinctive marks, body type, typical clothing colors. 40-50 words."
     }
   ]
 }
-Be very specific: 'Emma: 6-year-old girl, shoulder-length red-brown hair, yellow t-shirt, blue shorts, freckles, big brown eyes, caucasian'`,
+
+Example: "Emma: 6-year-old girl with shoulder-length wavy auburn hair, bright hazel eyes, round face with rosy cheeks, small freckles across nose, warm smile showing front teeth gap, fair skin, petite build, usually wears yellow t-shirt and denim shorts"`,
       },
       { role: "user", content: context },
     ],
@@ -111,9 +115,13 @@ OUTPUT STRUCTURE (exactly this, nothing else):
 3. Panel breakdown: one short visual sentence per panel
 4. One style tail: short style keywords + negatives
 
-CRITICAL RULES:
-- Total output: max 120 words
+CRITICAL RULES FOR SHARP FACES:
+- ALWAYS include: "Sharp, detailed facial features with clearly defined eyes, nose, mouth, and expressions"
 - ALWAYS include: "Each panel shows a COMPLETELY DIFFERENT scene, angle, and moment"
+- For characters: mention "recognizable face" or "distinct facial features"
+- Total output: max 130 words
+
+STYLE RULES:
 - No block headers (no "QUALITY:", "STYLE:", "LAYOUT:" etc.)
 - No redundant synonyms (don't say "crisp" AND "clean" AND "sharp" — pick one)
 - No meta-language, no prompt engineering jargon
