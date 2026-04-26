@@ -37,7 +37,7 @@ function CoverView({ imageUrl, title, subtitle }: { imageUrl?: string; title: st
 }
 
 // ── Ending page — pure CSS/HTML, no image ────────────────────────────────────
-function EndingView({ endingText, dedication }: { endingText: string; dedication?: string }) {
+function EndingView({ endingText, dedication, dedicationFrom }: { endingText: string; dedication?: string; dedicationFrom?: string }) {
   return (
     <div className="w-full max-w-sm mx-auto bg-[#FDF8F2] rounded-xl overflow-hidden border border-[#E8D9C0] shadow-lg"
       style={{ aspectRatio: "1024/1536" }}>
@@ -56,6 +56,12 @@ function EndingView({ endingText, dedication }: { endingText: string; dedication
           <p className="text-[#8B7355] text-sm italic"
             style={{ fontFamily: "'Playfair Display', Georgia, serif" }}>
             &ldquo;{dedication}&rdquo;
+          </p>
+        )}
+        {dedicationFrom && (
+          <p className="text-[#8B7355] text-sm mt-4"
+            style={{ fontFamily: "'Playfair Display', Georgia, serif" }}>
+            Von: {dedicationFrom}
           </p>
         )}
         <div className="mt-auto pt-8">
@@ -132,6 +138,7 @@ export default function Step5Preview() {
               <EndingView
                 endingText={project.endingData.endingText}
                 dedication={project.endingData.dedication}
+                dedicationFrom={project.endingData.dedicationFrom}
               />
             ) : page ? (
               <div>

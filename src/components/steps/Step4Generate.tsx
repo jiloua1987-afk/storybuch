@@ -147,12 +147,14 @@ export default function Step4Generate() {
           tone:          project?.tone || "humorvoll",
           language:      project?.language || "de",
           dedication:    project?.guidedAnswers?.dedication || project?.dedication || "",
+          dedicationFrom: project?.dedicationFrom || "",
         });
         if (endData.endingText) {
           updateProject({
             endingData: {
               endingText: endData.endingText,
               dedication: endData.dedication || "",
+              dedicationFrom: endData.dedicationFrom || "",
             },
           });
         }

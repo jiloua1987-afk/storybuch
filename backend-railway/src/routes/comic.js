@@ -361,7 +361,7 @@ Style: crisp ink outlines, vivid saturated colors, expressive faces, professiona
 // Returns ending text as JSON — NO SVG image. Frontend renders via CSS.
 router.post("/ending", async (req, res) => {
   try {
-    const { storyInput, guidedAnswers = {}, tone, language, dedication } = req.body;
+    const { storyInput, guidedAnswers = {}, tone, language, dedication, dedicationFrom } = req.body;
     const langMap = { de: "German", en: "English", fr: "French", es: "Spanish" };
     const lang = langMap[language] || "German";
 
@@ -376,10 +376,11 @@ WICHTIG — Das ist eine WIDMUNG, keine Zusammenfassung!
 - Sprich die Hauptperson DIREKT an (z.B. "Für Dich, liebe Helga...")
 - Erwähne EIN konkretes Detail aus der Geschichte
 - Ton: ${tone || "liebevoll, persönlich, warm"}
-- VERBOTEN: "Liebe Leserinnen", "[Dein Name]", "dieses Buch", "diese Geschichte"
+${dedicationFrom ? `- Ende die Widmung mit: "Von: ${dedicationFrom}"` : '- VERBOTEN: "[Dein Name]", "[Familienmitglied]" als Absender'}
+- VERBOTEN: "Liebe Leserinnen", "dieses Buch", "diese Geschichte"
 - VERBOTEN: Zusammenfassungen der Handlung
 - Schreibe so, als würde ein Familienmitglied die Widmung von Hand schreiben` },
-        { role: "user", content: `Geschichte: ${storyInput || ""}\n${Object.entries(guidedAnswers).filter(([k,v]) => v && k !== "category").map(([k,v]) => `${k}: ${v}`).join("\n")}${dedication ? `\nWidmung vom Nutzer: ${dedication}` : ""}` },
+        { role: "user", content: `Geschichte: ${storyInput || ""}\n${Object.entries(guidedAnswers).filter(([k,v]) => v && k !== "category").map(([k,v]) => `${k}: ${v}`).join("\n")}${dedication ? `\nWidmung vom Nutzer: ${dedication}` : ""}${dedicationFrom ? `\nVon: ${dedicationFrom}` : ""}` },
       ],
       max_tokens: 100, temperature: 0.8,
     });
@@ -388,7 +389,7 @@ WICHTIG — Das ist eine WIDMUNG, keine Zusammenfassung!
     console.log(`✓ Ending text generated (${endingText.length} chars)`);
 
     // Return text as JSON — frontend renders it
-    res.json({ endingText, dedication: dedication || "" });
+    res.json({ endingText, dedication: dedication || "", dedicationFrom: dedicationFrom || "" });
   } catch (err) {
     console.error("Ending error:", err.message);
     res.status(500).json({ error: err.message });
