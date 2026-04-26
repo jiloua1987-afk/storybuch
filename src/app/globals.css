@@ -2,20 +2,37 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Inter:wght@300;400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400&family=DM+Sans:wght@300;400;500;600&display=swap');
+
+:root {
+  --bg-primary:    #FDF8F2;
+  --bg-secondary:  #F5EDE0;
+  --bg-dark:       #1A1410;
+  --text-primary:  #1A1410;
+  --text-secondary:#8B7355;
+  --text-muted:    #B8A89A;
+  --accent:        #C9963A;
+  --accent-light:  #F5E6C8;
+  --border:        #E8D9C0;
+  --border-focus:  #1A1410;
+  --btn-primary-bg:#1A1410;
+  --btn-primary-fg:#FFFFFF;
+  --font-display:  'Playfair Display', Georgia, serif;
+  --font-body:     'DM Sans', system-ui, sans-serif;
+}
 
 * { box-sizing: border-box; }
 html { scroll-behavior: smooth; }
 
 body {
-  font-family: 'Inter', sans-serif;
-  background: #fdfaf7;
-  color: #1f1a2e;
+  font-family: var(--font-body);
+  background: var(--bg-primary);
+  color: var(--text-primary);
   -webkit-font-smoothing: antialiased;
 }
 
 .font-display {
-  font-family: 'Playfair Display', Georgia, serif;
+  font-family: var(--font-display);
 }
 
 .fade-up {
@@ -29,5 +46,5 @@ body {
 }
 
 ::-webkit-scrollbar { width: 5px; }
-::-webkit-scrollbar-track { background: #fdfaf7; }
-::-webkit-scrollbar-thumb { background: #d8b4fe; border-radius: 3px; }
+::-webkit-scrollbar-track { background: var(--bg-primary); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }

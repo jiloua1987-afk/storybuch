@@ -27,17 +27,17 @@ export default function Button({
   fullWidth,
 }: ButtonProps) {
   const base =
-    "inline-flex items-center justify-center gap-2 font-medium rounded-2xl transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2";
+    "inline-flex items-center justify-center gap-2 font-medium rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2";
 
   const variants = {
     primary:
-      "bg-gradient-to-r from-brand-500 to-brand-600 text-white hover:from-brand-600 hover:to-brand-700 focus:ring-brand-400 shadow-lg shadow-brand-200",
+      "bg-[#1A1410] text-white hover:bg-[#2D2620] focus:ring-[#1A1410]",
     secondary:
-      "bg-white text-brand-700 border-2 border-brand-200 hover:border-brand-400 hover:bg-brand-50 focus:ring-brand-300",
+      "bg-white text-[#1A1410] border-2 border-[#E8D9C0] hover:border-[#8B7355] hover:bg-[#F5EDE0] focus:ring-[#E8D9C0]",
     ghost:
-      "bg-transparent text-brand-600 hover:bg-brand-50 focus:ring-brand-300",
+      "bg-transparent text-[#8B7355] hover:bg-[#F5EDE0] focus:ring-[#E8D9C0]",
     danger:
-      "bg-red-500 text-white hover:bg-red-600 focus:ring-red-400 shadow-lg shadow-red-100",
+      "bg-red-500 text-white hover:bg-red-600 focus:ring-red-400",
   };
 
   const sizes = {

@@ -13,9 +13,8 @@ function CoverView({ imageUrl, title, subtitle }: { imageUrl?: string; title: st
       {imageUrl ? (
         <img src={imageUrl} alt="Cover" className="w-full h-full object-cover" />
       ) : (
-        <div className="absolute inset-0 bg-gradient-to-b from-purple-600 to-purple-900" />
+        <div className="absolute inset-0 bg-gradient-to-b from-[#2D2620] to-[#1A1410]" />
       )}
-      {/* Title overlay — CSS only, no sharp */}
       <div className="absolute inset-x-0 bottom-0 h-[40%]"
         style={{ background: "linear-gradient(to bottom, transparent 0%, rgba(10,5,2,0.75) 60%, rgba(10,5,2,0.95) 100%)" }}>
         <div className="absolute inset-x-0 bottom-[15%] text-center px-6">
@@ -48,21 +47,17 @@ function EndingView({ endingText, dedication }: { endingText: string; dedication
           ✦ Widmung ✦
         </p>
         <div className="w-20 h-[2px] bg-[#C9963A] rounded mb-8" />
-
         <p className="text-[#1A1410] text-lg md:text-xl leading-relaxed italic"
           style={{ fontFamily: "'Playfair Display', Georgia, serif" }}>
           {endingText}
         </p>
-
         <div className="w-12 h-[2px] bg-[#C9963A] rounded my-8" />
-
         {dedication && (
           <p className="text-[#8B7355] text-sm italic"
             style={{ fontFamily: "'Playfair Display', Georgia, serif" }}>
             &ldquo;{dedication}&rdquo;
           </p>
         )}
-
         <div className="mt-auto pt-8">
           <div className="w-20 h-[2px] bg-[#C9963A] rounded mb-2" />
           <p className="text-[#C9963A] text-xs tracking-[0.3em] uppercase"
@@ -75,6 +70,7 @@ function EndingView({ endingText, dedication }: { endingText: string; dedication
   );
 }
 
+
 export default function Step5Preview() {
   const { project, setStep, updateChapter } = useBookStore();
   const [currentPage, setCurrentPage] = useState(-1);
@@ -83,11 +79,9 @@ export default function Step5Preview() {
 
   if (!project) return null;
 
-  // Comic pages only (no ending in chapters anymore)
   const comicPages = project.chapters.filter((c) => c.id !== "ending");
   const total = comicPages.length;
   const hasEnding = !!project.endingData?.endingText;
-  // -1 = cover, 0..total-1 = pages, total = ending
   const maxPage = hasEnding ? total : total - 1;
   const isCover = currentPage === -1;
   const isEnding = currentPage === total && hasEnding;
@@ -108,11 +102,7 @@ export default function Step5Preview() {
     toast.success("Seite neu erstellt!");
   };
 
-  const pageLabel = isCover
-    ? "Cover"
-    : isEnding
-    ? "Abschluss"
-    : `Seite ${currentPage + 1} von ${total}`;
+  const pageLabel = isCover ? "Cover" : isEnding ? "Abschluss" : `Seite ${currentPage + 1} von ${total}`;
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="max-w-3xl mx-auto space-y-6">
@@ -121,7 +111,6 @@ export default function Step5Preview() {
         <p className="text-gray-400 text-sm">{pageLabel}</p>
       </div>
 
-      {/* Main Viewer */}
       <div className="relative">
         <AnimatePresence mode="wait" custom={direction}>
           <motion.div
@@ -147,9 +136,9 @@ export default function Step5Preview() {
             ) : page ? (
               <div>
                 {regenerating === page.id ? (
-                  <div className="w-full bg-purple-50 flex flex-col items-center justify-center gap-3 py-20">
+                  <div className="w-full bg-[#F5EDE0] flex flex-col items-center justify-center gap-3 py-20">
                     <div className="text-4xl animate-pulse">🎨</div>
-                    <p className="text-purple-600 font-medium text-sm">Seite wird neu illustriert…</p>
+                    <p className="text-[#8B7355] font-medium text-sm">Seite wird neu illustriert…</p>
                   </div>
                 ) : (
                   <PanelView
@@ -165,7 +154,7 @@ export default function Step5Preview() {
                   <button
                     onClick={() => handleRegen(page.id)}
                     disabled={!!regenerating}
-                    className="text-xs text-purple-500 hover:text-purple-700 border border-purple-200 px-3 py-1.5 rounded-lg hover:bg-purple-50 transition-all disabled:opacity-40"
+                    className="text-xs text-[#C9963A] hover:text-[#A67A28] border border-[#E8D9C0] px-3 py-1.5 rounded-lg hover:bg-[#F5EDE0] transition-all disabled:opacity-40"
                   >
                     Neu illustrieren
                   </button>
@@ -176,56 +165,52 @@ export default function Step5Preview() {
         </AnimatePresence>
       </div>
 
-      {/* Navigation */}
       <div className="flex items-center justify-between">
         <Button variant="secondary" onClick={goPrev} disabled={currentPage === -1} size="sm">← Vorherige</Button>
         <div className="flex gap-2 items-center">
           <button
             onClick={() => setCurrentPage(-1)}
-            className={`rounded-full transition-all ${currentPage === -1 ? "w-6 h-2.5 bg-purple-500" : "w-2.5 h-2.5 bg-purple-200"}`}
+            className={`rounded-full transition-all ${currentPage === -1 ? "w-6 h-2.5 bg-[#C9963A]" : "w-2.5 h-2.5 bg-[#E8D9C0]"}`}
           />
           {comicPages.map((_, i) => (
             <button
               key={i}
               onClick={() => setCurrentPage(i)}
-              className={`rounded-full transition-all ${i === currentPage ? "w-6 h-2.5 bg-purple-500" : "w-2.5 h-2.5 bg-purple-200"}`}
+              className={`rounded-full transition-all ${i === currentPage ? "w-6 h-2.5 bg-[#C9963A]" : "w-2.5 h-2.5 bg-[#E8D9C0]"}`}
             />
           ))}
           {hasEnding && (
             <button
               onClick={() => setCurrentPage(total)}
-              className={`rounded-full transition-all ${isEnding ? "w-6 h-2.5 bg-purple-500" : "w-2.5 h-2.5 bg-purple-200"}`}
+              className={`rounded-full transition-all ${isEnding ? "w-6 h-2.5 bg-[#C9963A]" : "w-2.5 h-2.5 bg-[#E8D9C0]"}`}
             />
           )}
         </div>
         <Button variant="secondary" onClick={goNext} disabled={currentPage === maxPage} size="sm">Nächste →</Button>
       </div>
 
-      {/* Thumbnails */}
-      <div className="bg-purple-50 rounded-2xl p-4 space-y-3">
+      <div className="bg-[#F5EDE0] rounded-2xl p-4 space-y-3">
         <h3 className="text-sm font-semibold text-[#1f1a2e]">Alle Seiten</h3>
         <div className="grid grid-cols-5 gap-3">
-          {/* Cover thumbnail */}
           <button
             onClick={() => setCurrentPage(-1)}
-            className={`relative rounded-xl overflow-hidden border-2 transition-all ${currentPage === -1 ? "border-purple-500 shadow-md" : "border-transparent hover:border-purple-200"}`}
+            className={`relative rounded-xl overflow-hidden border-2 transition-all ${currentPage === -1 ? "border-[#C9963A] shadow-md" : "border-transparent hover:border-[#E8D9C0]"}`}
             style={{ aspectRatio: "2/3" }}
           >
             {project.coverImageUrl ? (
               <img src={project.coverImageUrl} alt="Cover" className="w-full h-full object-cover" />
             ) : (
-              <div className="absolute inset-0 bg-gradient-to-b from-purple-400 to-purple-700 flex items-center justify-center">
+              <div className="absolute inset-0 bg-gradient-to-b from-[#2D2620] to-[#1A1410] flex items-center justify-center">
                 <span className="text-white text-xs font-bold">Cover</span>
               </div>
             )}
           </button>
 
-          {/* Page thumbnails */}
           {comicPages.map((p, i) => (
             <button
               key={p.id}
               onClick={() => setCurrentPage(i)}
-              className={`relative rounded-xl overflow-hidden border-2 transition-all ${i === currentPage ? "border-purple-500 shadow-md" : "border-transparent hover:border-purple-200"}`}
+              className={`relative rounded-xl overflow-hidden border-2 transition-all ${i === currentPage ? "border-[#C9963A] shadow-md" : "border-transparent hover:border-[#E8D9C0]"}`}
               style={{ aspectRatio: "2/3" }}
             >
               {p.imageUrl ? (
@@ -241,11 +226,10 @@ export default function Step5Preview() {
             </button>
           ))}
 
-          {/* Ending thumbnail */}
           {hasEnding && (
             <button
               onClick={() => setCurrentPage(total)}
-              className={`relative rounded-xl overflow-hidden border-2 transition-all ${isEnding ? "border-purple-500 shadow-md" : "border-transparent hover:border-purple-200"}`}
+              className={`relative rounded-xl overflow-hidden border-2 transition-all ${isEnding ? "border-[#C9963A] shadow-md" : "border-transparent hover:border-[#E8D9C0]"}`}
               style={{ aspectRatio: "2/3" }}
             >
               <div className="absolute inset-0 bg-[#FDF8F2] flex items-center justify-center">

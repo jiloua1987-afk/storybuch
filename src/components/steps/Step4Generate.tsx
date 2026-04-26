@@ -273,7 +273,7 @@ export default function Step4Generate() {
         <h2 className="font-display text-2xl text-[#1f1a2e]">Fehler bei der Generierung</h2>
         <p className="text-sm bg-red-50 border border-red-100 rounded-xl p-4 text-red-700">{error}</p>
         <button onClick={() => { setError(null); running.current = false; runGeneration(); }}
-          className="bg-purple-600 text-white px-6 py-3 rounded-xl hover:bg-purple-700 transition-colors">
+          className="bg-[#1A1410] text-white px-6 py-3 rounded-xl hover:bg-[#2D2620] transition-colors">
           Nochmal versuchen
         </button>
       </div>
@@ -299,7 +299,7 @@ export default function Step4Generate() {
         <AnimatePresence>
           {log.map((entry, i) => (
             <motion.div key={i} initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }}
-              className={`flex items-center gap-2 text-sm ${entry.done ? "text-gray-400" : "text-purple-700 font-medium"}`}>
+              className={`flex items-center gap-2 text-sm ${entry.done ? "text-gray-400" : "text-[#1A1410] font-medium"}`}>
               <span className="w-4 text-center flex-shrink-0">{entry.done ? "✓" : "·"}</span>
               <span>{entry.text}</span>
             </motion.div>
@@ -308,7 +308,7 @@ export default function Step4Generate() {
       </div>
 
       {done && (
-        <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-purple-600 font-medium">
+        <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-[#C9963A] font-medium">
           Weiterleitung zur Vorschau…
         </motion.p>
       )}
