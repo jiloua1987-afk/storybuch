@@ -68,7 +68,7 @@ Tone: ${tone}. Visual mood: ${mood}. Comic style: ${comicMod}.
 ${mustHaveSentences ? `MUST include: ${mustHaveSentences}` : ""}
 Vary panel count: Page 1: 4 panels, Page 2: 3 panels, Page 3: 5 panels, Page 4: 4 panels.
 Each panel scene must work as a STANDALONE image prompt — describe the complete scene.
-Respond ONLY with JSON: {"pages": [{"id":"page1","pageNumber":1,"title":"Title in ${lang}","location":"English location","timeOfDay":"afternoon","panels":[{"nummer":1,"szene":"Specific English scene for SINGLE IMAGE generation","dialog":"Short ${lang} dialog max 8 words","speaker":"Name or null","bubble_type":"speech"}]}]}` },
+Respond ONLY with JSON: {"pages": [{"id":"page1","pageNumber":1,"title":"Title in ${lang}","location":"English location","timeOfDay":"afternoon","panels":[{"nummer":1,"szene":"Specific English scene for SINGLE IMAGE generation","dialog":"Short ${lang} dialog max 15 words","speaker":"Name or null","bubble_type":"speech"}]}]}` },
           { role: "user", content: ctx },
         ],
         response_format: { type: "json_object" },
