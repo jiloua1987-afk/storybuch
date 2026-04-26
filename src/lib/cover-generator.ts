@@ -12,6 +12,7 @@ export async function generateCoverImage(
   category: string,
   illustrationStyle: string,
   location: string,
+  referenceImages: string[] = [],
 ): Promise<string> {
   const charDesc = characters.length > 0
     ? characters.map((c) => `${c.name}: ${c.visual_anchor}`).join(", ")
@@ -47,9 +48,31 @@ Portrait orientation (vertical), characters prominently featured, stunning backg
 Leave the bottom 30% of the image slightly darker/simpler for title overlay.`;
 
   try {
-    // Always use images.generate() — A4 portrait
+    // If user uploaded reference photo, use images.edit()
+    if (referenceImages.length > 0 && referenceImages[0]) {
+      try {
+        const refBuf = Buffer.from(referenceImages[0], "base64");
+        const refBlob = new Blob([refBuf], { type: "image/jpeg" });
+        const refFile = new File([refBlob], "reference.jpg", { type: "image/jpeg" });
+        
+        const editRes = await openai.images.edit({
+          model: "gpt-image-1.5",
+          image: refFile,
+          prompt: `The people in this photo are the main characters. ${prompt}`,
+          size: "1024x1536",
+          quality: "high",
+        });
+        const item = (editRes.data ?? [])[0];
+        if (item?.url) return item.url;
+        if (item?.b64_json) return `data:image/png;base64,${item.b64_json}`;
+      } catch (e: any) {
+        console.warn("Cover edit failed, falling back to generate:", e.message);
+      }
+    }
+
+    // Fallback or default: images.generate()
     const response = await openai.images.generate({
-      model: "gpt-image-1",
+      model: "gpt-image-1.5",
       prompt,
       n: 1,
       size: "1024x1536",
@@ -64,7 +87,7 @@ Leave the bottom 30% of the image slightly darker/simpler for title overlay.`;
     // Single retry
     try {
       const response = await openai.images.generate({
-        model: "gpt-image-1",
+        model: "gpt-image-1.5",
         prompt,
         n: 1,
         size: "1024x1536",

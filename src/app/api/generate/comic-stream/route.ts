@@ -105,11 +105,20 @@ export async function POST(req: NextRequest) {
         // Step 2: Cover → Supabase Storage
         send("progress", { label: "Cover wird erstellt…", progress: 18 });
         const bookId = `book-${Date.now()}`;
+        let coverUrl = "";
+        let coverAsReference = ""; // For character consistency
         try {
           const rawCover = await generateCoverImage(
-            bookTitle, characters, category, illustrationStyle || "comic", location
+            bookTitle, characters, category, illustrationStyle || "comic", location, referenceImages
           );
-          const coverUrl = rawCover ? await saveImageToStorage(rawCover, "covers", `cover-${bookId}`) : "";
+          coverUrl = rawCover ? await saveImageToStorage(rawCover, "covers", `cover-${bookId}`) : "";
+          
+          // If no user photos uploaded, use cover as reference for consistency
+          if (referenceImages.length === 0 && rawCover) {
+            coverAsReference = rawCover; // Use cover as reference for all pages
+            console.log("✓ Using cover as character reference for consistency");
+          }
+          
           send("cover", { coverImageUrl: coverUrl });
           send("progress", { label: "Cover fertig", progress: 22 });
         } catch {
@@ -125,11 +134,15 @@ export async function POST(req: NextRequest) {
           send("progress", { label: `Seite ${i + 1}: "${page.title}"…`, progress: baseProgress });
 
           try {
+            // Use cover as reference if no user photos
+            const pageReferences = referenceImages.length > 0 ? referenceImages : (coverAsReference ? [coverAsReference] : []);
+            
             const rawUrl = await generateComicPage(
               page, characters,
               illustrationStyle || "comic",
               comicStyle || "emotional",
-              category
+              category,
+              pageReferences
             );
 
             // Save to Supabase → send public URL (no b64 over SSE)
