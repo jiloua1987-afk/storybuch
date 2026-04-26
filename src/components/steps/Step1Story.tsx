@@ -68,6 +68,7 @@ export default function Step1Story() {
   const [mode, setMode]             = useState<"frei" | "gefuehrt">("gefuehrt");
   const [category, setCategory]     = useState<string | null>(null);
   const [comicStyle, setComicStyle] = useState<ComicStyle>("emotional");
+  const [comicTitle, setComicTitle] = useState("");
   const [storyInput, setStoryInput] = useState("");
   const [answers, setAnswers]       = useState<Record<string, string>>({});
   const [moments, setMoments]       = useState<Moment[]>([{ id: "m1", title: "", description: "" }]);
@@ -107,7 +108,7 @@ export default function Step1Story() {
 
     setProject({
       id: `proj-${Date.now()}`,
-      title: "Mein persönlicher Comic",
+      title: comicTitle || "Mein persönlicher Comic",
       storyInput,
       guidedAnswers: {
         ...answers,
