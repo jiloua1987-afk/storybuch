@@ -3,6 +3,80 @@ import type { Character } from "./prompt-builder";
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
+// ── Character Reference Sheet generation ─────────────────────────────────────
+// Generates a neutral reference image showing all characters clearly
+// Used for consistency across all comic pages when no user photo is uploaded
+export async function generateCharacterSheet(
+  characters: Character[],
+  illustrationStyle: string,
+  referenceImages: string[] = [],
+): Promise<string> {
+  if (characters.length === 0) return "";
+
+  const charDesc = characters.map((c) => 
+    `${c.name}: ${c.visual_anchor}`
+  ).join(". ");
+
+  const styleMap: Record<string, string> = {
+    comic:       "watercolor comic illustration style, bold outlines, vibrant colors",
+    aquarell:    "soft watercolor illustration, pastel colors, dreamy",
+    bleistift:   "pencil sketch style, hand-drawn",
+    realistisch: "realistic comic art, detailed digital painting",
+  };
+  const style = styleMap[illustrationStyle] || styleMap.comic;
+
+  const prompt = `Create a CHARACTER REFERENCE SHEET for comic illustration.
+Show all characters standing together in neutral poses, facing forward.
+Characters: ${charDesc}
+Style: ${style}, professional character design quality.
+CRITICAL: Sharp, detailed facial features with clearly defined eyes, nose, mouth, and expressions.
+Each character should be clearly visible, well-lit, and easy to identify.
+Simple neutral background (white or light grey).
+Characters should look friendly and approachable.
+NO text, NO labels, NO letters anywhere in the image.
+Portrait orientation (vertical), all characters visible from head to waist.`;
+
+  try {
+    // If user uploaded reference photo, use images.edit()
+    if (referenceImages.length > 0 && referenceImages[0]) {
+      try {
+        const refBuf = Buffer.from(referenceImages[0], "base64");
+        const refBlob = new Blob([refBuf], { type: "image/jpeg" });
+        const refFile = new File([refBlob], "reference.jpg", { type: "image/jpeg" });
+        
+        const editRes = await openai.images.edit({
+          model: "gpt-image-1.5",
+          image: refFile,
+          prompt: `The people in this photo are the characters. ${prompt}`,
+          size: "1024x1536",
+          quality: "high",
+        });
+        const item = (editRes.data ?? [])[0];
+        if (item?.url) return item.url;
+        if (item?.b64_json) return `data:image/png;base64,${item.b64_json}`;
+      } catch (e: any) {
+        console.warn("Character sheet edit failed, falling back to generate:", e.message);
+      }
+    }
+
+    // Fallback or default: images.generate()
+    const response = await openai.images.generate({
+      model: "gpt-image-1.5",
+      prompt,
+      n: 1,
+      size: "1024x1536",
+      quality: "high",
+    });
+    const item = (response.data ?? [])[0];
+    if (item?.url) return item.url;
+    if (item?.b64_json) return `data:image/png;base64,${item.b64_json}`;
+    return "";
+  } catch (err: any) {
+    console.error("Character sheet generation error:", err.message);
+    return "";
+  }
+}
+
 // ── Cover image generation ───────────────────────────────────────────────────
 // Uses images.generate() ONLY — no images.edit(), no responses API
 // Title overlay is rendered in frontend via CSS

@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { buildComicStructure, buildCharacterAnchors, generateComicPage } from "@/lib/comic-page-generator";
-import { generateCoverImage } from "@/lib/cover-generator";
+import { generateCoverImage, generateCharacterSheet } from "@/lib/cover-generator";
 import { saveImageToStorage } from "@/lib/storage";
 import OpenAI from "openai";
 
@@ -106,55 +106,73 @@ export async function POST(req: NextRequest) {
         send("progress", { label: "Cover wird erstellt…", progress: 18 });
         const bookId = `book-${Date.now()}`;
         let coverUrl = "";
-        let coverAsReference = ""; // For character consistency when no user photos
+        let characterSheetReference = ""; // For character consistency
+        
         try {
           const rawCover = await generateCoverImage(
             bookTitle, characters, category, illustrationStyle || "comic", location, referenceImages
           );
           coverUrl = rawCover ? await saveImageToStorage(rawCover, "covers", `cover-${bookId}`) : "";
-          
-          // CRITICAL: If no user photos uploaded, use cover as reference for ALL pages
-          if (referenceImages.length === 0 && rawCover) {
-            // Convert URL to base64 for images.edit() API
-            if (rawCover.startsWith("http")) {
-              try {
-                const response = await fetch(rawCover);
-                const buffer = await response.arrayBuffer();
-                coverAsReference = Buffer.from(buffer).toString("base64");
-                console.log("✓ Cover downloaded and converted to base64 for reference");
-              } catch (e: any) {
-                console.warn("Cover download failed, using URL:", e.message);
-                coverAsReference = rawCover; // Fallback to URL
-              }
-            } else if (rawCover.startsWith("data:image")) {
-              // Already base64
-              coverAsReference = rawCover.split(",")[1] || rawCover;
-              console.log("✓ Cover already in base64 format");
-            } else {
-              coverAsReference = rawCover;
-            }
-            console.log("✓ Using cover as character reference for consistency (no user photos)");
-          }
-          
           send("cover", { coverImageUrl: coverUrl });
           send("progress", { label: "Cover fertig", progress: 22 });
         } catch {
           send("progress", { label: "Cover übersprungen", progress: 22 });
         }
 
+        // Step 2b: Character Reference Sheet (only if no user photos)
+        if (referenceImages.length === 0 && characters.length > 0) {
+          send("progress", { label: "Charakter-Referenz wird erstellt…", progress: 24 });
+          try {
+            const rawCharSheet = await generateCharacterSheet(
+              characters, illustrationStyle || "comic", referenceImages
+            );
+            
+            if (rawCharSheet) {
+              // Convert to base64 for images.edit() API
+              if (rawCharSheet.startsWith("http")) {
+                try {
+                  const response = await fetch(rawCharSheet);
+                  const buffer = await response.arrayBuffer();
+                  characterSheetReference = Buffer.from(buffer).toString("base64");
+                  console.log("✓ Character sheet downloaded and converted to base64");
+                } catch (e: any) {
+                  console.warn("Character sheet download failed:", e.message);
+                }
+              } else if (rawCharSheet.startsWith("data:image")) {
+                characterSheetReference = rawCharSheet.split(",")[1] || rawCharSheet;
+                console.log("✓ Character sheet already in base64 format");
+              } else {
+                characterSheetReference = rawCharSheet;
+              }
+              console.log("✓ Character Reference Sheet created for consistency");
+            }
+            send("progress", { label: "Charakter-Referenz fertig", progress: 26 });
+          } catch (e: any) {
+            console.warn("Character sheet generation failed:", e.message);
+            send("progress", { label: "Charakter-Referenz übersprungen", progress: 26 });
+          }
+        }
+
         // Step 3: Pages — raw images + panels JSON, no sharp compositing
-        const progressPerPage = 68 / pages.length;
+        const progressPerPage = 64 / pages.length;
 
         for (let i = 0; i < pages.length; i++) {
           const page = pages[i];
-          const baseProgress = 22 + i * progressPerPage;
+          const baseProgress = 26 + i * progressPerPage;
           send("progress", { label: `Seite ${i + 1}: "${page.title}"…`, progress: baseProgress });
 
           try {
-            // Use cover as reference if no user photos
-            const pageReferences = referenceImages.length > 0 ? referenceImages : (coverAsReference ? [coverAsReference] : []);
-            
-            console.log(`Page ${i + 1}: Using ${pageReferences.length > 0 ? (referenceImages.length > 0 ? "user photo" : "cover") : "no"} reference`);
+            // Priority: User photos > Character Sheet > no reference
+            let pageReferences: string[] = [];
+            if (referenceImages.length > 0) {
+              pageReferences = referenceImages;
+              console.log(`Page ${i + 1}: Using user photo reference`);
+            } else if (characterSheetReference) {
+              pageReferences = [characterSheetReference];
+              console.log(`Page ${i + 1}: Using character sheet reference`);
+            } else {
+              console.log(`Page ${i + 1}: No reference available`);
+            }
             
             const rawUrl = await generateComicPage(
               page, characters,
