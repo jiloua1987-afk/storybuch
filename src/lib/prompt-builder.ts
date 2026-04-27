@@ -68,12 +68,14 @@ export function buildComicPagePrompt(input: PagePromptInput): string {
   // Short, focused prompt — quality instruction FIRST, then content
   return `Create a premium European comic book page with ${panelCount} panels in a ${layoutDesc}. 
 
-CRITICAL: Sharp, detailed facial features with clearly defined eyes, nose, mouth, and expressions. Maximum 2-4 people per panel with visible faces. Each panel shows a COMPLETELY DIFFERENT scene, angle, and moment — no duplicates, no similar compositions. Each character appears ONLY ONCE per panel — no duplicates of the same person.
+CRITICAL: Sharp, detailed facial features with clearly defined eyes, nose, mouth, and expressions. Maximum 2-4 people per panel with visible faces. Each panel shows a COMPLETELY DIFFERENT scene, angle, and moment — no duplicates, no similar compositions. Each character appears ONLY ONCE per panel — no duplicates of the same person. Do NOT invent or add any people not listed in the characters below.
+
+ABSOLUTELY NO TEXT IN IMAGE: No panel titles, no page titles, no captions, no labels, no letters, no words, no speech bubbles anywhere in the generated image. Text is added separately.
 
 ${charBlock ? `Characters (keep identical in every panel with recognizable faces): ${charBlock}\n` : ""}${panelDescs}
 ${location ? `\nSetting: ${location}.` : ""}${timeOfDay ? ` ${timeOfDay} lighting.` : ""}
 
-Style: varied camera angles (close-ups, wide shots, over-shoulder views), ${style}, expressive faces with clear features, soft panel borders, professional graphic novel quality. Mix perspectives: not all close-ups, include establishing shots. For crowd scenes: background people as silhouettes or slightly out of focus. No watercolor. No soft blur. CRITICAL: NO text, NO speech bubbles, NO letters in the generated image — text will be added separately.`;
+Style: varied camera angles (close-ups, wide shots, over-shoulder views), ${style}, expressive faces with clear features, soft panel borders, professional graphic novel quality. Mix perspectives: not all close-ups, include establishing shots. For crowd scenes: background people as silhouettes or slightly out of focus. For beach/outdoor scenes: bright natural light, vivid colors, characters in appropriate clothing. No watercolor. No soft blur.`;
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -154,11 +156,20 @@ CRITICAL — VARIETY:
 - Vary: close-up face, wide group shot, action moment, quiet detail, over-shoulder view
 - Think cinematically: establishing shot → close-up → reaction → wide shot
 - Each panel must advance the story — no redundant moments
-- Only include characters that are mentioned in the story — do NOT invent extra people
-- Background people (strangers on street, crowd) are OK, but NO new named characters
-- AVOID large crowd scenes with 10+ people — prefer intimate moments with 2-4 people per panel
-- For party/celebration scenes: focus on main characters, show crowd as background silhouettes
+
+CRITICAL — NO INVENTED CHARACTERS:
+- ONLY include characters explicitly mentioned in the story input
+- Do NOT invent new people, children, strangers, or background figures with faces
+- Background crowd (airport, beach) = faceless silhouettes or blurred, NO distinct faces
+- If a scene needs a minor role (waiter, steward) — they can speak but must be generic/faceless
+- NEVER add a child, boy, girl, or person that is not in the story
+
+CRITICAL — DIALOG SPEAKERS:
+- A character can only be "speaker" if they are VISIBLE in that panel's "szene" description
+- If Mama is not mentioned in the szene, she cannot be the speaker
+- Only assign dialog to characters explicitly present in the scene
 - CRITICAL: Each character appears ONLY ONCE per panel — no duplicates of the same person
+- AVOID large crowd scenes — prefer intimate moments with 2-4 people per panel
 
 RULES:
 - ${numPages} pages minimum, 3-4 panels each (prefer 4)

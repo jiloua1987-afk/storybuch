@@ -64,7 +64,7 @@ function EndingView({ endingText, dedication, dedicationFrom }: { endingText: st
             Von: {dedicationFrom}
           </p>
         )}
-        <div className="mt-auto pt-8">
+        <div className="w-full flex flex-col items-center pt-8">
           <div className="w-20 h-[2px] bg-[#C9963A] rounded mb-2" />
           <p className="text-[#C9963A] text-xs tracking-[0.3em] uppercase"
             style={{ fontFamily: "'Playfair Display', Georgia, serif" }}>

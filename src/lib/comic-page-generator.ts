@@ -150,9 +150,14 @@ CRITICAL RULES FOR SHARP FACES:
 
 ABSOLUTELY NO TEXT IN IMAGE:
 - NO text, NO speech bubbles, NO letters, NO words anywhere in the generated image
-- NO panel titles, NO captions, NO labels
+- NO panel titles, NO page titles, NO captions, NO labels — not even small text
 - Text will be added separately by the frontend
 - This is CRITICAL — any text in the image will ruin the comic
+
+NO INVENTED CHARACTERS:
+- ONLY draw characters listed in the Characters section below
+- Do NOT add any extra people, children, strangers, or background figures with faces
+- Background crowd = faceless silhouettes only, NO distinct faces on unnamed people
 
 CLOTHING CONTEXT:
 - ${outfitContext}
