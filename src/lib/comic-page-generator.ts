@@ -38,6 +38,7 @@ export async function buildComicStructure(
       { role: "user", content: context },
     ],
     response_format: { type: "json_object" },
+    max_tokens: 4000, // Increased for longer stories
     temperature: 0.85,
   });
 
@@ -142,9 +143,16 @@ CRITICAL RULES FOR SHARP FACES:
 - ALWAYS include: "Each panel shows a COMPLETELY DIFFERENT scene, angle, and moment"
 - ALWAYS include: "Maximum 2-4 people per panel with visible faces — avoid large crowds"
 - CRITICAL: "Each character appears ONLY ONCE per panel — no duplicates of the same person"
+- CRITICAL: "Prefer showing characters facing camera or from side to see expressions — back views OK when story needs it"
 - For characters: mention "recognizable face" or "distinct facial features"
 - For crowd scenes: "Background people as silhouettes or out of focus"
 - Total output: max 130 words
+
+ABSOLUTELY NO TEXT IN IMAGE:
+- NO text, NO speech bubbles, NO letters, NO words anywhere in the generated image
+- NO panel titles, NO captions, NO labels
+- Text will be added separately by the frontend
+- This is CRITICAL — any text in the image will ruin the comic
 
 CLOTHING CONTEXT:
 - ${outfitContext}

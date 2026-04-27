@@ -29,12 +29,15 @@ export async function POST(req: NextRequest) {
 WICHTIG — Das ist eine WIDMUNG, keine Zusammenfassung!
 - Schreibe wie eine handgeschriebene Widmung auf der letzten Seite eines Geschenks
 - Maximal 2-3 kurze, herzliche Sätze
-- Sprich die Hauptperson DIREKT an (z.B. "Für Dich, liebe Helga...")
+- Sprich die Hauptperson(en) DIREKT an
+- Wenn die Geschichte von Großeltern handelt: "Für Opa und Oma..." oder "Für euch, liebe Großeltern..."
+- Wenn die Geschichte von einem Kind handelt: "Für Dich, lieber [Name]..."
 - Erwähne EIN konkretes Detail aus der Geschichte
 - Ton: ${tone || "liebevoll, persönlich, warm"}
-${dedicationFrom ? `- Ende die Widmung mit: "Von: ${dedicationFrom}"` : '- VERBOTEN: "[Dein Name]", "[Familienmitglied]" als Absender'}
+${dedicationFrom ? `- Ende die Widmung mit: "Von: ${dedicationFrom}" (NICHT "Von: Von ${dedicationFrom}")` : '- VERBOTEN: "[Dein Name]", "[Familienmitglied]" als Absender'}
 - VERBOTEN: "Liebe Leserinnen", "dieses Buch", "diese Geschichte"
 - VERBOTEN: Zusammenfassungen der Handlung
+- VERBOTEN: Doppelungen wie "Von: Von..."
 - Schreibe so, als würde ein Familienmitglied die Widmung von Hand schreiben`,
       }, {
         role: "user",

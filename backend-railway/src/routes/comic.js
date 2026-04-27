@@ -69,6 +69,9 @@ ${mustHaveSentences ? `MUST include: ${mustHaveSentences}` : ""}
 Vary panel count: Page 1: 4 panels, Page 2: 3 panels, Page 3: 5 panels, Page 4: 4 panels.
 Each panel scene must work as a STANDALONE image prompt — describe the complete scene.
 
+CRITICAL — MINIMUM PAGES:
+- Generate MINIMUM ${numPages} pages. Long stories are good — use all the details provided!
+
 CRITICAL — PANEL VARIETY:
 - Every panel must show a COMPLETELY DIFFERENT scene, angle, and moment
 - NEVER repeat the same activity in two panels (e.g. not 2× at gate, not 2× looking at something)
@@ -77,7 +80,12 @@ CRITICAL — PANEL VARIETY:
 - Each panel must advance the story — no redundant moments
 - Each character appears ONLY ONCE per panel — no duplicates of the same person
 
-Respond ONLY with JSON: {"pages": [{"id":"page1","pageNumber":1,"title":"Title in ${lang}","location":"English location","timeOfDay":"afternoon","panels":[{"nummer":1,"szene":"Specific English scene for SINGLE IMAGE generation","dialog":"Short ${lang} dialog max 15 words","speaker":"Name or null","bubble_type":"speech"}]}]}` },
+CRITICAL — CHARACTER VISIBILITY:
+- Characters should face the camera or be shown from the side — AVOID back views
+- Show faces clearly so readers can see expressions and emotions
+- Prefer: front view, 3/4 view, profile view
+
+Respond ONLY with JSON: {"pages": [{"id":"page1","pageNumber":1,"title":"Title in ${lang}","location":"English location","timeOfDay":"afternoon","panels":[{"nummer":1,"szene":"Specific English scene for SINGLE IMAGE generation","dialog":"Short ${lang} dialog 10-15 words","speaker":"Name or null","bubble_type":"speech"}]}]}` },
           { role: "user", content: ctx },
         ],
         response_format: { type: "json_object" },
@@ -242,9 +250,16 @@ CRITICAL RULES FOR SHARP FACES:
 - ALWAYS include: "Each panel shows a COMPLETELY DIFFERENT scene, angle, and moment"
 - ALWAYS include: "Maximum 2-4 people per panel with visible faces — avoid large crowds"
 - CRITICAL: "Each character appears ONLY ONCE per panel — no duplicates of the same person"
+- CRITICAL: "Prefer showing characters facing camera or from side to see expressions — back views OK when story needs it"
 - For characters: mention "recognizable face" or "distinct facial features"
 - For crowd scenes: "Background people as silhouettes or out of focus"
 - Total output: max 130 words
+
+ABSOLUTELY NO TEXT IN IMAGE:
+- NO text, NO speech bubbles, NO letters, NO words anywhere in the generated image
+- NO panel titles, NO captions, NO labels
+- Text will be added separately by the frontend
+- This is CRITICAL — any text in the image will ruin the comic
 
 CLOTHING CONTEXT:
 - ${outfitContext}
@@ -459,12 +474,15 @@ router.post("/ending", async (req, res) => {
 WICHTIG — Das ist eine WIDMUNG, keine Zusammenfassung!
 - Schreibe wie eine handgeschriebene Widmung auf der letzten Seite eines Geschenks
 - Maximal 2-3 kurze, herzliche Sätze
-- Sprich die Hauptperson DIREKT an (z.B. "Für Dich, liebe Helga...")
+- Sprich die Hauptperson(en) DIREKT an
+- Wenn die Geschichte von Großeltern handelt: "Für Opa und Oma..." oder "Für euch, liebe Großeltern..."
+- Wenn die Geschichte von einem Kind handelt: "Für Dich, lieber [Name]..."
 - Erwähne EIN konkretes Detail aus der Geschichte
 - Ton: ${tone || "liebevoll, persönlich, warm"}
-${dedicationFrom ? `- Ende die Widmung mit: "Von: ${dedicationFrom}"` : '- VERBOTEN: "[Dein Name]", "[Familienmitglied]" als Absender'}
+${dedicationFrom ? `- Ende die Widmung mit: "Von: ${dedicationFrom}" (NICHT "Von: Von ${dedicationFrom}")` : '- VERBOTEN: "[Dein Name]", "[Familienmitglied]" als Absender'}
 - VERBOTEN: "Liebe Leserinnen", "dieses Buch", "diese Geschichte"
 - VERBOTEN: Zusammenfassungen der Handlung
+- VERBOTEN: Doppelungen wie "Von: Von..."
 - Schreibe so, als würde ein Familienmitglied die Widmung von Hand schreiben` },
         { role: "user", content: `Geschichte: ${storyInput || ""}\n${Object.entries(guidedAnswers).filter(([k,v]) => v && k !== "category").map(([k,v]) => `${k}: ${v}`).join("\n")}${dedication ? `\nWidmung vom Nutzer: ${dedication}` : ""}${dedicationFrom ? `\nVon: ${dedicationFrom}` : ""}` },
       ],

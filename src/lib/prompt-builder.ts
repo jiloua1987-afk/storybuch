@@ -128,6 +128,8 @@ export function buildGPTStructurePrompt(
 
   return `You are a comic book author. Create a ${numPages}-page comic in ${lang}.
 
+CRITICAL: Generate MINIMUM ${numPages} pages. Long stories are good — use all the details provided!
+
 ${storyModules[category] || storyModules.sonstiges}
 ${styleModules[comicStyle] || styleModules.emotional}
 ${mustHaveSentences ? `MUST INCLUDE: "${mustHaveSentences}"` : ""}
@@ -138,6 +140,12 @@ Write SHORT visual descriptions for an image AI. Max 2 sentences. Visual only.
 - GOOD: "Wide shot: Helga (80, white curly hair, glasses) at garden gate, hands over mouth. Behind her: family around decorated table with lanterns, cheering. Golden afternoon light."
 
 Include: WHO (name + key visual), WHAT (action), WHERE, LIGHTING. No narrative. No emotions in words — show them through expressions and body language.
+
+CRITICAL — CHARACTER VISIBILITY:
+- Prefer showing characters facing the camera or from the side to see expressions
+- Back views are OK when it serves the story (e.g., looking at something, walking away)
+- Most panels should show faces clearly so readers can connect with characters
+- Mix of angles is good: front view, 3/4 view, profile view, occasional back view
 
 CRITICAL — VARIETY:
 - Every panel on a page must show a COMPLETELY DIFFERENT scene, angle, and moment
@@ -153,8 +161,8 @@ CRITICAL — VARIETY:
 - CRITICAL: Each character appears ONLY ONCE per panel — no duplicates of the same person
 
 RULES:
-- ${numPages} pages, 3-4 panels each (prefer 4)
-- Dialogs: max 15 words, natural ${lang}. Not every panel needs dialog.
+- ${numPages} pages minimum, 3-4 panels each (prefer 4)
+- Dialogs: 10-15 words, natural ${lang}. Most panels should have dialog to tell the story.
 - Page titles: 3-5 words, ${lang}.
 
 JSON only:

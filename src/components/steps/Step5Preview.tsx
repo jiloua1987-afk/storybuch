@@ -132,7 +132,6 @@ export default function Step5Preview() {
               <CoverView
                 imageUrl={project.coverImageUrl}
                 title={project.title}
-                subtitle={project.guidedAnswers?.ort || project.guidedAnswers?.location}
               />
             ) : isEnding && project.endingData ? (
               <EndingView
