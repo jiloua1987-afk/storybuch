@@ -78,10 +78,12 @@ function EndingView({ endingText, dedication, dedicationFrom }: { endingText: st
 
 
 export default function Step5Preview() {
-  const { project, setStep, updateChapter } = useBookStore();
+  const { project, setStep, updateProject, updateChapter } = useBookStore();
   const [currentPage, setCurrentPage] = useState(-1);
   const [direction, setDirection] = useState(1);
   const [regenerating, setRegenerating] = useState<string | null>(null);
+  const [editingTitle, setEditingTitle] = useState(false);
+  const [editingEnding, setEditingEnding] = useState(false);
 
   if (!project) return null;
 
@@ -113,7 +115,24 @@ export default function Step5Preview() {
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="max-w-3xl mx-auto space-y-6">
       <div className="text-center space-y-1">
-        <h2 className="font-display text-3xl font-semibold text-[#1f1a2e]">{project.title}</h2>
+        {editingTitle ? (
+          <input
+            autoFocus
+            className="font-display text-3xl font-semibold text-[#1f1a2e] text-center bg-transparent border-b-2 border-[#C9963A] outline-none w-full max-w-md mx-auto block"
+            value={project.title}
+            onChange={(e) => updateProject({ title: e.target.value })}
+            onBlur={() => setEditingTitle(false)}
+            onKeyDown={(e) => e.key === "Enter" && setEditingTitle(false)}
+          />
+        ) : (
+          <h2
+            className="font-display text-3xl font-semibold text-[#1f1a2e] cursor-text hover:text-[#C9963A] transition-colors"
+            title="Klicken zum Bearbeiten"
+            onClick={() => setEditingTitle(true)}
+          >
+            {project.title}
+          </h2>
+        )}
         <p className="text-gray-400 text-sm">{pageLabel}</p>
       </div>
 
@@ -134,11 +153,53 @@ export default function Step5Preview() {
                 title={project.title}
               />
             ) : isEnding && project.endingData ? (
-              <EndingView
-                endingText={project.endingData.endingText}
-                dedication={project.endingData.dedication}
-                dedicationFrom={project.endingData.dedicationFrom}
-              />
+              <div className="relative">
+                <EndingView
+                  endingText={project.endingData.endingText}
+                  dedication={project.endingData.dedication}
+                  dedicationFrom={project.endingData.dedicationFrom}
+                />
+                {/* Edit overlay button */}
+                {!editingEnding && (
+                  <button
+                    onClick={() => setEditingEnding(true)}
+                    className="absolute top-3 right-3 text-xs bg-white/80 hover:bg-white border border-[#E8D9C0] text-[#8B7355] px-2 py-1 rounded-lg shadow-sm transition-all"
+                  >
+                    ✏️ Bearbeiten
+                  </button>
+                )}
+                {editingEnding && (
+                  <div className="absolute inset-0 bg-[#FDF8F2]/95 rounded-xl p-6 flex flex-col gap-3 overflow-auto">
+                    <p className="text-xs text-[#8B7355] font-semibold uppercase tracking-widest">Abschlussseite bearbeiten</p>
+                    <label className="text-xs text-[#8B7355]">Widmungstext</label>
+                    <textarea
+                      className="border border-[#E8D9C0] rounded-lg p-2 text-sm text-[#1A1410] resize-none outline-none focus:border-[#C9963A]"
+                      rows={4}
+                      value={project.endingData.endingText}
+                      onChange={(e) => updateProject({ endingData: { ...project.endingData!, endingText: e.target.value } })}
+                      style={{ fontFamily: "'Playfair Display', serif" }}
+                    />
+                    <label className="text-xs text-[#8B7355]">Zitat / Widmung</label>
+                    <input
+                      className="border border-[#E8D9C0] rounded-lg p-2 text-sm text-[#1A1410] outline-none focus:border-[#C9963A]"
+                      value={project.endingData.dedication || ""}
+                      onChange={(e) => updateProject({ endingData: { ...project.endingData!, dedication: e.target.value } })}
+                    />
+                    <label className="text-xs text-[#8B7355]">Von</label>
+                    <input
+                      className="border border-[#E8D9C0] rounded-lg p-2 text-sm text-[#1A1410] outline-none focus:border-[#C9963A]"
+                      value={project.endingData.dedicationFrom || ""}
+                      onChange={(e) => updateProject({ endingData: { ...project.endingData!, dedicationFrom: e.target.value } })}
+                    />
+                    <button
+                      onClick={() => setEditingEnding(false)}
+                      className="mt-2 bg-[#C9963A] text-white rounded-lg py-2 text-sm font-semibold hover:bg-[#A67A28] transition-colors"
+                    >
+                      Fertig
+                    </button>
+                  </div>
+                )}
+              </div>
             ) : page ? (
               <div>
                 {regenerating === page.id ? (
