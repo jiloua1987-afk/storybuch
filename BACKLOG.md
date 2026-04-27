@@ -1098,6 +1098,223 @@ START: Qualitätsprobleme mit gpt-image-1.5
 
 **Alternativen zu prüfen:**
 
+#### A) **gpt-image-2** (NEU! 🔥)
+- ✅ Deutlich bessere Qualität als gpt-image-1.5
+- ✅ Schärfere Gesichter, bessere Konsistenz
+- ❌ Teurer: ~$0.16-0.21 pro Bild (high quality)
+- ❌ Noch nicht getestet für Comics
+- **Kosten-Vergleich:**
+  - gpt-image-1.5: ~$0.15-0.18 pro Bild
+  - gpt-image-2: ~$0.16-0.21 pro Bild
+  - **Differenz:** +$0.03-0.05 pro Bild = +$0.15-0.25 pro Comic (5 Bilder)
+- **Aufwand:** Gering (nur Model-Wechsel)
+- **Test empfohlen:** Ja! Könnte Qualitätsprobleme lösen
+
+---
+
+### 7b. **Kosten-Analyse & Optimierung** 💰
+
+#### **Wie Bildkosten wirklich funktionieren**
+
+Die API rechnet **token-basiert** (wie bei Text), nicht "pro Bild fix".
+
+**Du zahlst für 3 Dinge:**
+
+| Komponente | Kosten | Pro Bild | Anteil |
+|------------|--------|----------|--------|
+| **1. Text Input (Prompt)** | $5 / 1M Tokens | ~$0.001-0.005 | ~1% |
+| **2. Image Input (Foto)** | $8 / 1M Tokens | ~$0.01-0.03 | ~9% |
+| **3. Image Output** | $30 / 1M Tokens | ~$0.15-0.20 | ~90% 💰 |
+
+**👉 Image Output ist der große Kostentreiber!**
+
+---
+
+#### **Konkrete Kosten für dein Produkt**
+
+**Setup:** 5 Seiten + Cover = 6 Bilder (1024×1536, high quality)
+
+**MIT User-Foto (images.edit()):**
+```
+Kostenblock          Pro Bild    Gesamt (6 Bilder)
+─────────────────────────────────────────────────
+Prompt               ~$0.002     ~$0.01
+Foto Input           ~$0.02      ~$0.12
+Bild Output          ~$0.18      ~$1.08
+─────────────────────────────────────────────────
+TOTAL                ~$0.20      ~$1.20
+```
+
+**OHNE User-Foto (images.generate()):**
+```
+Kostenblock          Pro Bild    Gesamt (6 Bilder)
+─────────────────────────────────────────────────
+Prompt               ~$0.002     ~$0.01
+Bild Output          ~$0.18      ~$1.08
+─────────────────────────────────────────────────
+TOTAL                ~$0.18      ~$1.08
+```
+
+**Differenz:** Mit Foto kostet ~$0.12 mehr (Foto Input)
+
+---
+
+#### **Modell-Vergleich**
+
+| Modell | Kosten/Bild | Qualität | Empfehlung |
+|--------|-------------|----------|------------|
+| **gpt-image-1** | $0.04-0.17 | ⭐⭐ | ❌ Zu schlecht |
+| **gpt-image-1.5** | $0.15-0.18 | ⭐⭐⭐ | ✅ Aktuell |
+| **gpt-image-2** | $0.16-0.21 | ⭐⭐⭐⭐ | 🔥 Testen! |
+
+---
+
+#### **⚠️ Die 3 größten Kostenfallen**
+
+**1. images.edit() mit Foto bei JEDER Seite**
+```
+Problem: Foto Input kostet ~$0.02 pro Bild
+Bei 5 Seiten: 5 × $0.02 = $0.10 extra
+```
+**Lösung:** Character Anchor einmal erstellen, dann ohne Foto generieren
+
+---
+
+**2. Multi-Generationen (Preview, Regenerate, Edit)**
+```
+Problem: User generiert 3× neu
+Statt $1.20 → $3.60 Kosten!
+```
+**Lösung:** 
+- Preview mit `quality: "standard"` (~$0.08 statt $0.18)
+- Final mit `quality: "high"`
+- Regenerate nur einzelne Seiten, nicht alles
+
+---
+
+**3. Zu viele Seiten**
+```
+Problem: Jede Seite kostet ~$0.18
+10 Seiten = $1.80 statt $1.08
+```
+**Lösung:** 
+- Standard: 5 Seiten
+- Premium: 10 Seiten (höherer Preis)
+
+---
+
+#### **💡 PRO-Level Kostenstrategie**
+
+**Best Practice Pipeline:**
+
+```javascript
+// Phase 1: Preview (günstig)
+const preview = await openai.images.generate({
+  model: "gpt-image-1.5",
+  prompt: "...",
+  quality: "standard", // 👉 ~$0.08 statt $0.18
+  size: "1024x1024"    // 👉 kleiner = günstiger
+});
+
+// Phase 2: User approved → Final (teuer)
+const final = await openai.images.generate({
+  model: "gpt-image-2",  // 👉 beste Qualität
+  prompt: "...",
+  quality: "high",       // 👉 ~$0.21
+  size: "1024x1536"
+});
+
+// Phase 3: Character Anchor (1× mit Foto)
+const characterSheet = await openai.images.edit({
+  image: userPhoto,      // 👉 nur 1× Foto Input
+  prompt: "Character reference sheet..."
+});
+
+// Phase 4: Alle Seiten (ohne Foto!)
+for (const page of pages) {
+  const pageImage = await openai.images.edit({
+    image: characterSheet, // 👉 kein Foto Input mehr!
+    prompt: "..."
+  });
+}
+```
+
+**Einsparung:** ~$0.10 pro Comic (10% weniger Kosten)
+
+---
+
+#### **Business Case Rechnung**
+
+**Verkaufspreis:** 29€ pro Buch
+
+**Kosten:**
+```
+AI Generierung:        ~$1.20  (mit Foto)
+Druck + Versand:       ~$8.00  (geschätzt)
+Payment Provider:      ~$0.90  (3%)
+─────────────────────────────────
+Gesamt:                ~$10.10
+─────────────────────────────────
+Marge:                 ~$18.90  (65%)
+```
+
+**✅ Starke Marge!**
+
+**ABER:** Bei 3× Regenerierung:
+```
+AI Generierung:        ~$3.60  (3× generiert)
+Druck + Versand:       ~$8.00
+Payment Provider:      ~$0.90
+─────────────────────────────────
+Gesamt:                ~$12.50
+─────────────────────────────────
+Marge:                 ~$16.50  (57%)
+```
+
+**Immer noch OK, aber:** Regenerate-Limit setzen!
+
+---
+
+#### **Empfohlene Maßnahmen**
+
+**Kurzfristig (jetzt):**
+1. ✅ Regenerate-Limit: Max 2× pro Comic
+2. ✅ Foto nur für Cover + Character Sheet nutzen
+3. ✅ Monitoring: Kosten pro Comic tracken
+
+**Mittelfristig (Phase 2):**
+4. Preview mit `quality: "standard"`
+5. A/B-Test: gpt-image-1.5 vs gpt-image-2
+6. Character Sheet einmal erstellen, dann wiederverwenden
+
+**Langfristig (Phase 3):**
+7. SDXL für Bulk-Generierung (>500 Comics/Monat)
+8. Tiered Pricing: Standard (5 Seiten) vs Premium (10 Seiten)
+9. Caching: Häufige Prompts/Styles vorrendern
+
+---
+
+#### **Zusammenfassung**
+
+**Aktuelle Kosten:**
+- ~$1.20 pro Comic (6 Bilder mit Foto)
+- ~90% davon ist Image Output
+- ~10% ist Foto Input + Prompt
+
+**Optimierungspotenzial:**
+- Preview-Modus: -50% Kosten
+- Character Sheet: -10% Kosten
+- gpt-image-2: +5% Kosten, aber bessere Qualität
+
+**Empfehlung:**
+1. Jetzt: gpt-image-2 testen (nur +$0.20 pro Comic)
+2. Später: Preview-Modus implementieren
+3. Monitoring: Kosten pro Comic tracken
+
+---
+
+### 7c. Alternative Geschäftsmodelle / Technologien (Fortsetzung)
+
 #### A) **Midjourney** (beste Qualität, aber kompliziert)
 - ✅ Beste Bildqualität
 - ✅ Konsistente Charaktere via `--cref`
