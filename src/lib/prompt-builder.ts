@@ -68,7 +68,7 @@ export function buildComicPagePrompt(input: PagePromptInput): string {
   // Short, focused prompt — quality instruction FIRST, then content
   return `Create a premium European comic book page with ${panelCount} panels in a ${layoutDesc}. 
 
-CRITICAL: Sharp, detailed facial features with clearly defined eyes, nose, mouth, and expressions. Maximum 2-4 people per panel with visible faces. Each panel shows a COMPLETELY DIFFERENT scene, angle, and moment — no duplicates, no similar compositions.
+CRITICAL: Sharp, detailed facial features with clearly defined eyes, nose, mouth, and expressions. Maximum 2-4 people per panel with visible faces. Each panel shows a COMPLETELY DIFFERENT scene, angle, and moment — no duplicates, no similar compositions. Each character appears ONLY ONCE per panel — no duplicates of the same person.
 
 ${charBlock ? `Characters (keep identical in every panel with recognizable faces): ${charBlock}\n` : ""}${panelDescs}
 ${location ? `\nSetting: ${location}.` : ""}${timeOfDay ? ` ${timeOfDay} lighting.` : ""}
@@ -142,11 +142,15 @@ Include: WHO (name + key visual), WHAT (action), WHERE, LIGHTING. No narrative. 
 CRITICAL — VARIETY:
 - Every panel on a page must show a COMPLETELY DIFFERENT scene, angle, and moment
 - NEVER repeat the same activity in two panels (e.g. not 2× looking at album, not 2× hanging decorations)
+- NEVER show the same location/angle twice (e.g. not 2× "Familie am Gate")
 - Vary: close-up face, wide group shot, action moment, quiet detail, over-shoulder view
+- Think cinematically: establishing shot → close-up → reaction → wide shot
+- Each panel must advance the story — no redundant moments
 - Only include characters that are mentioned in the story — do NOT invent extra people
 - Background people (strangers on street, crowd) are OK, but NO new named characters
 - AVOID large crowd scenes with 10+ people — prefer intimate moments with 2-4 people per panel
 - For party/celebration scenes: focus on main characters, show crowd as background silhouettes
+- CRITICAL: Each character appears ONLY ONCE per panel — no duplicates of the same person
 
 RULES:
 - ${numPages} pages, 3-4 panels each (prefer 4)

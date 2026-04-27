@@ -68,6 +68,15 @@ Tone: ${tone}. Visual mood: ${mood}. Comic style: ${comicMod}.
 ${mustHaveSentences ? `MUST include: ${mustHaveSentences}` : ""}
 Vary panel count: Page 1: 4 panels, Page 2: 3 panels, Page 3: 5 panels, Page 4: 4 panels.
 Each panel scene must work as a STANDALONE image prompt — describe the complete scene.
+
+CRITICAL — PANEL VARIETY:
+- Every panel must show a COMPLETELY DIFFERENT scene, angle, and moment
+- NEVER repeat the same activity in two panels (e.g. not 2× at gate, not 2× looking at something)
+- NEVER show the same location/angle twice on one page
+- Think cinematically: establishing shot → close-up → reaction → wide shot
+- Each panel must advance the story — no redundant moments
+- Each character appears ONLY ONCE per panel — no duplicates of the same person
+
 Respond ONLY with JSON: {"pages": [{"id":"page1","pageNumber":1,"title":"Title in ${lang}","location":"English location","timeOfDay":"afternoon","panels":[{"nummer":1,"szene":"Specific English scene for SINGLE IMAGE generation","dialog":"Short ${lang} dialog max 15 words","speaker":"Name or null","bubble_type":"speech"}]}]}` },
           { role: "user", content: ctx },
         ],
@@ -81,18 +90,23 @@ Respond ONLY with JSON: {"pages": [{"id":"page1","pageNumber":1,"title":"Title i
 
 CRITICAL: Descriptions must be detailed enough for gpt-image-1.5 to generate sharp, recognizable faces.
 
+ACCESSORIES & CONSISTENT FEATURES:
+- If a character wears glasses, hijab, hat, jewelry, or other accessories: ALWAYS mention "always wears [accessory]"
+- If a character has facial hair (beard, mustache): specify exact style and ALWAYS include it
+- These features must appear in EVERY panel across ALL pages
+
 Respond ONLY with JSON:
 {
   "characters": [
     {
       "name": "Character name",
       "age": 30,
-      "visual_anchor": "DETAILED English description for sharp face generation: exact age, precise hair color/length/style, eye color and shape, skin tone, facial features (jawline, cheekbones, nose shape, smile type), distinctive marks, body type, typical clothing colors. 40-50 words."
+      "visual_anchor": "DETAILED English description for sharp face generation: exact age, precise hair color/length/style, eye color and shape, skin tone, facial features (jawline, cheekbones, nose shape, smile type), distinctive marks, body type, typical clothing colors, ALWAYS wears [consistent accessories like glasses/hijab/beard]. 40-50 words."
     }
   ]
 }
 
-Example: "Emma: 6-year-old girl with shoulder-length wavy auburn hair, bright hazel eyes, round face with rosy cheeks, small freckles across nose, warm smile showing front teeth gap, fair skin, petite build, usually wears yellow t-shirt and denim shorts"` },
+Example: "Emma: 6-year-old girl with shoulder-length wavy auburn hair, bright hazel eyes, round face with rosy cheeks, small freckles across nose, warm smile showing front teeth gap, fair skin, petite build, always wears yellow t-shirt and denim shorts"` },
           { role: "user", content: ctx },
         ],
         response_format: { type: "json_object" },
@@ -227,6 +241,7 @@ CRITICAL RULES FOR SHARP FACES:
 - ALWAYS include: "Sharp, detailed facial features with clearly defined eyes, nose, mouth, and expressions"
 - ALWAYS include: "Each panel shows a COMPLETELY DIFFERENT scene, angle, and moment"
 - ALWAYS include: "Maximum 2-4 people per panel with visible faces — avoid large crowds"
+- CRITICAL: "Each character appears ONLY ONCE per panel — no duplicates of the same person"
 - For characters: mention "recognizable face" or "distinct facial features"
 - For crowd scenes: "Background people as silhouettes or out of focus"
 - Total output: max 130 words

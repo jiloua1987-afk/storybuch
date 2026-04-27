@@ -66,18 +66,23 @@ export async function buildCharacterAnchors(
 
 CRITICAL: Descriptions must be detailed enough for gpt-image-1.5 to generate sharp, recognizable faces.
 
+ACCESSORIES & CONSISTENT FEATURES:
+- If a character wears glasses, hijab, hat, jewelry, or other accessories: ALWAYS mention "always wears [accessory]"
+- If a character has facial hair (beard, mustache): specify exact style and ALWAYS include it
+- These features must appear in EVERY panel across ALL pages
+
 Respond ONLY with JSON:
 {
   "characters": [
     {
       "name": "Character name",
       "age": 30,
-      "visual_anchor": "DETAILED English description for sharp face generation: exact age, precise hair color/length/style, eye color and shape, skin tone, facial features (jawline, cheekbones, nose shape, smile type), distinctive marks, body type, typical clothing colors. 40-50 words."
+      "visual_anchor": "DETAILED English description for sharp face generation: exact age, precise hair color/length/style, eye color and shape, skin tone, facial features (jawline, cheekbones, nose shape, smile type), distinctive marks, body type, typical clothing colors, ALWAYS wears [consistent accessories like glasses/hijab/beard]. 40-50 words."
     }
   ]
 }
 
-Example: "Emma: 6-year-old girl with shoulder-length wavy auburn hair, bright hazel eyes, round face with rosy cheeks, small freckles across nose, warm smile showing front teeth gap, fair skin, petite build, usually wears yellow t-shirt and denim shorts"`,
+Example: "Emma: 6-year-old girl with shoulder-length wavy auburn hair, bright hazel eyes, round face with rosy cheeks, small freckles across nose, warm smile showing front teeth gap, fair skin, petite build, always wears yellow t-shirt and denim shorts"`,
       },
       { role: "user", content: context },
     ],
@@ -136,6 +141,7 @@ CRITICAL RULES FOR SHARP FACES:
 - ALWAYS include: "Sharp, detailed facial features with clearly defined eyes, nose, mouth, and expressions"
 - ALWAYS include: "Each panel shows a COMPLETELY DIFFERENT scene, angle, and moment"
 - ALWAYS include: "Maximum 2-4 people per panel with visible faces — avoid large crowds"
+- CRITICAL: "Each character appears ONLY ONCE per panel — no duplicates of the same person"
 - For characters: mention "recognizable face" or "distinct facial features"
 - For crowd scenes: "Background people as silhouettes or out of focus"
 - Total output: max 130 words
