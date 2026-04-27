@@ -252,7 +252,8 @@ export async function generateComicPage(
       }
 
       // Create File object for OpenAI API (Node.js compatible)
-      const file = new File([imageBuffer], "reference.png", { type: "image/png" });
+      // Convert Buffer to Uint8Array for File constructor
+      const file = new File([new Uint8Array(imageBuffer)], "reference.png", { type: "image/png" });
 
       // Enhanced prompt with character consistency emphasis
       const charAnchors = characters.map(c => `${c.name} (${c.visual_anchor})`).join(", ");

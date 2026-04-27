@@ -54,7 +54,7 @@ Portrait orientation (vertical), all characters visible from head to waist.`;
           imageBuffer = Buffer.from(refData, "base64");
         }
         
-        const refFile = new File([imageBuffer], "reference.png", { type: "image/png" });
+        const refFile = new File([new Uint8Array(imageBuffer)], "reference.png", { type: "image/png" });
         
         const editRes = await openai.images.edit({
           model: "gpt-image-1.5",
@@ -152,7 +152,7 @@ Leave the bottom 30% of the image slightly darker/simpler for title overlay.`;
           imageBuffer = Buffer.from(refData, "base64");
         }
         
-        const refFile = new File([imageBuffer], "reference.png", { type: "image/png" });
+        const refFile = new File([new Uint8Array(imageBuffer)], "reference.png", { type: "image/png" });
         
         const editRes = await openai.images.edit({
           model: "gpt-image-1.5",
