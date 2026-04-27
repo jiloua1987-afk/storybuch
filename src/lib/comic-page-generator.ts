@@ -101,6 +101,23 @@ async function rewriteForImageAI(page: StoryPage, characters: Character[], categ
     const layoutDesc = panelCount <= 3 ? "1 wide panel on top, 2 panels on bottom"
       : panelCount === 5 ? "2 on top, 1 wide middle, 2 on bottom" : "2×2 grid";
 
+    // Context-aware outfit detection
+    const location = (page.location || "").toLowerCase();
+    const beachKeywords = ["strand", "beach", "meer", "sea", "pool", "planschbecken", "schwimmbad", "wasser"];
+    const homeKeywords = ["haus", "home", "wohnzimmer", "küche", "hof", "garten", "zimmer"];
+    const formalKeywords = ["restaurant", "theater", "hochzeit", "feier", "party", "celebration"];
+    
+    let outfitContext = "";
+    if (beachKeywords.some(kw => location.includes(kw))) {
+      outfitContext = "Characters wear appropriate beach/swim clothing (swimwear, shorts, light summer clothes). ";
+    } else if (formalKeywords.some(kw => location.includes(kw))) {
+      outfitContext = "Characters wear formal/festive clothing appropriate for the occasion. ";
+    } else if (homeKeywords.some(kw => location.includes(kw))) {
+      outfitContext = "Characters wear casual home clothing. ";
+    } else {
+      outfitContext = "Characters wear context-appropriate clothing for the setting. ";
+    }
+
     const response = await openai.chat.completions.create({
       model: "gpt-4o",
       messages: [{
@@ -122,6 +139,11 @@ CRITICAL RULES FOR SHARP FACES:
 - For characters: mention "recognizable face" or "distinct facial features"
 - For crowd scenes: "Background people as silhouettes or out of focus"
 - Total output: max 130 words
+
+CLOTHING CONTEXT:
+- ${outfitContext}
+- Characters can change clothes between pages based on location/activity
+- Keep character faces/hair/features identical, but adapt clothing to scene
 
 STYLE RULES:
 - No block headers (no "QUALITY:", "STYLE:", "LAYOUT:" etc.)
@@ -167,6 +189,23 @@ export async function generateComicPage(
 
   // Fallback to our built prompt if rewriter fails
   if (!prompt) {
+    // Context-aware outfit detection for fallback
+    const location = (page.location || "").toLowerCase();
+    const beachKeywords = ["strand", "beach", "meer", "sea", "pool", "planschbecken", "schwimmbad", "wasser"];
+    const homeKeywords = ["haus", "home", "wohnzimmer", "küche", "hof", "garten", "zimmer"];
+    const formalKeywords = ["restaurant", "theater", "hochzeit", "feier", "party", "celebration"];
+    
+    let outfitNote = "";
+    if (beachKeywords.some(kw => location.includes(kw))) {
+      outfitNote = " Characters wear appropriate beach/swim clothing (swimwear, shorts, light summer clothes).";
+    } else if (formalKeywords.some(kw => location.includes(kw))) {
+      outfitNote = " Characters wear formal/festive clothing appropriate for the occasion.";
+    } else if (homeKeywords.some(kw => location.includes(kw))) {
+      outfitNote = " Characters wear casual home clothing.";
+    } else {
+      outfitNote = " Characters wear context-appropriate clothing for the setting.";
+    }
+
     prompt = buildComicPagePrompt({
       title: page.title,
       panels: page.panels,
@@ -176,7 +215,7 @@ export async function generateComicPage(
       category,
       location: page.location,
       timeOfDay: page.timeOfDay,
-    });
+    }) + outfitNote;
   }
 
   // Step 3b: Generate image — with user photo if available
@@ -187,10 +226,20 @@ export async function generateComicPage(
       const blob = new Blob([refBuf], { type: "image/jpeg" });
       const file = new File([blob], "reference.jpg", { type: "image/jpeg" });
 
+      // Enhanced prompt with character consistency emphasis
+      const charAnchors = characters.map(c => `${c.name} (${c.visual_anchor})`).join(", ");
+      const consistencyNote = referenceImages.length === 0 
+        ? "This is the cover image showing the main characters. Keep their faces, hair, and features EXACTLY as shown in this reference."
+        : "The people in this photo are the main characters. Keep their exact faces, hair, and features recognizable.";
+
       const response = await openai.images.edit({
         model: "gpt-image-1.5",
         image: file,
-        prompt: `The people in this photo are the main characters. Draw them as premium European comic illustrations — keep their exact faces, hair, and features recognizable but rendered in crisp comic style with bold ink outlines.\n\n${prompt}`,
+        prompt: `${consistencyNote} Draw them as premium European comic illustrations — crisp comic style with bold ink outlines.
+
+Character consistency is CRITICAL: ${charAnchors}
+
+${prompt}`,
         size: "1024x1536",
         quality: "high",
       } as any);

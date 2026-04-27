@@ -106,17 +106,34 @@ export async function POST(req: NextRequest) {
         send("progress", { label: "Cover wird erstellt…", progress: 18 });
         const bookId = `book-${Date.now()}`;
         let coverUrl = "";
-        let coverAsReference = ""; // For character consistency
+        let coverAsReference = ""; // For character consistency when no user photos
         try {
           const rawCover = await generateCoverImage(
             bookTitle, characters, category, illustrationStyle || "comic", location, referenceImages
           );
           coverUrl = rawCover ? await saveImageToStorage(rawCover, "covers", `cover-${bookId}`) : "";
           
-          // If no user photos uploaded, use cover as reference for consistency
+          // CRITICAL: If no user photos uploaded, use cover as reference for ALL pages
           if (referenceImages.length === 0 && rawCover) {
-            coverAsReference = rawCover; // Use cover as reference for all pages
-            console.log("✓ Using cover as character reference for consistency");
+            // Convert URL to base64 for images.edit() API
+            if (rawCover.startsWith("http")) {
+              try {
+                const response = await fetch(rawCover);
+                const buffer = await response.arrayBuffer();
+                coverAsReference = Buffer.from(buffer).toString("base64");
+                console.log("✓ Cover downloaded and converted to base64 for reference");
+              } catch (e: any) {
+                console.warn("Cover download failed, using URL:", e.message);
+                coverAsReference = rawCover; // Fallback to URL
+              }
+            } else if (rawCover.startsWith("data:image")) {
+              // Already base64
+              coverAsReference = rawCover.split(",")[1] || rawCover;
+              console.log("✓ Cover already in base64 format");
+            } else {
+              coverAsReference = rawCover;
+            }
+            console.log("✓ Using cover as character reference for consistency (no user photos)");
           }
           
           send("cover", { coverImageUrl: coverUrl });
@@ -136,6 +153,8 @@ export async function POST(req: NextRequest) {
           try {
             // Use cover as reference if no user photos
             const pageReferences = referenceImages.length > 0 ? referenceImages : (coverAsReference ? [coverAsReference] : []);
+            
+            console.log(`Page ${i + 1}: Using ${pageReferences.length > 0 ? (referenceImages.length > 0 ? "user photo" : "cover") : "no"} reference`);
             
             const rawUrl = await generateComicPage(
               page, characters,

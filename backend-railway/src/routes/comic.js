@@ -192,6 +192,23 @@ router.post("/page", async (req, res) => {
     // Step 1: GPT-4o Prompt Rewriter — writes like an Art Director
     let imagePrompt = "";
     try {
+      // Context-aware outfit detection
+      const location = (page.location || "").toLowerCase();
+      const beachKeywords = ["strand", "beach", "meer", "sea", "pool", "planschbecken", "schwimmbad", "wasser"];
+      const homeKeywords = ["haus", "home", "wohnzimmer", "küche", "hof", "garten", "zimmer"];
+      const formalKeywords = ["restaurant", "theater", "hochzeit", "feier", "party", "celebration"];
+      
+      let outfitContext = "";
+      if (beachKeywords.some(kw => location.includes(kw))) {
+        outfitContext = "Characters wear appropriate beach/swim clothing (swimwear, shorts, light summer clothes). ";
+      } else if (formalKeywords.some(kw => location.includes(kw))) {
+        outfitContext = "Characters wear formal/festive clothing appropriate for the occasion. ";
+      } else if (homeKeywords.some(kw => location.includes(kw))) {
+        outfitContext = "Characters wear casual home clothing. ";
+      } else {
+        outfitContext = "Characters wear context-appropriate clothing for the setting. ";
+      }
+
       const rewriteRes = await openai.chat.completions.create({
         model: "gpt-4o",
         messages: [{
@@ -213,6 +230,11 @@ CRITICAL RULES FOR SHARP FACES:
 - For characters: mention "recognizable face" or "distinct facial features"
 - For crowd scenes: "Background people as silhouettes or out of focus"
 - Total output: max 130 words
+
+CLOTHING CONTEXT:
+- ${outfitContext}
+- Characters can change clothes between pages based on location/activity
+- Keep character faces/hair/features identical, but adapt clothing to scene
 
 STYLE RULES:
 - No block headers (no "QUALITY:", "STYLE:", "LAYOUT:" etc.)
@@ -242,11 +264,19 @@ ${panelList}`,
     }
     // Fallback prompt
     if (!imagePrompt) {
+      // Context-aware outfit for fallback
+      const location = (page.location || "").toLowerCase();
+      const beachKeywords = ["strand", "beach", "meer", "sea", "pool", "planschbecken", "schwimmbad", "wasser"];
+      let outfitNote = "";
+      if (beachKeywords.some(kw => location.includes(kw))) {
+        outfitNote = " Characters wear appropriate beach/swim clothing (swimwear, shorts, light summer clothes).";
+      }
+
       imagePrompt = `Create a premium European comic book page with ${panelCount} panels in a ${layoutDesc}. 
 
 CRITICAL: Sharp, detailed facial features with clearly defined eyes, nose, mouth, and expressions. Maximum 2-4 people per panel with visible faces. Each panel shows a COMPLETELY DIFFERENT scene, angle, and moment — no duplicates, no similar compositions.
 
-Characters (keep identical in every panel with recognizable faces): ${characters.map(c => `${c.name}: ${c.visual_anchor}`).join(". ")}
+Characters (keep identical in every panel with recognizable faces): ${characters.map(c => `${c.name}: ${c.visual_anchor}`).join(". ")}${outfitNote}
 ${page.panels.map(p => `Panel ${p.nummer}: ${p.szene}`).join("\n")}
 ${page.location ? `\nSetting: ${page.location}.` : ""}${page.timeOfDay ? ` ${page.timeOfDay} lighting.` : ""}
 
@@ -263,17 +293,28 @@ Style: crisp black ink outlines, ${style}, expressive faces with clear features,
         const refBuf = Buffer.from(primaryRef, "base64");
         const refBlob = new Blob([refBuf], { type: "image/jpeg" });
         const refFile = new File([refBlob], "reference.jpg", { type: "image/jpeg" });
+        
+        // Enhanced consistency note
+        const charAnchors = characters.map(c => `${c.name} (${c.visual_anchor})`).join(", ");
+        const consistencyNote = referenceImages.length === 0
+          ? "This is the cover image showing the main characters. Keep their faces, hair, and features EXACTLY as shown in this reference."
+          : "The people in this photo are the main characters. Keep their exact faces, hair, and features recognizable.";
+        
         const editRes = await openai.images.edit({
           model: "gpt-image-1.5",
           image: refFile,
-          prompt: `The people in this photo are the main characters. Draw them as premium European comic illustrations — keep their exact faces recognizable in crisp comic style.\n\n${imagePrompt}`,
+          prompt: `${consistencyNote} Draw them as premium European comic illustrations — crisp comic style with bold ink outlines.
+
+Character consistency is CRITICAL: ${charAnchors}
+
+${imagePrompt}`,
           size: "1024x1536",
           quality: "high",
         });
         const item = (editRes.data || [])[0];
         if (item?.url) rawUrl = item.url;
         else if (item?.b64_json) rawUrl = `data:image/png;base64,${item.b64_json}`;
-        if (rawUrl) console.log(`  → Generated with reference photo`);
+        if (rawUrl) console.log(`  → Generated with reference ${referenceImages.length > 0 ? "photo" : "(cover)"}`);
       } catch (e) {
         console.warn(`  → Reference photo failed:`, e.message);
       }
