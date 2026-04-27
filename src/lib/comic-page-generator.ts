@@ -232,18 +232,32 @@ export async function generateComicPage(
     }) + outfitNote;
   }
 
-  // Step 3b: Generate image — with user photo if available
+  // Step 3b: Generate image — with reference if available
   const primaryRef = referenceImages[0] || (characters.find((c) => (c as any).refBase64) as any)?.refBase64;
   if (primaryRef) {
     try {
-      const refBuf = Buffer.from(primaryRef, "base64");
-      const blob = new Blob([refBuf], { type: "image/jpeg" });
-      const file = new File([blob], "reference.jpg", { type: "image/jpeg" });
+      // Convert base64 to Buffer
+      let imageBuffer: Buffer;
+      if (primaryRef.startsWith("data:image")) {
+        // Remove data:image/...;base64, prefix
+        const base64Data = primaryRef.split(",")[1] || primaryRef;
+        imageBuffer = Buffer.from(base64Data, "base64");
+      } else if (primaryRef.startsWith("http")) {
+        // Download from URL
+        const response = await fetch(primaryRef);
+        imageBuffer = Buffer.from(await response.arrayBuffer());
+      } else {
+        // Raw base64 string
+        imageBuffer = Buffer.from(primaryRef, "base64");
+      }
+
+      // Create File object for OpenAI API (Node.js compatible)
+      const file = new File([imageBuffer], "reference.png", { type: "image/png" });
 
       // Enhanced prompt with character consistency emphasis
       const charAnchors = characters.map(c => `${c.name} (${c.visual_anchor})`).join(", ");
       const consistencyNote = referenceImages.length === 0 
-        ? "This is the cover image showing the main characters. Keep their faces, hair, and features EXACTLY as shown in this reference."
+        ? "This is the character reference sheet showing the main characters. Keep their faces, hair, and features EXACTLY as shown in this reference."
         : "The people in this photo are the main characters. Keep their exact faces, hair, and features recognizable.";
 
       const response = await openai.images.edit({
@@ -263,6 +277,7 @@ ${prompt}`,
       if (item?.b64_json) return `data:image/png;base64,${item.b64_json}`;
     } catch (err: any) {
       console.warn(`Reference photo failed for page ${page.pageNumber}:`, err.message);
+      console.error("Full error:", err);
     }
   }
 

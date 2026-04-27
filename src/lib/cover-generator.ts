@@ -40,14 +40,26 @@ Portrait orientation (vertical), all characters visible from head to waist.`;
     // If user uploaded reference photo, use images.edit()
     if (referenceImages.length > 0 && referenceImages[0]) {
       try {
-        const refBuf = Buffer.from(referenceImages[0], "base64");
-        const refBlob = new Blob([refBuf], { type: "image/jpeg" });
-        const refFile = new File([refBlob], "reference.jpg", { type: "image/jpeg" });
+        // Convert base64 to Buffer
+        let imageBuffer: Buffer;
+        const refData = referenceImages[0];
+        
+        if (refData.startsWith("data:image")) {
+          const base64Data = refData.split(",")[1] || refData;
+          imageBuffer = Buffer.from(base64Data, "base64");
+        } else if (refData.startsWith("http")) {
+          const response = await fetch(refData);
+          imageBuffer = Buffer.from(await response.arrayBuffer());
+        } else {
+          imageBuffer = Buffer.from(refData, "base64");
+        }
+        
+        const refFile = new File([imageBuffer], "reference.png", { type: "image/png" });
         
         const editRes = await openai.images.edit({
           model: "gpt-image-1.5",
           image: refFile,
-          prompt: `The people in this photo are the characters. ${prompt}`,
+          prompt: `The people in this photo are the main characters. ${prompt}`,
           size: "1024x1536",
           quality: "high",
         });
@@ -56,6 +68,7 @@ Portrait orientation (vertical), all characters visible from head to waist.`;
         if (item?.b64_json) return `data:image/png;base64,${item.b64_json}`;
       } catch (e: any) {
         console.warn("Character sheet edit failed, falling back to generate:", e.message);
+        console.error("Full error:", e);
       }
     }
 
@@ -125,9 +138,21 @@ Leave the bottom 30% of the image slightly darker/simpler for title overlay.`;
     // If user uploaded reference photo, use images.edit()
     if (referenceImages.length > 0 && referenceImages[0]) {
       try {
-        const refBuf = Buffer.from(referenceImages[0], "base64");
-        const refBlob = new Blob([refBuf], { type: "image/jpeg" });
-        const refFile = new File([refBlob], "reference.jpg", { type: "image/jpeg" });
+        // Convert base64 to Buffer
+        let imageBuffer: Buffer;
+        const refData = referenceImages[0];
+        
+        if (refData.startsWith("data:image")) {
+          const base64Data = refData.split(",")[1] || refData;
+          imageBuffer = Buffer.from(base64Data, "base64");
+        } else if (refData.startsWith("http")) {
+          const response = await fetch(refData);
+          imageBuffer = Buffer.from(await response.arrayBuffer());
+        } else {
+          imageBuffer = Buffer.from(refData, "base64");
+        }
+        
+        const refFile = new File([imageBuffer], "reference.png", { type: "image/png" });
         
         const editRes = await openai.images.edit({
           model: "gpt-image-1.5",
@@ -141,6 +166,7 @@ Leave the bottom 30% of the image slightly darker/simpler for title overlay.`;
         if (item?.b64_json) return `data:image/png;base64,${item.b64_json}`;
       } catch (e: any) {
         console.warn("Cover edit failed, falling back to generate:", e.message);
+        console.error("Full error:", e);
       }
     }
 
