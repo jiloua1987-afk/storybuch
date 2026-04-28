@@ -239,6 +239,16 @@ router.post("/page", async (req, res) => {
 
 Write like an art director briefing an illustrator — NOT like a prompt engineer.
 
+⚠️ CRITICAL - ABSOLUTELY NO TEXT IN IMAGE ⚠️
+The image generator MUST NOT write ANY text, titles, captions, or letters.
+- NO page titles like "Ankunft in Tunesien" or "Abflug nach Tunesien"
+- NO panel titles, NO scene titles, NO location names
+- NO speech bubbles, NO captions, NO labels
+- NO letters, NO words, NO text of any kind
+- Text is added separately by the frontend - the image must be PURE ILLUSTRATION
+- If you see a title in the panel description, IGNORE IT - do not include it in the image prompt
+- This is CRITICAL - any text in the image will ruin the comic
+
 OUTPUT STRUCTURE (exactly this, nothing else):
 1. One master sentence: style + layout + motif + story context
 2. One character anchor sentence (if reference photo exists)
@@ -255,15 +265,16 @@ CRITICAL RULES FOR SHARP FACES:
 - For crowd scenes: "Background people as silhouettes or out of focus"
 - Total output: max 130 words
 
-ABSOLUTELY NO TEXT IN IMAGE:
-- NO text, NO speech bubbles, NO letters, NO words anywhere in the generated image
-- NO panel titles, NO captions, NO labels
-- Text will be added separately by the frontend
-- This is CRITICAL — any text in the image will ruin the comic
+NO INVENTED CHARACTERS:
+- ONLY draw characters listed in the Characters section below
+- Do NOT add any extra people, children, strangers, or background figures with faces
+- Background crowd = faceless silhouettes only, NO distinct faces on unnamed people
 
 CLOTHING CONTEXT:
 - ${outfitContext}
-- Characters can change clothes between pages based on location/activity
+- Characters can change clothes between DIFFERENT locations (airport → beach → home)
+- BUT: Same outfit within the SAME location across multiple panels
+- Example: If Mama wears brown top at beach in panel 1, she wears brown top in ALL beach panels
 - Keep character faces/hair/features identical, but adapt clothing to scene
 
 STYLE RULES:
@@ -273,7 +284,7 @@ STYLE RULES:
 - Write naturally, like describing a scene to an artist
 - Each panel: max 1 sentence, purely what is VISIBLE
 - Emphasize variety: close-ups, wide shots, different actions, different angles
-- CRITICAL: End with "NO text, NO speech bubbles, NO letters in image"`,
+- CRITICAL: End with "NO text, NO speech bubbles, NO letters, NO titles in image"`,
         }, {
           role: "user",
           content: `${panelCount} panels in a ${layoutDesc}. Category: ${category}, style: ${comicStyle}.

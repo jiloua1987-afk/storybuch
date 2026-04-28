@@ -143,6 +143,15 @@ Write SHORT visual descriptions for an image AI. Max 2 sentences. Visual only.
 
 Include: WHO (name + key visual), WHAT (action), WHERE, LIGHTING. No narrative. No emotions in words — show them through expressions and body language.
 
+DIALOGS — CRITICAL FOR STORYTELLING:
+- MOST panels (70-80%) should have dialog to tell the story
+- Create CONVERSATIONS, not monologues — characters talk TO EACH OTHER
+- Each dialog: 10-15 words, natural ${lang}
+- Vary speakers: not all from one person, create back-and-forth exchanges
+- Example: Panel 1: Mama asks question → Panel 2: Papa answers → Panel 3: Child reacts
+- Dialogs should feel like real conversations with questions, answers, reactions
+- ONLY assign dialog to characters who are VISIBLE in that panel's "szene" description
+
 CRITICAL — CHARACTER VISIBILITY:
 - Prefer showing characters facing the camera or from the side to see expressions
 - Back views are OK when it serves the story (e.g., looking at something, walking away)
