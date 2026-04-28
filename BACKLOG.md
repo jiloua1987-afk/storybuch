@@ -1,5 +1,50 @@
 # Product Backlog - MyComicStory
 
+## 🎨 UI/UX Redesign - Wizard ruhiger gestalten
+
+**Status:** TODO
+**Priorität:** Hoch
+**Aufwand:** Mittel (1-2 Tage)
+
+**Problem:**
+- Zu viele Emojis und Icons im Wizard
+- Zu viel visuelle Unruhe
+- Kleine Buttons, wenig Weißraum
+- Nicht konsistent mit Referenz-Design (magischeskinderbuch.de)
+
+**Lösung:**
+Redesign aller Wizard-Steps + Startseite + Über uns im ruhigen Stil:
+
+**Design-Prinzipien:**
+- ✅ Große weiße Boxen mit Nummern-Kreisen (1, 2, 3...)
+- ✅ Viel Weißraum zwischen Elementen
+- ✅ Warme Farbpalette: Gold (#C9963A), Ink (#1A1410), Cream (#FDF8F2), Oat (#E8D9C0)
+- ✅ Playfair Display für Überschriften
+- ✅ Keine Emojis in Buttons (nur in Texten wo sinnvoll)
+- ✅ Klare Hierarchie mit großen Überschriften
+- ✅ Nummerierte Kreise statt Icons
+
+**Betroffene Komponenten:**
+1. `src/components/steps/Step1Story.tsx` - ALLE Features behalten (Momente, Custom Dialogs, etc.)
+2. `src/components/steps/Step2Upload.tsx` - Dropzone + Bildergalerie
+3. `src/components/steps/Step3Style.tsx` - Widmung + Sprache
+4. `src/app/page.tsx` - Startseite (Hero, Features)
+5. `src/app/ueber-uns/page.tsx` - Über uns Seite
+
+**WICHTIG:**
+- ❌ KEINE Funktionalitäten entfernen oder ändern
+- ✅ Nur visuelles Design anpassen
+- ✅ Alle Inputs, Buttons, Features müssen erhalten bleiben
+- ✅ Momente-Feature in Step1 muss bleiben
+- ✅ Custom Dialogs Feature in Step1 muss bleiben
+- ✅ Alle Validierungen und Toast-Messages bleiben
+
+**Referenz:**
+- https://magischeskinderbuch.de (große Boxen, Nummern, ruhig)
+- Aktuelles Cover/Ending Design (bereits im neuen Stil)
+
+---
+
 ## 🔴 Kritische Qualitätsprobleme
 
 ### 1. Charaktere - Kleidung & Kontext
