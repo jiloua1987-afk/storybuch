@@ -57,7 +57,7 @@ Portrait orientation (vertical), all characters visible from head to waist.`;
         const refFile = new File([new Uint8Array(imageBuffer)], "reference.png", { type: "image/png" });
         
         const editRes = await openai.images.edit({
-          model: "gpt-image-1.5",
+          model: "gpt-image-2",
           image: refFile,
           prompt: `The people in this photo are the main characters. ${prompt}`,
           size: "1024x1536",
@@ -74,7 +74,7 @@ Portrait orientation (vertical), all characters visible from head to waist.`;
 
     // Fallback or default: images.generate()
     const response = await openai.images.generate({
-      model: "gpt-image-1.5",
+      model: "gpt-image-2",
       prompt,
       n: 1,
       size: "1024x1536",
@@ -155,7 +155,7 @@ Leave the bottom 30% of the image slightly darker/simpler for title overlay.`;
         const refFile = new File([new Uint8Array(imageBuffer)], "reference.png", { type: "image/png" });
         
         const editRes = await openai.images.edit({
-          model: "gpt-image-1.5",
+          model: "gpt-image-2",
           image: refFile,
           prompt: `The people in this photo are the main characters. ${prompt}`,
           size: "1024x1536",
@@ -172,7 +172,7 @@ Leave the bottom 30% of the image slightly darker/simpler for title overlay.`;
 
     // Fallback or default: images.generate()
     const response = await openai.images.generate({
-      model: "gpt-image-1.5",
+      model: "gpt-image-2",
       prompt,
       n: 1,
       size: "1024x1536",

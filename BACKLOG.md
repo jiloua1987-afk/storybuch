@@ -1,67 +1,31 @@
 # Product Backlog - MyComicStory
 
-## 🔥 UPGRADE: gpt-image-2 (sobald Organization verifiziert)
+## 🔥 UPGRADE: gpt-image-2 ✅ DONE
 
-**Status:** BLOCKED (warte auf OpenAI Organization Verification)
+**Status:** ✅ COMPLETED (Organization verifiziert, Code upgraded)
 **Priorität:** Hoch
 **Aufwand:** Gering (5 Minuten)
 
-**Problem:**
-- gpt-image-2 ist verfügbar und deutlich besser als 1.5
-- Aber: Braucht verifizierte OpenAI Organization
-- Fehler: `403 Your organization must be verified to use the model gpt-image-2`
-
-**Vorteile von gpt-image-2:**
-- ✅ Bessere Character Consistency über mehrere Bilder
-- ✅ Deutlich bessere Multi-Panel Layouts
-- ✅ Saubere Linien statt Aquarell
-- ✅ Bessere Gesichter aus Referenzfotos
-- ✅ Viel stärkeres Instruction Following (weniger Titel in Bildern)
-- ✅ Nur +$0.03-0.05 pro Bild teurer
-
-**Kosten:**
-- gpt-image-1.5: ~$0.15-0.18 pro Bild
-- gpt-image-2: ~$0.16-0.21 pro Bild
-- **Differenz:** +$0.20 pro Comic (6 Bilder) = +17%
-
-**Schritte zum Upgrade:**
-
-1. **Organization verifizieren:**
-   - Gehe zu: https://platform.openai.com/settings/organization/general
-   - Klicke auf "Verify Organization"
-   - Fülle Formular aus (Name, Use Case, evtl. Firmendetails)
-   - Warte 15 Min - 24h auf Freischaltung
-
-2. **Code ändern (5 Minuten):**
-   ```bash
-   # Alle gpt-image-1.5 → gpt-image-2 ersetzen in:
-   - src/lib/comic-page-generator.ts (4 Stellen)
-   - src/lib/cover-generator.ts (3 Stellen)
-   - src/lib/dalle.ts (1 Stelle)
-   - backend-railway/src/routes/comic.js (7 Stellen)
-   ```
-
-3. **Suche & Ersetze:**
-   ```
-   Suche:  model: "gpt-image-1.5"
-   Ersetze: model: "gpt-image-2"
-   
-   Suche:  for gpt-image-1.5
-   Ersetze: for gpt-image-2
-   ```
-
-4. **Testen:**
-   - Git commit + push
-   - Comic generieren
-   - Qualität vergleichen mit 1.5
+**✅ Was wurde gemacht:**
+- Organization bei OpenAI verifiziert
+- Alle 15 Stellen im Code von gpt-image-1.5 → gpt-image-2 geändert
+- Frontend: 7 Änderungen (comic-page-generator, cover-generator, dalle)
+- Backend: 7 Änderungen (routes/comic.js)
+- Deployed und bereit zum Testen
 
 **Erwartete Verbesserungen:**
 - 🎨 Schärfere Gesichter
 - 🎯 Bessere Konsistenz über Seiten
 - 📝 Weniger Titel in Bildern (besseres Instruction Following)
 - ✨ Höhere Gesamtqualität
+- 💪 Bessere Multi-Panel Layouts
 
-**WICHTIG:** Sobald Organization verifiziert ist, sofort upgraden! Das ist der größte Qualitätshebel.
+**Kosten:**
+- Vorher: ~$1.20 pro Comic (gpt-image-1.5)
+- Jetzt: ~$1.40 pro Comic (gpt-image-2)
+- **+$0.20 pro Comic (+17%)** für deutlich bessere Qualität
+
+**Nächster Schritt:** Comic generieren und Qualität testen! 🚀
 
 ---
 
