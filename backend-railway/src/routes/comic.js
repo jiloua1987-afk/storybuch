@@ -490,12 +490,21 @@ WICHTIG — Das ist eine WIDMUNG, keine Zusammenfassung!
 - Wenn die Geschichte von einem Kind handelt: "Für Dich, lieber [Name]..."
 - Erwähne EIN konkretes Detail aus der Geschichte
 - Ton: ${tone || "liebevoll, persönlich, warm"}
-${dedicationFrom ? `- Ende die Widmung mit: "Von: ${dedicationFrom}" (NICHT "Von: Von ${dedicationFrom}")` : '- VERBOTEN: "[Dein Name]", "[Familienmitglied]" als Absender'}
-- VERBOTEN: "Liebe Leserinnen", "dieses Buch", "diese Geschichte"
-- VERBOTEN: Zusammenfassungen der Handlung
-- VERBOTEN: Doppelungen wie "Von: Von..."
-- Schreibe so, als würde ein Familienmitglied die Widmung von Hand schreiben` },
-        { role: "user", content: `Geschichte: ${storyInput || ""}\n${Object.entries(guidedAnswers).filter(([k,v]) => v && k !== "category").map(([k,v]) => `${k}: ${v}`).join("\n")}${dedication ? `\nWidmung vom Nutzer: ${dedication}` : ""}${dedicationFrom ? `\nVon: ${dedicationFrom}` : ""}` },
+
+KRITISCH — ABSENDER:
+- Schreibe NUR die Widmung selbst
+- Füge KEINEN Absender hinzu (kein "Von:", kein "Deine Familie", etc.)
+- Der Absender wird separat angezeigt
+${dedicationFrom ? `- Info: Der Absender ist "${dedicationFrom}" — aber schreibe das NICHT in die Widmung` : ''}
+
+VERBOTEN:
+- "Von:", "Deine Familie", "[Dein Name]", "[Familienmitglied]" im Text
+- "Liebe Leserinnen", "dieses Buch", "diese Geschichte"
+- Zusammenfassungen der Handlung
+- Doppelungen wie "Von: Von..."
+
+Schreibe so, als würde ein Familienmitglied die Widmung von Hand schreiben — aber ohne Unterschrift (die kommt separat).` },
+        { role: "user", content: `Geschichte: ${storyInput || ""}\n${Object.entries(guidedAnswers).filter(([k,v]) => v && k !== "category").map(([k,v]) => `${k}: ${v}`).join("\n")}${dedication ? `\nWidmung vom Nutzer: ${dedication}` : ""}` },
       ],
       max_tokens: 100, temperature: 0.8,
     });
