@@ -65,7 +65,7 @@ export async function buildCharacterAnchors(
         role: "system",
         content: `Extract all main characters from the story. For each character create a DETAILED visual description for sharp, high-quality face generation.
 
-CRITICAL: Descriptions must be detailed enough for gpt-image-1.5 to generate sharp, recognizable faces.
+CRITICAL: Descriptions must be detailed enough for gpt-image-2 to generate sharp, recognizable faces.
 
 ACCESSORIES & CONSISTENT FEATURES:
 - If a character wears glasses, hijab, hat, jewelry, or other accessories: ALWAYS mention "always wears [accessory]"
@@ -128,7 +128,7 @@ async function rewriteForImageAI(page: StoryPage, characters: Character[], categ
       model: "gpt-4o",
       messages: [{
         role: "system",
-        content: `You rewrite comic scene descriptions into short, natural image prompts for gpt-image-1.5.
+        content: `You rewrite comic scene descriptions into short, natural image prompts for gpt-image-2.
 
 Write like an art director briefing an illustrator — NOT like a prompt engineer.
 
@@ -273,7 +273,7 @@ export async function generateComicPage(
         : "The people in this photo are the main characters. Keep their exact faces, hair, and features recognizable.";
 
       const response = await openai.images.edit({
-        model: "gpt-image-1.5",
+        model: "gpt-image-2",
         image: file,
         prompt: `${consistencyNote} Draw them as premium European comic illustrations — crisp comic style with bold ink outlines.
 
@@ -300,7 +300,7 @@ ${prompt}`,
 async function generateStandard(prompt: string, pageNumber: number): Promise<string> {
   try {
     const response = await openai.images.generate({
-      model: "gpt-image-1.5",
+      model: "gpt-image-2",
       prompt,
       n: 1,
       size: "1024x1536",
@@ -315,7 +315,7 @@ async function generateStandard(prompt: string, pageNumber: number): Promise<str
     // Single retry
     try {
       const response = await openai.images.generate({
-        model: "gpt-image-1.5",
+        model: "gpt-image-2",
         prompt,
         n: 1,
         size: "1024x1536",
