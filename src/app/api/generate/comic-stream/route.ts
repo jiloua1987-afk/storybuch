@@ -115,7 +115,9 @@ export async function POST(req: NextRequest) {
           coverUrl = rawCover ? await saveImageToStorage(rawCover, "covers", `cover-${bookId}`) : "";
           send("cover", { coverImageUrl: coverUrl });
           send("progress", { label: "Cover fertig", progress: 22 });
-        } catch {
+        } catch (coverErr: any) {
+          console.error("❌ Cover generation failed:", coverErr.message);
+          console.error("Full error:", coverErr);
           send("progress", { label: "Cover übersprungen", progress: 22 });
         }
 
@@ -193,8 +195,10 @@ export async function POST(req: NextRequest) {
               panels: page.panels,
             });
             send("progress", { label: `Seite ${i + 1} fertig`, progress: baseProgress + progressPerPage });
-          } catch {
-            send("page", { pageIndex: i, pageId: page.id, imageUrl: "", title: page.title, panels: page.panels });
+          } catch (pageErr: any) {
+            console.error(`❌ Page ${i + 1} generation failed:`, pageErr.message);
+            console.error("Full error:", pageErr);
+            send("page", { pageIndex: i, pageId: page.id, imageUrl: "", title: page.title, panels: page.panels, error: pageErr.message });
           }
         }
 

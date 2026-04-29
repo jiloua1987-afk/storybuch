@@ -45,7 +45,7 @@ export async function generatePanelImage(
 
   try {
     const response = await openai.images.generate({
-      model: "gpt-image-2",
+      model: "gpt-image-1.5",
       prompt,
       n: 1,
       size: "1536x1024",
