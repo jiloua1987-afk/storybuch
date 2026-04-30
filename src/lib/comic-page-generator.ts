@@ -51,7 +51,10 @@ export async function buildComicStructure(
   }));
 
   // ── Dialog Validation: ensure every panel has dialog ──────────────────────
-  return ensureDialogs(pages);
+  const withDialogs = ensureDialogs(pages);
+
+  // ── Panel Variety Validation: fix redundant panels ────────────────────────
+  return validatePanelVariety(withDialogs, lang);
 }
 
 // ── Step 2: Character Builder ────────────────────────────────────────────────
@@ -353,6 +356,81 @@ function buildContext(storyInput: string, guidedAnswers: Record<string, string>)
     if (guidedAnswers[f]) ctx += `\n${f}: ${guidedAnswers[f]}`;
   }
   return ctx;
+}
+
+// ── Panel Variety Validation ──────────────────────────────────────────────────
+// Checks each page for redundant/similar panels and rewrites them if needed.
+// Uses a lightweight GPT-4o call — only triggered when similarity is detected.
+async function validatePanelVariety(pages: StoryPage[], lang: string): Promise<StoryPage[]> {
+  const results = await Promise.all(pages.map(async (page) => {
+    if (page.panels.length < 2) return page;
+
+    // Quick heuristic: check for suspiciously similar szene descriptions
+    const scenes = page.panels.map(p => p.szene?.toLowerCase() || "");
+    const hasDuplicates = scenes.some((s, i) =>
+      scenes.some((other, j) => i !== j && similarity(s, other) > 0.55)
+    );
+
+    if (!hasDuplicates) return page;
+
+    console.log(`Page ${page.pageNumber}: similar panels detected, rewriting...`);
+
+    try {
+      const panelList = page.panels.map(p => `${p.nummer}. ${p.szene}`).join("\n");
+      const response = await openai.chat.completions.create({
+        model: "gpt-4o",
+        messages: [{
+          role: "system",
+          content: `You fix redundant comic panels. Each panel must show a COMPLETELY DIFFERENT moment, angle, and action.
+          
+Rules:
+- Keep the same characters and story context
+- Each panel: different camera angle (close-up / wide / over-shoulder / reaction)
+- Each panel: different action or story beat
+- No two panels with the same activity or composition
+- Keep existing dialogs and speakers
+- Return ONLY the fixed panels as JSON: {"panels": [{"nummer": 1, "szene": "...", "dialog": "...", "speaker": "...", "bubble_type": "speech"}]}
+- Descriptions in English, dialogs in ${lang}`,
+        }, {
+          role: "user",
+          content: `Page: "${page.title}" (${page.location || ""})\n\nCurrent panels (some are too similar):\n${panelList}\n\nRewrite to make each panel visually distinct.`,
+        }],
+        response_format: { type: "json_object" },
+        max_tokens: 800,
+        temperature: 0.9,
+      });
+
+      const raw = JSON.parse(response.choices[0].message.content || "{}");
+      if (raw.panels && Array.isArray(raw.panels) && raw.panels.length === page.panels.length) {
+        // Merge: keep original dialog/speaker if rewriter left them empty
+        const fixedPanels = raw.panels.map((fp: any, i: number) => ({
+          ...page.panels[i],
+          szene: fp.szene || page.panels[i].szene,
+          dialog: fp.dialog || page.panels[i].dialog,
+          speaker: fp.speaker || page.panels[i].speaker,
+          bubble_type: fp.bubble_type || page.panels[i].bubble_type,
+        }));
+        return { ...page, panels: fixedPanels };
+      }
+    } catch (err: any) {
+      console.warn(`Panel variety fix failed for page ${page.pageNumber}:`, err.message);
+    }
+
+    return page;
+  }));
+
+  return results;
+}
+
+// Simple word-overlap similarity (0–1) — no external deps needed
+function similarity(a: string, b: string): number {
+  if (!a || !b) return 0;
+  const wordsA = new Set(a.split(/\s+/).filter(w => w.length > 3));
+  const wordsB = new Set(b.split(/\s+/).filter(w => w.length > 3));
+  if (wordsA.size === 0 || wordsB.size === 0) return 0;
+  let overlap = 0;
+  wordsA.forEach(w => { if (wordsB.has(w)) overlap++; });
+  return overlap / Math.max(wordsA.size, wordsB.size);
 }
 
 // ── Dialog Validation: ensure every panel has dialog ─────────────────────────

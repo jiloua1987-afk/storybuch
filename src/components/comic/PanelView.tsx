@@ -1,5 +1,6 @@
 "use client";
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useMemo } from "react";
+import { resolveCollisions } from "./bubble-collision";
 
 interface PanelData {
   dialog?: string;
@@ -172,48 +173,66 @@ function ResizableBubble({
   );
 }
 
-// ── Fallback positions ────────────────────────────────────────────────────────
-function getFallbackPosition(index: number, total: number): React.CSSProperties {
-  const base: React.CSSProperties = { position: "absolute", zIndex: 10 };
-  const h = 5;
-  if (total <= 3) {
-    const pos = [
-      { top: `${h + 3}%`, left: "3%" },
-      { top: `${h + 58}%`, left: "3%" },
-      { top: `${h + 58}%`, right: "3%" },
-    ];
-    return { ...base, ...(pos[index] || pos[0]) };
-  }
-  if (total === 4) {
-    const row = Math.floor(index / 2);
-    const col = index % 2;
-    const top = row === 0 ? `${h + 3}%` : `${h + 50}%`;
-    const side = col === 0 ? { left: "3%" } : { right: "3%" };
-    return { ...base, top, ...side };
-  }
-  const positions = [
-    { top: `${h + 3}%`, left: "3%" },
-    { top: `${h + 3}%`, right: "3%" },
-    { top: `${h + 35}%`, left: "3%" },
-    { top: `${h + 67}%`, left: "3%" },
-    { top: `${h + 67}%`, right: "3%" },
-  ];
-  return { ...base, ...(positions[index] || positions[0]) };
+// ── Bubble slot system ────────────────────────────────────────────────────────
+// Each panel gets its own "zone" in the image. Within that zone we pick
+// a corner slot. Slots are tracked globally so no two bubbles share the
+// same pixel area.
+
+interface Slot {
+  top: string;   // CSS percentage
+  left?: string;
+  right?: string;
 }
 
-function getDetectedPosition(panelIndex: number, positions: PanelPosition[]): React.CSSProperties {
-  const pos = positions.find(p => p.nummer === panelIndex + 1) || positions[panelIndex];
-  if (!pos) return { position: "absolute", top: "5%", left: "3%", zIndex: 10 };
+// All available slots across the whole image (portrait 2:3 ratio)
+// Ordered so we naturally spread across the page top→bottom, left↔right
+const ALL_SLOTS: Slot[] = [
+  { top: "5%",  left: "2%" },
+  { top: "5%",  right: "2%" },
+  { top: "27%", left: "2%" },
+  { top: "27%", right: "2%" },
+  { top: "49%", left: "2%" },
+  { top: "49%", right: "2%" },
+  { top: "71%", left: "2%" },
+  { top: "71%", right: "2%" },
+  { top: "88%", left: "2%" },
+  { top: "88%", right: "2%" },
+];
+
+// For a given panel count, assign each panel a preferred slot index so
+// bubbles are spread evenly and never start in the same corner.
+function getPreferredSlotIndex(panelIndex: number, total: number): number {
+  if (total <= 2) {
+    // Panel 0 → top-left, Panel 1 → bottom-right
+    return panelIndex === 0 ? 0 : 7;
+  }
+  if (total === 3) {
+    return [0, 4, 7][panelIndex] ?? panelIndex * 2;
+  }
+  if (total === 4) {
+    // 2×2 grid: TL, TR, BL, BR
+    return [0, 1, 4, 5][panelIndex] ?? panelIndex;
+  }
+  if (total === 5) {
+    return [0, 1, 4, 6, 7][panelIndex] ?? panelIndex;
+  }
+  // 6+ panels: spread evenly
+  return Math.min(panelIndex, ALL_SLOTS.length - 1);
+}
+
+function getFallbackPosition(index: number, total: number): React.CSSProperties {
+  const slotIdx = getPreferredSlotIndex(index, total);
+  const slot = ALL_SLOTS[slotIdx] ?? ALL_SLOTS[index % ALL_SLOTS.length];
   return {
     position: "absolute",
-    top: `${pos.top + 2}%`,
-    left: `${pos.left + 2}%`,
     zIndex: 10,
+    top: slot.top,
+    ...(slot.left  ? { left:  slot.left  } : {}),
+    ...(slot.right ? { right: slot.right } : {}),
   };
 }
 
 // ── Compute initial bubble size from dialog length ────────────────────────────
-function initBubbleSize(dialog: string, speaker: string): { w: number; h: number } {
   const text = (speaker ? speaker + ": " : "") + dialog;
   const chars = text.length;
   const w = Math.min(220, Math.max(100, 80 + chars * 3.2));
@@ -246,6 +265,41 @@ export default function PanelView({ imageUrl, title, panels = [], panelPositions
 
   const hasDetectedPositions = panelPositions && panelPositions.length > 0;
 
+  // ── Compute collision-free positions for all dialog bubbles ────────────────
+  // We do this once per render (memoized on dialogPanels + panelPositions).
+  const resolvedPositions = useMemo(() => {
+    // Step 1: compute initial placement for each bubble (in % of container)
+    const initial = dialogPanels.map((panel) => {
+      const i = panel.originalIndex;
+      let top = 5;
+      let left = 2;
+
+      if (hasDetectedPositions) {
+        const pos = panelPositions!.find(p => p.nummer === i + 1) || panelPositions![i];
+        if (pos) { top = pos.top + 2; left = pos.left + 2; }
+      } else {
+        const style = getFallbackPosition(i, panels.length);
+        top  = parseFloat(String(style.top  ?? "5%"));
+        left = parseFloat(String(style.left ?? style.right ?? "2%"));
+      }
+
+      // Estimate bubble size in % (container is ~400px wide, ~600px tall typically)
+      const text = (panel.speaker || "") + (panel.dialog || "");
+      const wPx = Math.min(220, Math.max(100, 80 + text.length * 3.2));
+      const lines = Math.ceil(text.length / 22);
+      const hPx = Math.max(48, 28 + lines * 20);
+
+      // Convert px → % (assume 400×600 container as baseline)
+      const w = (wPx / 400) * 100;
+      const h = (hPx / 600) * 100;
+
+      return { top, left, w, h };
+    });
+
+    // Step 2: resolve collisions
+    return resolveCollisions(initial);
+  }, [dialogPanels.length, hasDetectedPositions, panels.length]); // eslint-disable-line
+
   const handleMouseDown = (e: React.MouseEvent, index: number) => {
     if (editingIndex !== null) return;
     e.preventDefault();
@@ -271,12 +325,17 @@ export default function PanelView({ imageUrl, title, panels = [], panelPositions
 
   const handleMouseUp = () => setDragging(null);
 
-  const getFinalPosition = (panelIndex: number): React.CSSProperties => {
+  const getFinalPosition = (panelIndex: number, bubbleIndex: number): React.CSSProperties => {
+    // User dragged this bubble → honour drag position
     const dragPos = dragPositions[panelIndex];
     if (dragPos) return { position: "absolute", top: `${dragPos.top}%`, left: `${dragPos.left}%`, zIndex: 10 };
-    return hasDetectedPositions
-      ? getDetectedPosition(panelIndex, panelPositions!)
-      : getFallbackPosition(panelIndex, panels.length);
+
+    // Use collision-resolved position
+    const resolved = resolvedPositions[bubbleIndex];
+    if (resolved) return { position: "absolute", top: `${resolved.top}%`, left: `${resolved.left}%`, zIndex: 10 };
+
+    // Ultimate fallback
+    return getFallbackPosition(panelIndex, panels.length);
   };
 
   return (
@@ -306,12 +365,12 @@ export default function PanelView({ imageUrl, title, panels = [], panelPositions
           </div>
         )}
 
-        {dialogPanels.map((panel) => {
+        {dialogPanels.map((panel, bubbleIndex) => {
           const i = panel.originalIndex;
           const dialog = getDialog(panel, i);
           if (!dialog) return null;
           const isEditing = editingIndex === i;
-          const posStyle = getFinalPosition(i);
+          const posStyle = getFinalPosition(i, bubbleIndex);
           const isDragging = dragging === i;
           const { w: initW, h: initH } = initBubbleSize(dialog, panel.speaker || "");
 
