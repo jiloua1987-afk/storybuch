@@ -6,10 +6,13 @@ import Button from "@/components/ui/Button";
 import PanelView from "@/components/comic/PanelView";
 import toast from "react-hot-toast";
 
+// ── Shared page dimensions — A5 portrait (1:√2 ≈ 2:3), matches API output 1024×1536
+const PAGE_RATIO = "1024 / 1536"; // CSS aspect-ratio value
+
 // ── Cover with CSS title overlay ─────────────────────────────────────────────
 function CoverView({ imageUrl, title, subtitle }: { imageUrl?: string; title: string; subtitle?: string }) {
   return (
-    <div className="relative w-full max-w-sm mx-auto overflow-hidden rounded-xl" style={{ aspectRatio: "1024/1792" }}>
+    <div className="relative w-full max-w-sm mx-auto overflow-hidden rounded-xl" style={{ aspectRatio: PAGE_RATIO }}>
       {imageUrl ? (
         <img src={imageUrl} alt="Cover" className="w-full h-full object-cover" />
       ) : (
@@ -203,21 +206,27 @@ export default function Step5Preview() {
             ) : page ? (
               <div>
                 {regenerating === page.id ? (
-                  <div className="w-full bg-[#F5EDE0] flex flex-col items-center justify-center gap-3 py-20">
+                  <div className="w-full bg-[#F5EDE0] flex flex-col items-center justify-center gap-3 py-20" style={{ aspectRatio: "1024 / 1536" }}>
                     <div className="text-4xl animate-pulse">🎨</div>
                     <p className="text-[#8B7355] font-medium text-sm">Seite wird neu illustriert…</p>
                   </div>
                 ) : (
-                  <PanelView
-                    imageUrl={page.imageUrl || ""}
-                    title={page.title}
-                    panels={page.panels || []}
-                    panelPositions={page.panelPositions}
-                    pageNumber={currentPage + 1}
-                  />
+                  <>
+                    <div className="px-4 pt-4 pb-2">
+                      <h3 className="font-semibold text-[#1f1a2e] text-base"
+                        style={{ fontFamily: "'Playfair Display', serif" }}>
+                        {page.title}
+                      </h3>
+                    </div>
+                    <PanelView
+                      imageUrl={page.imageUrl || ""}
+                      panels={page.panels || []}
+                      panelPositions={page.panelPositions}
+                      pageNumber={currentPage + 1}
+                    />
+                  </>
                 )}
-                <div className="px-6 py-3 flex items-center justify-between border-t border-gray-100">
-                  <h3 className="font-semibold text-[#1f1a2e] text-sm">{page.title}</h3>
+                <div className="px-6 py-3 flex items-center justify-end border-t border-gray-100">
                   <button
                     onClick={() => handleRegen(page.id)}
                     disabled={!!regenerating}

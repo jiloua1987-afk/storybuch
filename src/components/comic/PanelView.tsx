@@ -356,15 +356,7 @@ export default function PanelView({ imageUrl, title, panels = [], panelPositions
           </div>
         )}
 
-        {/* Page Title Overlay — rendered after image so it sits on top */}
-        {title && (
-          <div className="absolute top-0 left-0 right-0 z-20 bg-gradient-to-b from-black/70 to-transparent py-3 px-4 pointer-events-none">
-            <h3 className="text-white text-base font-semibold tracking-wide drop-shadow-lg"
-              style={{ fontFamily: "'Playfair Display', serif" }}>
-              {title}
-            </h3>
-          </div>
-        )}
+        {/* Page Title Overlay — REMOVED, title is rendered above the page in Step5Preview */}
 
         {dialogPanels.map((panel, bubbleIndex) => {
           const i = panel.originalIndex;
