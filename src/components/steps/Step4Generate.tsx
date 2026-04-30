@@ -64,7 +64,7 @@ export default function Step4Generate() {
           mustHaveSentences: project?.mustHaveSentences || "",
           language:          project?.language || "de",
           category:          project?.guidedAnswers?.category || "familie",
-          numPages:          4,
+          numPages:          project?.numPages || 5,
           referenceImages:   project?.referenceImages || [],
         }),
         post("/api/comic/ending", {
@@ -93,34 +93,36 @@ export default function Step4Generate() {
         addLog("Abschlussseite fertig", true);
       }
 
-      // ── Step 2+3: Cover + alle Seiten parallel ──────────────────────────────
-      setStepLabel("Cover und Seiten werden illustriert…");
+      // ── Step 2: Cover zuerst generieren ─────────────────────────────────────
+      // Cover wird als Stil-Referenz für alle Seiten genutzt → muss zuerst fertig sein
+      setStepLabel("Cover wird erstellt…");
       setProgress(20);
       addLog("Cover wird erstellt…");
+
+      let coverImageUrl = "";
+      try {
+        const coverData = await post("/api/comic/cover", {
+          title:           project?.title || "Mein Comic",
+          characters,
+          category:        project?.guidedAnswers?.category || "familie",
+          location:        project?.guidedAnswers?.ort || project?.guidedAnswers?.location || "",
+          referenceImages: project?.referenceImages || [],
+        });
+        coverImageUrl = coverData.coverImageUrl || "";
+        if (coverImageUrl) updateProject({ coverImageUrl });
+        addLog("Cover fertig", true);
+      } catch {
+        addLog("Cover übersprungen", true);
+      }
+      setProgress(30);
+
+      // ── Step 3: Alle Seiten parallel (mit Cover als Referenz) ───────────────
+      setStepLabel("Seiten werden illustriert…");
       pages.forEach((_: any, i: number) => addLog(`Seite ${i + 1}: "${pages[i].title}"…`));
 
-      // Batch-Größe 3 um Rate Limits zu vermeiden
       const BATCH_SIZE = 3;
       const chapters: any[] = new Array(pages.length).fill(null);
-      let coverImageUrl = "";
-
-      // Cover + erster Batch starten gleichzeitig
-      const coverPromise = post("/api/comic/cover", {
-        title:             project?.title || "Mein Comic",
-        characters,
-        category:          project?.guidedAnswers?.category || "familie",
-        illustrationStyle: project?.illustrationStyle || "comic",
-        location:          project?.guidedAnswers?.ort || project?.guidedAnswers?.location || "",
-        referenceImages:   project?.referenceImages || [],
-      }).then((data: any) => {
-        coverImageUrl = data.coverImageUrl || "";
-        updateProject({ coverImageUrl: coverImageUrl || undefined });
-        addLog("Cover fertig", true);
-        return coverImageUrl;
-      }).catch(() => { addLog("Cover übersprungen", true); return ""; });
-
-      // Seiten in Batches à BATCH_SIZE parallel
-      const progressPerPage = 70 / pages.length;
+      const progressPerPage = 60 / pages.length;
 
       for (let batchStart = 0; batchStart < pages.length; batchStart += BATCH_SIZE) {
         const batchEnd = Math.min(batchStart + BATCH_SIZE, pages.length);
@@ -132,10 +134,10 @@ export default function Step4Generate() {
             const pageData = await post("/api/comic/page", {
               page,
               characters,
-              illustrationStyle: project?.illustrationStyle || "comic",
-              comicStyle:        project?.comicStyle || "emotional",
-              category:          project?.guidedAnswers?.category || "familie",
-              referenceImages:   project?.referenceImages || [],
+              comicStyle:      project?.comicStyle || "emotional",
+              category:        project?.guidedAnswers?.category || "familie",
+              referenceImages: project?.referenceImages || [],
+              coverImageUrl,   // ← Cover als primäre Stil-Referenz
             });
 
             chapters[i] = {
@@ -153,28 +155,27 @@ export default function Step4Generate() {
             addLog(`Seite ${i + 1}: Fehler`, true);
           }
 
-          setProgress(20 + (chapters.filter(Boolean).length / pages.length) * progressPerPage);
-          updateProject({ chapters: chapters.filter(Boolean) });
+          setProgress(30 + (chapters.filter(Boolean).length / pages.length) * progressPerPage);
+          // Nur fertige Seiten (non-null) in korrekter Reihenfolge übergeben
+          updateProject({ chapters: chapters.filter((c): c is NonNullable<typeof c> => c !== null) });
         }));
       }
 
-      // Warte auf Cover falls noch nicht fertig
-      await coverPromise;
-
       // ── Finalisieren ────────────────────────────────────────────────────────
-      const finalChapters = chapters.filter(Boolean);
+      const finalChapters = chapters.filter((c): c is NonNullable<typeof c> => c !== null);
+
       updateProject({
-        id:           project?.id || `proj-${Date.now()}`,
-        title:        project?.title || "Mein Comic",
-        storyInput:   project?.storyInput || "",
+        id:            project?.id || `proj-${Date.now()}`,
+        title:         project?.title || "Mein Comic",
+        storyInput:    project?.storyInput || "",
         guidedAnswers: project?.guidedAnswers || { characters: "", location: "", timeframe: "", specialMoments: "" },
-        tone:         project?.tone || "humorvoll",
-        design:       "kinderbuch",
-        characters:   characters.map((c: any, i: number) => ({ id: `c${i}`, name: c.name, role: "Hauptfigur" })),
-        chapters:     finalChapters,
+        tone:          project?.tone || "humorvoll",
+        design:        "kinderbuch",
+        characters:    characters.map((c: any, i: number) => ({ id: `c${i}`, name: c.name, role: "Hauptfigur" })),
+        chapters:      finalChapters,
         coverImageUrl: coverImageUrl || undefined,
-        status:       "preview",
-        createdAt:    project?.createdAt || new Date().toISOString(),
+        status:        "preview",
+        createdAt:     project?.createdAt || new Date().toISOString(),
       });
 
       setProgress(100);
@@ -288,7 +289,7 @@ export default function Step4Generate() {
       className="max-w-lg mx-auto text-center space-y-8 py-10">
       <div className="space-y-2">
         <h2 className="font-display text-3xl font-semibold text-[#1f1a2e]">Dein Comic wird erstellt</h2>
-        <p className="text-gray-500 text-sm">Alle Seiten werden gleichzeitig illustriert – ca. 60–90 Sekunden.</p>
+        <p className="text-gray-500 text-sm">Cover wird zuerst erstellt, dann alle Seiten gleichzeitig – ca. 90–120 Sekunden.</p>
       </div>
 
       <motion.div animate={{ rotate: done ? 0 : [0, -3, 3, -3, 0] }}

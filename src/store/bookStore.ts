@@ -67,6 +67,7 @@ export interface BookProject {
   dialogMode?: DialogMode;
   customDialogs?: CustomDialog[];
   mustHaveSentences?: string;
+  numPages?: number;            // Anzahl Comic-Seiten (Standard: 5, Premium: 8+)
   storyInput: string;
   guidedAnswers: {
     characters: string;
