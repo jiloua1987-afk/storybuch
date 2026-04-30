@@ -70,7 +70,7 @@ Vary panel count: Page 1: 4 panels, Page 2: 3 panels, Page 3: 5 panels, Page 4: 
 Each panel scene must work as a STANDALONE image prompt — describe the complete scene.
 
 CRITICAL — MINIMUM PAGES:
-- Generate MINIMUM ${numPages} pages. Long stories are good — use all the details provided!
+- Generate EXACTLY ${numPages} pages. No more, no less.
 
 CRITICAL — PANEL VARIETY:
 - Every panel must show a COMPLETELY DIFFERENT scene, angle, and moment
@@ -80,23 +80,34 @@ CRITICAL — PANEL VARIETY:
 - Each panel must advance the story — no redundant moments
 - Each character appears ONLY ONCE per panel — no duplicates of the same person
 
+CRITICAL — ALL CHARACTERS MUST APPEAR:
+- Every character mentioned in the story MUST appear in at least 2-3 panels across the comic
+- Do NOT forget any character — if Opa, Oma, Papa, Mama, or children are mentioned, they MUST be shown
+- Distribute characters across pages — not all on one page
+
 CRITICAL — CHARACTER VISIBILITY:
 - Characters should face the camera or be shown from the side — AVOID back views
 - Show faces clearly so readers can see expressions and emotions
 - Prefer: front view, 3/4 view, profile view
 
-Respond ONLY with JSON: {"pages": [{"id":"page1","pageNumber":1,"title":"Title in ${lang}","location":"English location","timeOfDay":"afternoon","panels":[{"nummer":1,"szene":"Specific English scene for SINGLE IMAGE generation","dialog":"Short ${lang} dialog 10-15 words","speaker":"Name or null","bubble_type":"speech"}]}]}` },
+CRITICAL — DIALOGS:
+- EVERY panel MUST have dialog or narrator caption — NO silent panels
+- Create conversations, not monologues — characters talk TO EACH OTHER
+- Each dialog: 10-18 words, natural ${lang}, vivid and personal
+- Be creative and specific — reference actual story details
+
+Respond ONLY with JSON: {"pages": [{"id":"page1","pageNumber":1,"title":"Title in ${lang}","location":"English location","timeOfDay":"afternoon","panels":[{"nummer":1,"szene":"Specific English scene for SINGLE IMAGE generation","dialog":"Short ${lang} dialog 10-18 words","speaker":"Name or null","bubble_type":"speech"}]}]}` },
           { role: "user", content: ctx },
         ],
         response_format: { type: "json_object" },
-        temperature: 0.85,
+        temperature: 0.9,
       }),
       openai.chat.completions.create({
         model: "gpt-4o",
         messages: [
-          { role: "system", content: `Extract all main characters from the story. For each character create a DETAILED visual description for sharp, high-quality face generation.
+          { role: "system", content: `Extract ALL main characters from the story. For each character create a DETAILED visual description for sharp, high-quality face generation.
 
-CRITICAL: Descriptions must be detailed enough for gpt-image-2 to generate sharp, recognizable faces.
+CRITICAL: Include EVERY person mentioned — grandparents, parents, children, friends. Do NOT skip anyone.
 
 ACCESSORIES & CONSISTENT FEATURES:
 - If a character wears glasses, hijab, hat, jewelry, or other accessories: ALWAYS mention "always wears [accessory]"
@@ -112,9 +123,7 @@ Respond ONLY with JSON:
       "visual_anchor": "DETAILED English description for sharp face generation: exact age, precise hair color/length/style, eye color and shape, skin tone, facial features (jawline, cheekbones, nose shape, smile type), distinctive marks, body type, typical clothing colors, ALWAYS wears [consistent accessories like glasses/hijab/beard]. 40-50 words."
     }
   ]
-}
-
-Example: "Emma: 6-year-old girl with shoulder-length wavy auburn hair, bright hazel eyes, round face with rosy cheeks, small freckles across nose, warm smile showing front teeth gap, fair skin, petite build, always wears yellow t-shirt and denim shorts"` },
+}` },
           { role: "user", content: ctx },
         ],
         response_format: { type: "json_object" },
@@ -148,25 +157,25 @@ Example: "Emma: 6-year-old girl with shoulder-length wavy auburn hair, bright ha
       }));
     }
 
-    // Character Reference Sheet
+    // Character Reference Sheet — Portrait format so it matches page generation
     let characterSheetUrl = null;
     if (characters.length > 0) {
       try {
         console.log("Generating character reference sheet...");
+        const charDescForSheet = characters.map(c => `${c.name} (${c.visual_anchor})`).join(". ");
         const sheetRes = await openai.images.generate({
           model: "gpt-image-2",
-          prompt: `Character reference sheet showing all characters standing side by side, full body view, neutral background.
-Characters: ${characters.map(c => `${c.name}: ${c.visual_anchor}`).join(". ")}.
-Style: warm watercolor comic illustration, high quality.
-Show each character clearly from head to toe. NO text, NO labels.`,
-          n: 1, size: "1536x1024", quality: "high",
+          prompt: `Character reference sheet. Show ALL ${characters.length} characters standing side by side, full body, facing forward, neutral white background.
+CRITICAL: ALL characters must be visible — ${characters.map(c => c.name).join(", ")}.
+${charDescForSheet}
+Style: bold ink outlines, flat colors, European comic illustration style. NOT photorealistic.
+Each character clearly separated, labeled by position (left to right). NO text, NO labels in image.`,
+          n: 1, size: "1024x1536", quality: "high",
         });
         const item = (sheetRes.data || [])[0];
         let sheetRaw = item?.url || "";
         if (!sheetRaw && item?.b64_json) {
-          const buf = Buffer.from(item.b64_json, "base64");
-          const small = await sharp(buf).resize(800, null).jpeg({ quality: 85 }).toBuffer();
-          sheetRaw = `data:image/jpeg;base64,${small.toString("base64")}`;
+          sheetRaw = `data:image/png;base64,${item.b64_json}`;
         }
         if (sheetRaw) {
           const bookId = `book-${Date.now()}`;
