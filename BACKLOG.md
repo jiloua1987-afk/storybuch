@@ -1444,6 +1444,101 @@ Marge:                 ~$16.50  (57%)
 
 ---
 
+## ⚡ Generierungs-Geschwindigkeit
+
+**Status:** TODO
+**Priorität:** Hoch
+**Aufwand:** Gering (2-3 Stunden)
+
+### Problem: Alles läuft sequenziell
+
+Aktuelle Reihenfolge (ca. 3-5 Minuten):
+```
+Structure (15s)
+  → Cover (30s)
+    → Seite 1 (40s)
+      → Seite 2 (40s)
+        → Seite 3 (40s)
+          → Seite 4 (40s)
+            → Ending (5s)
+```
+
+**Zusätzliche versteckte Kosten pro Seite:**
+- `rewriteForImageAI()` = extra GPT-4o Call (~3-5s) **vor** jedem Bild
+- `validatePanelVariety()` = extra GPT-4o Call (~3-5s) **nach** Structure, für jede Seite mit ähnlichen Panels
+- Gesamt: bis zu 2 extra GPT-4o Calls pro Seite = +10-20s pro Seite
+
+**Gesamtzeit heute: ~3-5 Minuten**
+
+---
+
+### Lösung: Parallelisierung wo möglich
+
+**Was kann parallel laufen:**
+
+| Was | Abhängigkeit | Parallelisierbar? |
+|-----|-------------|-------------------|
+| Structure | nichts | ✅ Startpunkt |
+| Cover | Structure (characters) | ✅ parallel zu Seiten |
+| Seite 1 | Structure | ✅ parallel zu Cover |
+| Seite 2 | Structure | ✅ parallel zu Cover + Seite 1 |
+| Seite 3 | Structure | ✅ parallel |
+| Seite 4 | Structure | ✅ parallel |
+| Ending | nichts außer Story | ✅ parallel zu allem |
+| rewriteForImageAI | pro Seite | ✅ parallel zu anderen Seiten |
+| validatePanelVariety | alle Pages | ✅ bereits parallel (Promise.all) |
+
+**Neue Reihenfolge:**
+```
+Structure (15s)
+  → [Cover + Seite 1 + Seite 2 + Seite 3 + Seite 4 + Ending] parallel (40s)
+```
+
+**Erwartete Zeit: ~55s statt ~3-5 Minuten**
+
+---
+
+### Implementierung
+
+**In `Step4Generate.tsx`:**
+
+```typescript
+// Nach Structure:
+const [coverData, ...pageResults] = await Promise.all([
+  // Cover
+  post("/api/comic/cover", { ... }),
+  // Alle Seiten gleichzeitig
+  ...pages.map((page, i) => post("/api/comic/page", { page, characters, ... })),
+  // Ending
+  post("/api/comic/ending", { ... }),
+]);
+```
+
+**Einschränkung:** `previousImageUrl` (Referenz auf vorherige Seite) kann nicht mehr genutzt werden bei echter Parallelisierung. Das ist aber kein Problem weil:
+- `previousImageUrl` wird aktuell kaum genutzt (nur als optionaler Parameter)
+- Character Consistency kommt aus dem User-Foto / Character Sheet, nicht aus der vorherigen Seite
+- Sprint 3 (Memory Layer) ersetzt das sowieso
+
+**Caveat:** OpenAI Rate Limits — bei 4 parallelen `gpt-image-2` Calls könnte es zu 429-Fehlern kommen. Lösung: max. 3 parallele Bild-Calls, Rest in kleinen Batches.
+
+**Empfohlene Implementierung:**
+```typescript
+// Seiten in Batches à 3 parallel
+const BATCH_SIZE = 3;
+for (let i = 0; i < pages.length; i += BATCH_SIZE) {
+  const batch = pages.slice(i, i + BATCH_SIZE);
+  const results = await Promise.all(batch.map(page => post("/api/comic/page", { ... })));
+  // update chapters...
+}
+// Cover + Ending parallel zum ersten Batch
+```
+
+**Aufwand:** 2-3 Stunden
+**Zeitersparnis:** ~70-80% (von ~4 Minuten auf ~60-90 Sekunden)
+**Risiko:** Gering — keine API-Änderungen, nur Reihenfolge
+
+---
+
 ## 📊 Priorisierung
 
 **Sofort (diese Woche):**
@@ -1462,4 +1557,4 @@ Marge:                 ~$16.50  (57%)
 
 ---
 
-**Letzte Aktualisierung:** 26. April 2026
+**Letzte Aktualisierung:** 30. April 2026

@@ -50,130 +50,131 @@ export default function Step4Generate() {
     if (DRY_RUN) return runDryGeneration();
 
     try {
-      // ── Step 1: Story-Struktur ──────────────────────────────────────────────
+      // ── Step 1: Story-Struktur + Ending parallel ────────────────────────────
       setStepLabel("Geschichte wird analysiert…");
       setProgress(5);
       addLog("Geschichte wird analysiert…");
 
-      const { pages, characters } = await post("/api/comic/structure", {
-        storyInput:        project?.storyInput || "",
-        guidedAnswers:     project?.guidedAnswers || {},
-        tone:              project?.tone || "humorvoll",
-        comicStyle:        project?.comicStyle || "emotional",
-        mustHaveSentences: project?.mustHaveSentences || "",
-        language:          project?.language || "de",
-        category:          project?.guidedAnswers?.category || "familie",
-        numPages:          4,
-        referenceImages:   project?.referenceImages || [],
-      });
+      const [{ pages, characters }, endData] = await Promise.all([
+        post("/api/comic/structure", {
+          storyInput:        project?.storyInput || "",
+          guidedAnswers:     project?.guidedAnswers || {},
+          tone:              project?.tone || "humorvoll",
+          comicStyle:        project?.comicStyle || "emotional",
+          mustHaveSentences: project?.mustHaveSentences || "",
+          language:          project?.language || "de",
+          category:          project?.guidedAnswers?.category || "familie",
+          numPages:          4,
+          referenceImages:   project?.referenceImages || [],
+        }),
+        post("/api/comic/ending", {
+          storyInput:     project?.storyInput || "",
+          guidedAnswers:  project?.guidedAnswers || {},
+          tone:           project?.tone || "humorvoll",
+          language:       project?.language || "de",
+          dedication:     project?.guidedAnswers?.dedication || project?.dedication || "",
+          dedicationFrom: project?.dedicationFrom || "",
+        }).catch(() => null),
+      ]);
 
       if (!pages?.length) throw new Error("Keine Seiten generiert.");
       addLog(`${pages.length} Seiten geplant`, true);
       setProgress(15);
 
-      // ── Step 2: Cover ───────────────────────────────────────────────────────
-      setStepLabel("Cover wird erstellt…");
-      addLog("Cover wird erstellt…");
-      setProgress(18);
-
-      let coverImageUrl = "";
-      try {
-        const coverData = await post("/api/comic/cover", {
-          title:            project?.title || "Mein Comic",
-          characters,
-          category:         project?.guidedAnswers?.category || "familie",
-          illustrationStyle: project?.illustrationStyle || "comic",
-          location:         project?.guidedAnswers?.ort || project?.guidedAnswers?.location || "",
-          referenceImages:  project?.referenceImages || [],
+      // Ending sofort speichern wenn vorhanden
+      if (endData?.endingText) {
+        updateProject({
+          endingData: {
+            endingText: endData.endingText,
+            dedication: endData.dedication || "",
+            dedicationFrom: endData.dedicationFrom || "",
+          },
         });
-        coverImageUrl = coverData.coverImageUrl || "";
-        updateProject({ coverImageUrl: coverImageUrl || undefined });
-        addLog("Cover fertig", true);
-      } catch { addLog("Cover übersprungen", true); }
-      setProgress(22);
-
-      // ── Step 3: Seiten einzeln ──────────────────────────────────────────────
-      const chapters: any[] = [];
-      const progressPerPage = 65 / pages.length;
-      let previousImageUrl: string | null = null;
-
-      for (let i = 0; i < pages.length; i++) {
-        const page = pages[i];
-        setStepLabel(`Seite ${i + 1} von ${pages.length}: "${page.title}"…`);
-        addLog(`Seite ${i + 1}: "${page.title}"…`);
-        setProgress(22 + i * progressPerPage);
-
-        try {
-          const pageData = await post("/api/comic/page", {
-            page,
-            characters,
-            illustrationStyle: project?.illustrationStyle || "comic",
-            comicStyle:        project?.comicStyle || "emotional",
-            category:          project?.guidedAnswers?.category || "familie",
-            referenceImages:   project?.referenceImages || [],
-            previousImageUrl,
-          });
-
-          const chapter = {
-            id: page.id || `page-${i}`,
-            title: page.title,
-            content: page.panels?.map((p: any) => p.dialog || "").filter(Boolean).join(" ") || "",
-            imageUrl: pageData.imageUrl || "",
-            imagePrompt: "",
-            panels: pageData.panels || page.panels || [],
-            panelPositions: pageData.panelPositions || null,
-          };
-          chapters.push(chapter);
-          previousImageUrl = pageData.imageUrl || null;
-          updateProject({ chapters: [...chapters] });
-          addLog(`Seite ${i + 1} fertig`, true);
-        } catch (e: any) {
-          chapters.push({ id: page.id || `page-${i}`, title: page.title, content: "", imageUrl: "", imagePrompt: "" });
-          addLog(`Seite ${i + 1}: Fehler`, true);
-        }
-
-        setProgress(22 + (i + 1) * progressPerPage);
+        addLog("Abschlussseite fertig", true);
       }
 
-      // ── Step 4: Endseite ────────────────────────────────────────────────────
-      setStepLabel("Abschlussseite wird erstellt…");
-      addLog("Abschlussseite wird erstellt…");
-      setProgress(90);
+      // ── Step 2+3: Cover + alle Seiten parallel ──────────────────────────────
+      setStepLabel("Cover und Seiten werden illustriert…");
+      setProgress(20);
+      addLog("Cover wird erstellt…");
+      pages.forEach((_: any, i: number) => addLog(`Seite ${i + 1}: "${pages[i].title}"…`));
 
-      try {
-        const endData = await post("/api/comic/ending", {
-          storyInput:    project?.storyInput || "",
-          guidedAnswers: project?.guidedAnswers || {},
-          tone:          project?.tone || "humorvoll",
-          language:      project?.language || "de",
-          dedication:    project?.guidedAnswers?.dedication || project?.dedication || "",
-          dedicationFrom: project?.dedicationFrom || "",
-        });
-        if (endData.endingText) {
-          updateProject({
-            endingData: {
-              endingText: endData.endingText,
-              dedication: endData.dedication || "",
-              dedicationFrom: endData.dedicationFrom || "",
-            },
-          });
-        }
-        addLog("Abschlussseite fertig", true);
-      } catch { addLog("Abschlussseite übersprungen", true); }
+      // Batch-Größe 3 um Rate Limits zu vermeiden
+      const BATCH_SIZE = 3;
+      const chapters: any[] = new Array(pages.length).fill(null);
+      let coverImageUrl = "";
+
+      // Cover + erster Batch starten gleichzeitig
+      const coverPromise = post("/api/comic/cover", {
+        title:             project?.title || "Mein Comic",
+        characters,
+        category:          project?.guidedAnswers?.category || "familie",
+        illustrationStyle: project?.illustrationStyle || "comic",
+        location:          project?.guidedAnswers?.ort || project?.guidedAnswers?.location || "",
+        referenceImages:   project?.referenceImages || [],
+      }).then((data: any) => {
+        coverImageUrl = data.coverImageUrl || "";
+        updateProject({ coverImageUrl: coverImageUrl || undefined });
+        addLog("Cover fertig", true);
+        return coverImageUrl;
+      }).catch(() => { addLog("Cover übersprungen", true); return ""; });
+
+      // Seiten in Batches à BATCH_SIZE parallel
+      const progressPerPage = 70 / pages.length;
+
+      for (let batchStart = 0; batchStart < pages.length; batchStart += BATCH_SIZE) {
+        const batchEnd = Math.min(batchStart + BATCH_SIZE, pages.length);
+        const batch = pages.slice(batchStart, batchEnd);
+
+        await Promise.all(batch.map(async (page: any, batchIdx: number) => {
+          const i = batchStart + batchIdx;
+          try {
+            const pageData = await post("/api/comic/page", {
+              page,
+              characters,
+              illustrationStyle: project?.illustrationStyle || "comic",
+              comicStyle:        project?.comicStyle || "emotional",
+              category:          project?.guidedAnswers?.category || "familie",
+              referenceImages:   project?.referenceImages || [],
+            });
+
+            chapters[i] = {
+              id:             page.id || `page-${i}`,
+              title:          page.title,
+              content:        page.panels?.map((p: any) => p.dialog || "").filter(Boolean).join(" ") || "",
+              imageUrl:       pageData.imageUrl || "",
+              imagePrompt:    "",
+              panels:         pageData.panels || page.panels || [],
+              panelPositions: pageData.panelPositions || null,
+            };
+            addLog(`Seite ${i + 1} fertig`, true);
+          } catch {
+            chapters[i] = { id: page.id || `page-${i}`, title: page.title, content: "", imageUrl: "", imagePrompt: "" };
+            addLog(`Seite ${i + 1}: Fehler`, true);
+          }
+
+          setProgress(20 + (chapters.filter(Boolean).length / pages.length) * progressPerPage);
+          updateProject({ chapters: chapters.filter(Boolean) });
+        }));
+      }
+
+      // Warte auf Cover falls noch nicht fertig
+      await coverPromise;
 
       // ── Finalisieren ────────────────────────────────────────────────────────
+      const finalChapters = chapters.filter(Boolean);
       updateProject({
-        id: project?.id || `proj-${Date.now()}`,
-        title: project?.title || "Mein Comic",
-        storyInput: project?.storyInput || "",
+        id:           project?.id || `proj-${Date.now()}`,
+        title:        project?.title || "Mein Comic",
+        storyInput:   project?.storyInput || "",
         guidedAnswers: project?.guidedAnswers || { characters: "", location: "", timeframe: "", specialMoments: "" },
-        tone: project?.tone || "humorvoll",
-        design: "kinderbuch",
-        characters: characters.map((c: any, i: number) => ({ id: `c${i}`, name: c.name, role: "Hauptfigur" })),
-        chapters,
+        tone:         project?.tone || "humorvoll",
+        design:       "kinderbuch",
+        characters:   characters.map((c: any, i: number) => ({ id: `c${i}`, name: c.name, role: "Hauptfigur" })),
+        chapters:     finalChapters,
         coverImageUrl: coverImageUrl || undefined,
-        status: "preview",
-        createdAt: project?.createdAt || new Date().toISOString(),
+        status:       "preview",
+        createdAt:    project?.createdAt || new Date().toISOString(),
       });
 
       setProgress(100);
@@ -287,7 +288,7 @@ export default function Step4Generate() {
       className="max-w-lg mx-auto text-center space-y-8 py-10">
       <div className="space-y-2">
         <h2 className="font-display text-3xl font-semibold text-[#1f1a2e]">Dein Comic wird erstellt</h2>
-        <p className="text-gray-500 text-sm">Jede Seite wird einzeln illustriert – ca. 2–3 Minuten.</p>
+        <p className="text-gray-500 text-sm">Alle Seiten werden gleichzeitig illustriert – ca. 60–90 Sekunden.</p>
       </div>
 
       <motion.div animate={{ rotate: done ? 0 : [0, -3, 3, -3, 0] }}
