@@ -1,30 +1,9 @@
 const express = require("express");
 const router = express.Router();
 const OpenAI = require("openai");
-const sharp = require("sharp");
-const fs = require("fs");
-const path = require("path");
 const { saveImage } = require("../lib/storage");
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-
-// ── Load style reference image ────────────────────────────────────────────────
-let STYLE_REF_BUFFER = null;
-try {
-  const candidates = [
-    path.join(__dirname, "../../public/Comic.png"),
-    path.join(__dirname, "../../style-reference.png"),
-    path.join(process.cwd(), "public", "Comic.png"),
-  ];
-  for (const refPath of candidates) {
-    if (fs.existsSync(refPath)) {
-      STYLE_REF_BUFFER = fs.readFileSync(refPath);
-      console.log(`✓ Style reference loaded from ${refPath}`);
-      break;
-    }
-  }
-  if (!STYLE_REF_BUFFER) console.warn("⚠ No style reference image found");
-} catch (e) { console.warn("Style reference load error:", e.message); }
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const CATEGORY_MOOD = {
@@ -153,40 +132,6 @@ Example: "Emma: 6-year-old girl with shoulder-length wavy auburn hair, bright ha
           return char;
         }
       }));
-    }
-
-    // Character Reference Sheet
-    let characterSheetUrl = null;
-    if (characters.length > 0) {
-      try {
-        console.log("Generating character reference sheet...");
-        const sheetRes = await openai.images.generate({
-          model: "gpt-image-2",
-          prompt: `Character reference sheet showing all characters standing side by side, full body view, neutral background.
-Characters: ${characters.map(c => `${c.name}: ${c.visual_anchor}`).join(". ")}.
-Style: warm watercolor comic illustration, high quality.
-Show each character clearly from head to toe. NO text, NO labels.`,
-          n: 1, size: "1536x1024", quality: "high",
-        });
-        const item = (sheetRes.data || [])[0];
-        let sheetRaw = item?.url || "";
-        if (!sheetRaw && item?.b64_json) {
-          const buf = Buffer.from(item.b64_json, "base64");
-          const small = await sharp(buf).resize(800, null).jpeg({ quality: 85 }).toBuffer();
-          sheetRaw = `data:image/jpeg;base64,${small.toString("base64")}`;
-        }
-        if (sheetRaw) {
-          const bookId = `book-${Date.now()}`;
-          characterSheetUrl = await saveImage(sheetRaw, bookId, "character-sheet") || sheetRaw;
-          console.log("✓ Character sheet saved");
-        }
-      } catch (e) {
-        console.error("Character sheet error:", e.message);
-      }
-    }
-
-    if (characterSheetUrl) {
-      characters = characters.map(c => ({ ...c, characterSheetUrl }));
     }
 
     res.json({ pages, characters });
