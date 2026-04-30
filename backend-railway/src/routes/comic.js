@@ -56,34 +56,41 @@ router.post("/structure", async (req, res) => {
 
     let ctx = storyInput || "";
     for (const [k, v] of Object.entries(guidedAnswers)) {
-      if (v && k !== "category") ctx += `\n${k}: ${v}`;
+      if (v && k !== "category" && k !== "specialMoments") ctx += `\n${k}: ${v}`;
     }
+
+    // Momente explizit als Pflicht-Szenen extrahieren
+    const momentsText = guidedAnswers.specialMoments || "";
+    const momentsList = momentsText
+      ? momentsText.split("|").map(m => m.trim()).filter(Boolean)
+      : [];
+    const momentsInstruction = momentsList.length > 0
+      ? `\n\nMANDATORY SCENES — these MUST each become their own comic page (one page per moment):\n${momentsList.map((m, i) => `${i + 1}. ${m}`).join("\n")}\nGenerate EXACTLY ${momentsList.length} pages, one per moment above. Do NOT invent new scenes. Do NOT skip any moment.`
+      : "";
 
     const [structRes, charRes] = await Promise.all([
       openai.chat.completions.create({
         model: "gpt-4o",
         messages: [
-          { role: "system", content: `You are a comic book author. Create a ${numPages}-page comic structure in ${lang}.
+          { role: "system", content: `You are a comic book author. Create a ${momentsList.length > 0 ? momentsList.length : numPages}-page comic structure in ${lang}.
 Tone: ${tone}. Visual mood: ${mood}. Comic style: ${comicMod}.
-${mustHaveSentences ? `MUST include: ${mustHaveSentences}` : ""}
-Vary panel count: Page 1: 4 panels, Page 2: 3 panels, Page 3: 5 panels, Page 4: 4 panels.
-Each panel scene must work as a STANDALONE image prompt — describe the complete scene.
-
-CRITICAL — MINIMUM PAGES:
-- Generate MINIMUM ${numPages} pages. Long stories are good — use all the details provided!
+${mustHaveSentences ? `MUST include these sentences: ${mustHaveSentences}` : ""}
+${momentsInstruction}
+Vary panel count per page based on story moment (2-5 panels). Each panel scene must work as a STANDALONE image prompt.
 
 CRITICAL — PANEL VARIETY:
 - Every panel must show a COMPLETELY DIFFERENT scene, angle, and moment
-- NEVER repeat the same activity in two panels (e.g. not 2× at gate, not 2× looking at something)
-- NEVER show the same location/angle twice on one page
+- NEVER repeat the same activity in two panels
 - Think cinematically: establishing shot → close-up → reaction → wide shot
-- Each panel must advance the story — no redundant moments
-- Each character appears ONLY ONCE per panel — no duplicates of the same person
+- Each character appears ONLY ONCE per panel — no duplicates
+
+CRITICAL — ALL CHARACTERS MUST APPEAR:
+- EVERY character mentioned MUST appear across the comic
+- Grandparents, parents, children — ALL must be shown in relevant scenes
 
 CRITICAL — CHARACTER VISIBILITY:
 - Characters should face the camera or be shown from the side — AVOID back views
 - Show faces clearly so readers can see expressions and emotions
-- Prefer: front view, 3/4 view, profile view
 
 Respond ONLY with JSON: {"pages": [{"id":"page1","pageNumber":1,"title":"Title in ${lang}","location":"English location","timeOfDay":"afternoon","panels":[{"nummer":1,"szene":"Specific English scene for SINGLE IMAGE generation","dialog":"Short ${lang} dialog 10-15 words","speaker":"Name or null","bubble_type":"speech"}]}]}` },
           { role: "user", content: ctx },
@@ -327,39 +334,31 @@ Style: crisp black ink outlines, ${style}, expressive faces with clear features,
     console.log(`Generating page "${page.title}" (${panelCount} panels)`);
     let rawUrl = "";
 
-    // Primary: images.edit() with user reference photo only
-    // Never use character sheet or cover as reference — only the original user photo
+    // Primary: images.edit() with user photo — keeps character likeness in comic style
     const primaryRef = referenceImages[0];
     if (primaryRef) {
       try {
         const refBuf = Buffer.from(primaryRef, "base64");
         const refBlob = new Blob([refBuf], { type: "image/jpeg" });
         const refFile = new File([refBlob], "reference.jpg", { type: "image/jpeg" });
-        
         const charAnchors = characters.map(c => `${c.name} (${c.visual_anchor})`).join(", ");
-        const consistencyNote = "The people in this photo are the main characters. Keep their exact faces, hair, and features recognizable.";
-        
         const editRes = await openai.images.edit({
           model: "gpt-image-2",
           image: refFile,
-          prompt: `${consistencyNote} Draw them as premium European comic illustrations — crisp comic style with bold ink outlines.
-
-Character consistency is CRITICAL: ${charAnchors}
-
-${imagePrompt}`,
+          prompt: `The people in this photo are the main characters. Draw them as European comic book illustrations — bold ink outlines, flat cel-shaded colors, expressive cartoon faces. NOT photorealistic. NOT a photograph.\n\nCharacter consistency: ${charAnchors}\n\n${imagePrompt}`,
           size: "1024x1536",
           quality: "high",
         });
         const item = (editRes.data || [])[0];
         if (item?.url) rawUrl = item.url;
         else if (item?.b64_json) rawUrl = `data:image/png;base64,${item.b64_json}`;
-        if (rawUrl) console.log(`  → Generated with reference ${referenceImages.length > 0 ? "photo" : "(cover)"}`);
+        if (rawUrl) console.log(`  → Generated with user photo reference`);
       } catch (e) {
-        console.warn(`  → Reference photo failed:`, e.message);
+        console.warn(`  → images.edit() failed:`, e.message);
       }
     }
 
-    // Fallback: images.generate()
+    // Fallback: images.generate() without reference
     if (!rawUrl) {
       try {
         const genRes = await openai.images.generate({
@@ -368,6 +367,7 @@ ${imagePrompt}`,
         const item = (genRes.data || [])[0];
         if (item?.url) rawUrl = item.url;
         else if (item?.b64_json) rawUrl = `data:image/png;base64,${item.b64_json}`;
+        if (rawUrl) console.log(`  → Generated without reference (fallback)`);
       } catch (e) {
         console.error(`Generation failed for "${page.title}":`, e.message);
       }
@@ -434,7 +434,7 @@ Style: crisp ink outlines, vivid saturated colors, expressive faces, professiona
         const editRes = await openai.images.edit({
           model: "gpt-image-2",
           image: refFile,
-          prompt: `The people in this photo are the main characters. Create a premium European comic book COVER showing them in ${location || "a beautiful setting"}. Keep their exact faces recognizable in crisp comic style. Portrait orientation, characters in foreground.\nStyle: crisp ink outlines, vivid colors, expressive faces, professional graphic novel cover. No watercolor. No soft blur. No text.`,
+          prompt: `The people in this photo are the main characters. Create a premium European comic book COVER showing them in ${location || "a beautiful setting"}. Keep their exact faces recognizable but drawn in crisp comic illustration style — bold ink outlines, flat colors, expressive cartoon faces. NOT photorealistic. NOT a photograph. Portrait orientation, characters in foreground.\nStyle: crisp ink outlines, vivid colors, expressive faces, professional graphic novel cover. No watercolor. No soft blur. No text, no title, no letters.`,
           size: "1024x1536",
           quality: "high",
         });
