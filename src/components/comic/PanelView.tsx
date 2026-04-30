@@ -348,21 +348,21 @@ export default function PanelView({ imageUrl, title, panels = [], panelPositions
       onMouseLeave={handleMouseUp}
     >
       <div className="relative">
-        {/* Page Title Overlay */}
-        {title && (
-          <div className="absolute top-0 left-0 right-0 z-20 bg-gradient-to-b from-black/60 to-transparent py-3 px-4">
-            <h3 className="text-white text-lg font-serif font-semibold tracking-wide drop-shadow-lg"
-              style={{ fontFamily: "'Playfair Display', serif" }}>
-              {title}
-            </h3>
-          </div>
-        )}
-
         {imageUrl ? (
           <img src={imageUrl} alt={title || "Comic page"} className="w-full h-auto block" />
         ) : (
           <div className="w-full aspect-[2/3] bg-gray-100 flex items-center justify-center">
             <p className="text-gray-400 text-sm">Kein Bild</p>
+          </div>
+        )}
+
+        {/* Page Title Overlay — rendered after image so it sits on top */}
+        {title && (
+          <div className="absolute top-0 left-0 right-0 z-20 bg-gradient-to-b from-black/70 to-transparent py-3 px-4 pointer-events-none">
+            <h3 className="text-white text-base font-semibold tracking-wide drop-shadow-lg"
+              style={{ fontFamily: "'Playfair Display', serif" }}>
+              {title}
+            </h3>
           </div>
         )}
 
