@@ -1,5 +1,6 @@
 import OpenAI from "openai";
 import { buildComicPagePrompt, buildGPTStructurePrompt, type Character, type Panel } from "./prompt-builder";
+import { COMIC_PAGE_SIZE } from "./cover-generator";
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
@@ -39,15 +40,18 @@ export async function buildComicStructure(
     ],
     response_format: { type: "json_object" },
     max_tokens: 4000, // Increased for longer stories
-    temperature: 0.85,
+    temperature: 0.95,
   });
 
   const raw = JSON.parse(response.choices[0].message.content || "{}");
-  return (raw.pages || []).map((p: any, i: number) => ({
+  const pages = (raw.pages || []).map((p: any, i: number) => ({
     ...p,
     id: p.id || `page${i + 1}`,
     pageNumber: p.pageNumber || i + 1,
   }));
+
+  // ── Dialog Validation: ensure every panel has dialog ──────────────────────
+  return ensureDialogs(pages);
 }
 
 // ── Step 2: Character Builder ────────────────────────────────────────────────
@@ -132,6 +136,14 @@ async function rewriteForImageAI(page: StoryPage, characters: Character[], categ
 
 Write like an art director briefing an illustrator — NOT like a prompt engineer.
 
+⚠️ CRITICAL STYLE — COMIC BOOK ILLUSTRATION ⚠️
+This MUST look like a comic book — NOT a photo, NOT photorealistic, NOT a painting.
+- Bold ink outlines on all characters and objects
+- Flat color areas (not photographic gradients)
+- Stylized expressive faces (NOT photographic accuracy)
+- Think: Tintin, Asterix, European graphic novels
+- Every sentence must reinforce: "comic illustration style, bold ink outlines, flat colors"
+
 ⚠️ CRITICAL - ABSOLUTELY NO TEXT IN IMAGE ⚠️
 The image generator MUST NOT write ANY text, titles, captions, or letters.
 - NO page titles like "Ankunft in Tunesien" or "Abflug nach Tunesien"
@@ -177,7 +189,7 @@ STYLE RULES:
 - Write naturally, like describing a scene to an artist
 - Each panel: max 1 sentence, purely what is VISIBLE
 - Convert emotions into expressions and body language
-- CRITICAL: End with "NO text, NO speech bubbles, NO letters, NO titles in image"
+- CRITICAL: End with "Bold ink outlines, flat colors, comic illustration style. NO photorealism. NO text, NO speech bubbles, NO letters, NO titles in image."
 - Emphasize variety: close-ups, wide shots, different actions, different angles`,
       }, {
         role: "user",
@@ -275,12 +287,12 @@ export async function generateComicPage(
       const response = await openai.images.edit({
         model: "gpt-image-2",
         image: file,
-        prompt: `${consistencyNote} Draw them as premium European comic illustrations — crisp comic style with bold ink outlines.
+        prompt: `${consistencyNote} Draw them as premium European comic illustrations — bold ink outlines, flat colors, stylized faces. NOT photorealistic.
 
 Character consistency is CRITICAL: ${charAnchors}
 
 ${prompt}`,
-        size: "1024x1536",
+        size: COMIC_PAGE_SIZE,
         quality: "high",
       } as any);
 
@@ -303,7 +315,7 @@ async function generateStandard(prompt: string, pageNumber: number): Promise<str
       model: "gpt-image-2",
       prompt,
       n: 1,
-      size: "1024x1536",
+      size: COMIC_PAGE_SIZE,
       quality: "high",
     });
     const item = (response.data ?? [])[0];
@@ -318,7 +330,7 @@ async function generateStandard(prompt: string, pageNumber: number): Promise<str
         model: "gpt-image-2",
         prompt,
         n: 1,
-        size: "1024x1536",
+        size: COMIC_PAGE_SIZE,
         quality: "high",
       });
       const item = (response.data ?? [])[0];
@@ -341,4 +353,59 @@ function buildContext(storyInput: string, guidedAnswers: Record<string, string>)
     if (guidedAnswers[f]) ctx += `\n${f}: ${guidedAnswers[f]}`;
   }
   return ctx;
+}
+
+// ── Dialog Validation: ensure every panel has dialog ─────────────────────────
+// Panels without dialog get a narrator caption as fallback
+function ensureDialogs(pages: StoryPage[]): StoryPage[] {
+  const fallbackCaptions: Record<string, string[]> = {
+    de: [
+      "Ein unvergesslicher Moment...",
+      "Die Zeit steht still.",
+      "Erinnerungen, die bleiben.",
+      "Ein Blick sagt mehr als tausend Worte.",
+      "Gemeinsam ist alles leichter.",
+      "Manchmal braucht es keine Worte.",
+      "Ein Lächeln, das alles sagt.",
+    ],
+    en: [
+      "An unforgettable moment...",
+      "Time stands still.",
+      "Memories that last forever.",
+      "A look that says it all.",
+      "Together, everything is easier.",
+    ],
+  };
+
+  return pages.map(page => {
+    let captionIndex = 0;
+    const panels = page.panels.map(panel => {
+      const hasDialog = panel.dialog &&
+        panel.dialog.trim().length > 0 &&
+        panel.dialog.trim().toLowerCase() !== "null";
+
+      if (!hasDialog) {
+        const captions = fallbackCaptions["de"];
+        const caption = captions[captionIndex % captions.length];
+        captionIndex++;
+        return {
+          ...panel,
+          dialog: caption,
+          speaker: null,
+          bubble_type: "caption" as const,
+        };
+      }
+      return panel;
+    });
+
+    const emptyCount = page.panels.filter(p =>
+      !p.dialog || p.dialog.trim().length === 0 || p.dialog.trim().toLowerCase() === "null"
+    ).length;
+
+    if (emptyCount > 0) {
+      console.log(`Page ${page.pageNumber}: filled ${emptyCount} empty panel(s) with captions`);
+    }
+
+    return { ...page, panels };
+  });
 }

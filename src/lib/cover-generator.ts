@@ -3,6 +3,12 @@ import type { Character } from "./prompt-builder";
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
+// ── Unified format constant ───────────────────────────────────────────────────
+export const COMIC_PAGE_SIZE = "1024x1536" as const;
+
+// ── Anti-realism note (used in all image prompts) ────────────────────────────
+const COMIC_STYLE_NOTE = `CRITICAL STYLE: Bold ink outlines, flat color areas, stylized expressive faces — pure comic book illustration. NOT photorealistic, NOT a photo, NOT a painting. Think European graphic novels (Tintin, Asterix). Stylized characters, NOT photographic accuracy.`;
+
 // ── Character Reference Sheet generation ─────────────────────────────────────
 // Generates a neutral reference image showing all characters clearly
 // Used for consistency across all comic pages when no user photo is uploaded
@@ -18,16 +24,17 @@ export async function generateCharacterSheet(
   ).join(". ");
 
   const styleMap: Record<string, string> = {
-    comic:       "watercolor comic illustration style, bold outlines, vibrant colors",
-    aquarell:    "soft watercolor illustration, pastel colors, dreamy",
-    bleistift:   "pencil sketch style, hand-drawn",
-    realistisch: "realistic comic art, detailed digital painting",
+    comic:       "bold ink outlines, flat vibrant colors, European comic illustration style — NOT photorealistic",
+    aquarell:    "bold ink outlines with soft watercolor fills, comic illustration style — NOT photorealistic",
+    bleistift:   "bold pencil sketch with ink outlines, hand-drawn comic style — NOT photorealistic",
+    realistisch: "bold ink outlines, detailed flat colors, realistic comic art style — NOT photorealistic",
   };
   const style = styleMap[illustrationStyle] || styleMap.comic;
 
   const prompt = `Create a CHARACTER REFERENCE SHEET for comic illustration.
 Show all characters standing together in neutral poses, facing forward.
 Characters: ${charDesc}
+${COMIC_STYLE_NOTE}
 Style: ${style}, professional character design quality.
 CRITICAL: Sharp, detailed facial features with clearly defined eyes, nose, mouth, and expressions.
 Each character should be clearly visible, well-lit, and easy to identify.
@@ -59,8 +66,8 @@ Portrait orientation (vertical), all characters visible from head to waist.`;
         const editRes = await openai.images.edit({
           model: "gpt-image-2",
           image: refFile,
-          prompt: `The people in this photo are the main characters. ${prompt}`,
-          size: "1024x1536",
+          prompt: `The people in this photo are the main characters. Draw them as comic book illustrations — bold ink outlines, flat colors, stylized faces. NOT photorealistic. ${prompt}`,
+          size: COMIC_PAGE_SIZE,
           quality: "high",
         });
         const item = (editRes.data ?? [])[0];
@@ -77,7 +84,7 @@ Portrait orientation (vertical), all characters visible from head to waist.`;
       model: "gpt-image-2",
       prompt,
       n: 1,
-      size: "1024x1536",
+      size: COMIC_PAGE_SIZE,
       quality: "high",
     });
     const item = (response.data ?? [])[0];
@@ -117,14 +124,15 @@ export async function generateCoverImage(
   const mood = categoryMoods[category] || categoryMoods.familie;
 
   const styleMap: Record<string, string> = {
-    comic:       "watercolor comic illustration style, bold outlines, vibrant colors",
-    aquarell:    "soft watercolor illustration, pastel colors, dreamy",
-    bleistift:   "pencil sketch style, hand-drawn",
-    realistisch: "realistic comic art, detailed digital painting",
+    comic:       "bold ink outlines, flat vibrant colors, European comic illustration style — NOT photorealistic",
+    aquarell:    "bold ink outlines with soft watercolor fills, comic illustration style — NOT photorealistic",
+    bleistift:   "bold pencil sketch with ink outlines, hand-drawn comic style — NOT photorealistic",
+    realistisch: "bold ink outlines, detailed flat colors, realistic comic art style — NOT photorealistic",
   };
   const style = styleMap[illustrationStyle] || styleMap.comic;
 
   const prompt = `Create a beautiful comic book COVER illustration.
+${COMIC_STYLE_NOTE}
 ${charDesc ? `Main characters: ${charDesc}.` : ""}
 Setting: ${location || "beautiful scenic location"}.
 Mood: ${mood}.
@@ -157,8 +165,8 @@ Leave the bottom 30% of the image slightly darker/simpler for title overlay.`;
         const editRes = await openai.images.edit({
           model: "gpt-image-2",
           image: refFile,
-          prompt: `The people in this photo are the main characters. ${prompt}`,
-          size: "1024x1536",
+          prompt: `The people in this photo are the main characters. Draw them as comic book illustrations — bold ink outlines, flat colors, stylized faces. NOT photorealistic. ${prompt}`,
+          size: COMIC_PAGE_SIZE,
           quality: "high",
         });
         const item = (editRes.data ?? [])[0];
@@ -175,7 +183,7 @@ Leave the bottom 30% of the image slightly darker/simpler for title overlay.`;
       model: "gpt-image-2",
       prompt,
       n: 1,
-      size: "1024x1536",
+      size: COMIC_PAGE_SIZE,
       quality: "high",
     });
     const item = (response.data ?? [])[0];
@@ -190,7 +198,7 @@ Leave the bottom 30% of the image slightly darker/simpler for title overlay.`;
         model: "gpt-image-2",
         prompt,
         n: 1,
-        size: "1024x1536",
+        size: COMIC_PAGE_SIZE,
         quality: "high",
       });
       const item = (response.data ?? [])[0];

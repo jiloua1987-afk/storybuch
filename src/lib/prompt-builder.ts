@@ -32,13 +32,13 @@ export interface PagePromptInput {
 // STYLE per category × comicStyle — short, punchy, no filler words
 // ══════════════════════════════════════════════════════════════════════════════
 const STYLE_MATRIX: Record<string, Record<string, string>> = {
-  liebe:     { action: "dynamic superhero comic style, bold primary colors, wide action shots, Marvel/DC energy", emotional: "intimate golden light, elegant linework, romantic atmosphere", humor: "bright cheerful colors, exaggerated lovesick expressions, manga energy" },
-  familie:   { action: "classic adventure comic style, rich colors, varied camera angles, Tintin meets Spider-Man", emotional: "rich warm colors, rounded characters, Pixar concept art quality", humor: "bright pop colors, exaggerated expressions, European comic strip style" },
-  urlaub:    { action: "epic adventure comic style, saturated colors, cinematic wide shots, Indiana Jones energy", emotional: "luminous Mediterranean colors, panoramic compositions, travel book quality", humor: "bright holiday colors, exaggerated tourist situations, funny postcard style" },
-  feier:     { action: "explosive celebration comic style, dynamic angles, motion lines, superhero party energy", emotional: "golden lighting, intimate moments, greeting card quality", humor: "bright festive colors, exaggerated celebration chaos, maximum fun" },
-  biografie: { action: "graphic novel action style, dramatic shadows, varied perspectives, prestige comic energy", emotional: "muted earth tones, editorial linework, New Yorker illustration quality", humor: "retro color palette, expressive linework, illustrated memoir style" },
-  freunde:   { action: "team-up comic style, dynamic group compositions, X-Men energy, varied shot types", emotional: "natural colors, intimate moments, warm ambient lighting", humor: "bright pop colors, exaggerated expressions, webcomic quality" },
-  sonstiges: { action: "classic comic book style, varied camera angles, dynamic poses, professional superhero quality", emotional: "atmospheric colors, precise linework, cinematic lighting", humor: "bold outlines, bright colors, professional cartoon quality" },
+  liebe:     { action: "bold ink outlines, flat primary colors, dynamic superhero comic style, Marvel/DC energy — NOT photorealistic, NOT a painting", emotional: "bold ink outlines, warm flat colors, elegant European comic linework, romantic atmosphere — NOT photorealistic", humor: "bold ink outlines, bright flat colors, exaggerated lovesick expressions, manga-inspired comic style — NOT photorealistic" },
+  familie:   { action: "bold ink outlines, rich flat colors, classic adventure comic style, Tintin meets Spider-Man — NOT photorealistic, NOT a painting", emotional: "bold ink outlines, warm flat colors, rounded expressive characters, European graphic novel style — NOT photorealistic", humor: "bold ink outlines, bright pop colors, exaggerated expressions, European comic strip style — NOT photorealistic" },
+  urlaub:    { action: "bold ink outlines, saturated flat colors, epic adventure comic style, Indiana Jones energy — NOT photorealistic, NOT a painting", emotional: "bold ink outlines, luminous flat Mediterranean colors, European travel comic style — NOT photorealistic", humor: "bold ink outlines, bright flat holiday colors, exaggerated tourist situations, funny comic postcard style — NOT photorealistic" },
+  feier:     { action: "bold ink outlines, vibrant flat colors, explosive celebration comic style, dynamic motion lines — NOT photorealistic, NOT a painting", emotional: "bold ink outlines, golden flat colors, intimate European comic style — NOT photorealistic", humor: "bold ink outlines, bright festive flat colors, exaggerated celebration chaos, maximum comic fun — NOT photorealistic" },
+  biografie: { action: "bold ink outlines, dramatic flat colors, graphic novel action style, prestige comic energy — NOT photorealistic, NOT a painting", emotional: "bold ink outlines, muted earth flat tones, editorial comic linework, graphic memoir style — NOT photorealistic", humor: "bold ink outlines, retro flat color palette, expressive comic linework, illustrated memoir style — NOT photorealistic" },
+  freunde:   { action: "bold ink outlines, vibrant flat colors, team-up comic style, dynamic group compositions — NOT photorealistic, NOT a painting", emotional: "bold ink outlines, natural flat colors, intimate European comic style, warm atmosphere — NOT photorealistic", humor: "bold ink outlines, bright pop flat colors, exaggerated expressions, webcomic style — NOT photorealistic" },
+  sonstiges: { action: "bold ink outlines, flat colors, classic comic book style, dynamic poses, professional graphic novel quality — NOT photorealistic, NOT a painting", emotional: "bold ink outlines, atmospheric flat colors, precise comic linework, cinematic lighting — NOT photorealistic", humor: "bold ink outlines, bright flat colors, professional cartoon quality — NOT photorealistic" },
 };
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -68,6 +68,8 @@ export function buildComicPagePrompt(input: PagePromptInput): string {
   // Short, focused prompt — quality instruction FIRST, then content
   return `Create a premium European comic book page with ${panelCount} panels in a ${layoutDesc}. 
 
+CRITICAL STYLE: This MUST look like a comic book illustration — bold ink outlines, flat color areas, stylized faces. NOT a photo, NOT photorealistic, NOT a painting. Think Tintin, Asterix, European graphic novels. Stylized expressive faces, NOT photographic accuracy.
+
 CRITICAL: Sharp, detailed facial features with clearly defined eyes, nose, mouth, and expressions. Maximum 2-4 people per panel with visible faces. Each panel shows a COMPLETELY DIFFERENT scene, angle, and moment — no duplicates, no similar compositions. Each character appears ONLY ONCE per panel — no duplicates of the same person. Do NOT invent or add any people not listed in the characters below.
 
 ABSOLUTELY NO TEXT IN IMAGE: No panel titles, no page titles, no captions, no labels, no letters, no words, no speech bubbles anywhere in the generated image. Text is added separately.
@@ -75,7 +77,7 @@ ABSOLUTELY NO TEXT IN IMAGE: No panel titles, no page titles, no captions, no la
 ${charBlock ? `Characters (keep identical in every panel with recognizable faces): ${charBlock}\n` : ""}${panelDescs}
 ${location ? `\nSetting: ${location}.` : ""}${timeOfDay ? ` ${timeOfDay} lighting.` : ""}
 
-Style: varied camera angles (close-ups, wide shots, over-shoulder views), ${style}, expressive faces with clear features, soft panel borders, professional graphic novel quality. Mix perspectives: not all close-ups, include establishing shots. For crowd scenes: background people as silhouettes or slightly out of focus. For beach/outdoor scenes: bright natural light, vivid colors, characters in appropriate clothing. No watercolor. No soft blur.`;
+Style: varied camera angles (close-ups, wide shots, over-shoulder views), ${style}, expressive stylized faces with clear features, bold ink outlines, flat colors, soft panel borders, professional graphic novel quality. Mix perspectives: not all close-ups, include establishing shots. For crowd scenes: background people as silhouettes or slightly out of focus. For beach/outdoor scenes: bright natural light, vivid colors, characters in appropriate clothing. No watercolor. No soft blur. No photorealism.`;
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -144,13 +146,24 @@ Write SHORT visual descriptions for an image AI. Max 2 sentences. Visual only.
 Include: WHO (name + key visual), WHAT (action), WHERE, LIGHTING. No narrative. No emotions in words — show them through expressions and body language.
 
 DIALOGS — CRITICAL FOR STORYTELLING:
-- MOST panels (70-80%) should have dialog to tell the story
+- EVERY panel MUST have dialog or a narrator caption — NO silent panels
 - Create CONVERSATIONS, not monologues — characters talk TO EACH OTHER
-- Each dialog: 10-15 words, natural ${lang}
+- Each dialog: 10-18 words, natural ${lang}, vivid and personal
 - Vary speakers: not all from one person, create back-and-forth exchanges
 - Example: Panel 1: Mama asks question → Panel 2: Papa answers → Panel 3: Child reacts
-- Dialogs should feel like real conversations with questions, answers, reactions
+- Be CREATIVE and SPECIFIC — reference actual details from the story
 - ONLY assign dialog to characters who are VISIBLE in that panel's "szene" description
+
+DIALOG EXAMPLES (GOOD vs BAD):
+❌ BAD (boring, too short):
+  Panel 1: "Wir sind da." / Panel 2: "Ja, endlich."
+✅ GOOD (vivid, engaging):
+  Panel 1: "Mama, schau! Das Meer ist ja riesig wie in meinem Traum!" 
+  Panel 2: "Und es riecht nach Salz und Abenteuer — genau wie ich es dir versprochen habe!"
+❌ BAD (generic):
+  "Schön hier."
+✅ GOOD (specific, character voice):
+  "Opa, dein Garten ist noch schöner als auf den Fotos!"
 
 CRITICAL — CHARACTER VISIBILITY:
 - Prefer showing characters facing the camera or from the side to see expressions
@@ -182,9 +195,9 @@ CRITICAL — DIALOG SPEAKERS:
 
 RULES:
 - ${numPages} pages minimum, 3-4 panels each (prefer 4)
-- Dialogs: 10-15 words, natural ${lang}. Most panels should have dialog to tell the story.
+- Dialogs: 10-18 words, natural ${lang}. EVERY panel must have dialog or caption.
 - Page titles: 3-5 words, ${lang}.
 
 JSON only:
-{"pages":[{"id":"page1","pageNumber":1,"title":"...","location":"English location","timeOfDay":"morning|afternoon|golden hour|sunset|night","panels":[{"nummer":1,"szene":"Short visual description, max 2 sentences","dialog":"Short ${lang} dialog or null","speaker":"Name or null","bubble_type":"speech|caption|shout|thought"}]}]}`;
+{"pages":[{"id":"page1","pageNumber":1,"title":"...","location":"English location","timeOfDay":"morning|afternoon|golden hour|sunset|night","panels":[{"nummer":1,"szene":"Short visual description, max 2 sentences","dialog":"Short ${lang} dialog — REQUIRED, never null","speaker":"Name or null","bubble_type":"speech|caption|shout|thought"}]}]}`;
 }
