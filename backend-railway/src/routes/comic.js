@@ -202,42 +202,50 @@ router.post("/page", async (req, res) => {
     const { page, characters = [], comicStyle = "emotional", category = "familie",
             illustrationStyle = "comic", referenceImages = [] } = req.body;
 
-    const SM = {
-      liebe:     { action: "dramatic romantic energy, bold colors, cinematic angles", emotional: "intimate golden light, elegant linework, romantic atmosphere", humor: "bright cheerful colors, exaggerated lovesick expressions, manga energy" },
-      familie:   { action: "vibrant saturated colors, dynamic compositions, Asterix/Tintin energy", emotional: "rich warm colors, rounded characters, Pixar concept art quality", humor: "bright pop colors, exaggerated expressions, European comic strip style" },
-      urlaub:    { action: "vivid tropical colors, dynamic wide-angle compositions, movie poster quality", emotional: "luminous Mediterranean colors, panoramic compositions, travel book quality", humor: "bright holiday colors, exaggerated tourist situations, funny postcard style" },
-      feier:     { action: "vibrant party colors, confetti in motion, high energy", emotional: "golden lighting, intimate moments, greeting card quality", humor: "bright festive colors, exaggerated celebration chaos, maximum fun" },
-      biografie: { action: "dramatic cinematic lighting, deep colors, prestige graphic novel", emotional: "muted earth tones, editorial linework, New Yorker illustration quality", humor: "retro color palette, expressive linework, illustrated memoir style" },
-      freunde:   { action: "vibrant colors, dynamic group poses, superhero team-up energy", emotional: "natural colors, intimate moments, warm ambient lighting", humor: "bright pop colors, exaggerated expressions, webcomic quality" },
-      sonstiges: { action: "bold outlines, rich cinematic colors, high contrast", emotional: "atmospheric colors, precise linework, cinematic lighting", humor: "bold outlines, bright colors, professional cartoon quality" },
+    // Fixed base style — same for every page, every category
+    // This is what produces the consistent comic look seen in the good test pages
+    const BASE_STYLE = "cinematic comic illustration, bold ink outlines, rich detailed colors, expressive faces, dramatic lighting, professional graphic novel quality";
+    const MOOD_MOD = {
+      action:    "dynamic poses, motion energy, high contrast",
+      emotional: "warm golden tones, intimate close-ups, soft shadows",
+      humor:     "exaggerated expressions, bright colors, playful energy",
     };
-    const style = (SM[category] || SM.sonstiges)[comicStyle] || (SM[category] || SM.sonstiges).emotional;
+    const style = `${BASE_STYLE}, ${MOOD_MOD[comicStyle] || MOOD_MOD.emotional}`;
     const charListStr = characters.map(c => `${c.name} (${c.age || ""}, ${c.visual_anchor})`).join(", ");
     const panelList = page.panels.map(p => `${p.nummer}. ${p.szene}`).join("\n");
     const panelCount = page.panels.length;
     const layoutDesc = panelCount <= 3 ? "1 large panel on top, 2 panels on bottom"
       : panelCount === 5 ? "2 on top, 1 wide middle, 2 on bottom" : "2×2 grid";
 
+    // Context-aware outfit detection — computed once, used in both prompt rewriter and images.edit()
+    const pageLocation = (page.location || "").toLowerCase();
+    const beachKeywords = ["strand", "beach", "meer", "sea", "pool", "planschbecken", "schwimmbad", "wasser", "küste", "coast"];
+    const homeKeywords = ["wohnzimmer", "küche", "schlafzimmer", "living room", "kitchen", "bedroom", "indoor", "innen"];
+    const gardenKeywords = ["hof", "garten", "courtyard", "garden", "terrasse", "terrace", "outdoor", "außen", "backyard"];
+    const formalKeywords = ["restaurant", "theater", "hochzeit", "feier", "party", "celebration", "wedding", "dinner"];
+    const airportKeywords = ["flughafen", "airport", "gate", "terminal", "abflug", "ankunft"];
+    const sportKeywords = ["fahrrad", "bike", "bicycle", "sport", "spielplatz", "playground", "rennen", "race"];
+
+    let outfitContext = "";
+    if (beachKeywords.some(kw => pageLocation.includes(kw))) {
+      outfitContext = "CLOTHING: swimwear, swim shorts, light summer dresses, sandals — beach/pool appropriate. NO jeans, NO dark shirts.";
+    } else if (formalKeywords.some(kw => pageLocation.includes(kw))) {
+      outfitContext = "CLOTHING: smart casual to formal — dress shirts, blouses, nice trousers. NO sportswear.";
+    } else if (airportKeywords.some(kw => pageLocation.includes(kw))) {
+      outfitContext = "CLOTHING: comfortable travel clothes — casual shirts, jeans, sneakers, light jackets.";
+    } else if (gardenKeywords.some(kw => pageLocation.includes(kw))) {
+      outfitContext = "CLOTHING: casual outdoor clothes — t-shirts, shorts, light trousers. Appropriate for warm outdoor setting.";
+    } else if (sportKeywords.some(kw => pageLocation.includes(kw))) {
+      outfitContext = "CLOTHING: casual sporty clothes — t-shirts, shorts, sneakers. Comfortable and active.";
+    } else if (homeKeywords.some(kw => pageLocation.includes(kw))) {
+      outfitContext = "CLOTHING: relaxed home clothes — t-shirts, comfortable trousers.";
+    } else {
+      outfitContext = "CLOTHING: casual everyday clothes appropriate for the scene and weather.";
+    }
+
     // Step 1: GPT-4o Prompt Rewriter — writes like an Art Director
     let imagePrompt = "";
     try {
-      // Context-aware outfit detection
-      const location = (page.location || "").toLowerCase();
-      const beachKeywords = ["strand", "beach", "meer", "sea", "pool", "planschbecken", "schwimmbad", "wasser"];
-      const homeKeywords = ["haus", "home", "wohnzimmer", "küche", "hof", "garten", "zimmer"];
-      const formalKeywords = ["restaurant", "theater", "hochzeit", "feier", "party", "celebration"];
-      
-      let outfitContext = "";
-      if (beachKeywords.some(kw => location.includes(kw))) {
-        outfitContext = "Characters wear appropriate beach/swim clothing (swimwear, shorts, light summer clothes). ";
-      } else if (formalKeywords.some(kw => location.includes(kw))) {
-        outfitContext = "Characters wear formal/festive clothing appropriate for the occasion. ";
-      } else if (homeKeywords.some(kw => location.includes(kw))) {
-        outfitContext = "Characters wear casual home clothing. ";
-      } else {
-        outfitContext = "Characters wear context-appropriate clothing for the setting. ";
-      }
-
       const rewriteRes = await openai.chat.completions.create({
         model: "gpt-4o",
         messages: [{
@@ -310,14 +318,16 @@ ${panelList}`,
     } catch (e) {
       console.warn("Prompt rewrite failed:", e.message);
     }
-    // Fallback prompt
+    // Fallback prompt — also needs outfit context
     if (!imagePrompt) {
-      // Context-aware outfit for fallback
-      const location = (page.location || "").toLowerCase();
-      const beachKeywords = ["strand", "beach", "meer", "sea", "pool", "planschbecken", "schwimmbad", "wasser"];
+      const loc2 = (page.location || "").toLowerCase();
+      const beachKw = ["strand", "beach", "meer", "sea", "pool", "planschbecken", "schwimmbad", "wasser"];
+      const gardenKw = ["hof", "garten", "courtyard", "garden", "terrasse"];
       let outfitNote = "";
-      if (beachKeywords.some(kw => location.includes(kw))) {
-        outfitNote = " Characters wear appropriate beach/swim clothing (swimwear, shorts, light summer clothes).";
+      if (beachKw.some(kw => loc2.includes(kw))) {
+        outfitNote = " CLOTHING: swimwear, swim shorts, light summer clothes — NO jeans.";
+      } else if (gardenKw.some(kw => loc2.includes(kw))) {
+        outfitNote = " CLOTHING: casual t-shirts, shorts, light trousers for warm outdoor setting.";
       }
 
       imagePrompt = `Create a premium European comic book page with ${panelCount} panels in a ${layoutDesc}. 
@@ -328,7 +338,7 @@ Characters (keep identical in every panel with recognizable faces): ${characters
 ${page.panels.map(p => `Panel ${p.nummer}: ${p.szene}`).join("\n")}
 ${page.location ? `\nSetting: ${page.location}.` : ""}${page.timeOfDay ? ` ${page.timeOfDay} lighting.` : ""}
 
-Style: crisp black ink outlines, ${style}, expressive faces with clear features, bold panel borders, professional graphic novel quality. For crowd scenes: background people as silhouettes or out of focus. No watercolor. No soft blur. CRITICAL: NO text, NO speech bubbles, NO letters in the generated image.`;
+Style: ${style}, bold panel borders, professional graphic novel quality. Background crowd: silhouettes only. CRITICAL: NO text, NO speech bubbles, NO letters in the generated image.`;
     }
 
     console.log(`Generating page "${page.title}" (${panelCount} panels)`);
@@ -345,7 +355,7 @@ Style: crisp black ink outlines, ${style}, expressive faces with clear features,
         const editRes = await openai.images.edit({
           model: "gpt-image-2",
           image: refFile,
-          prompt: `The people in this photo are the main characters. Draw them as European comic book illustrations — bold ink outlines, flat cel-shaded colors, expressive cartoon faces. NOT photorealistic. NOT a photograph.\n\nCharacter consistency: ${charAnchors}\n\n${imagePrompt}`,
+          prompt: `The people in this photo are the main characters. Draw them as European comic book illustrations — bold ink outlines, flat cel-shaded colors, expressive cartoon faces. NOT photorealistic. NOT a photograph.\n\n${outfitContext}\n\nCharacter consistency: ${charAnchors}\n\n${imagePrompt}`,
           size: "1024x1536",
           quality: "high",
         });
