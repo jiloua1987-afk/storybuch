@@ -112,7 +112,7 @@ router.post("/structure", async (req, res) => {
     // Run structure + character extraction in parallel
     const [structRes, charRes] = await Promise.all([
       openai.chat.completions.create({
-        model: "gpt-4o",
+        model: "gpt-4.1",
         messages: [
           {
             role: "system",
@@ -160,7 +160,7 @@ Respond ONLY with JSON:
         temperature: 0.9,
       }),
       openai.chat.completions.create({
-        model: "gpt-4o",
+        model: "gpt-4.1",
         messages: [
           {
             role: "system",
@@ -196,7 +196,7 @@ Respond ONLY with JSON:
         if (!ref) return char;
         try {
           const r = await openai.chat.completions.create({
-            model: "gpt-4o",
+            model: "gpt-4.1",
             messages: [{
               role: "user",
               content: [
@@ -369,7 +369,7 @@ CRITICAL RULES:
     let panelPositions = null;
     try {
       const visionRes = await openai.chat.completions.create({
-        model: "gpt-4o",
+        model: "gpt-4.1",
         messages: [{
           role: "user",
           content: [
@@ -409,7 +409,7 @@ router.post("/ending", async (req, res) => {
     const lang = langMap[language] || "German";
 
     const r = await openai.chat.completions.create({
-      model: "gpt-4o",
+      model: "gpt-4.1",
       messages: [
         {
           role: "system",
