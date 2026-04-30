@@ -233,6 +233,7 @@ function getFallbackPosition(index: number, total: number): React.CSSProperties 
 }
 
 // ── Compute initial bubble size from dialog length ────────────────────────────
+function initBubbleSize(dialog: string, speaker: string): { w: number; h: number } {
   const text = (speaker ? speaker + ": " : "") + dialog;
   const chars = text.length;
   const w = Math.min(220, Math.max(100, 80 + chars * 3.2));

@@ -469,7 +469,7 @@ function ensureDialogs(pages: StoryPage[]): StoryPage[] {
         return {
           ...panel,
           dialog: caption,
-          speaker: null,
+          speaker: undefined,
           bubble_type: "caption" as const,
         };
       }
