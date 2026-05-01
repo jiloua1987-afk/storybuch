@@ -16,8 +16,10 @@
 | 7 | "Neu illustrieren" mit Freitextfeld | 🟡 Mittel | 3-4h | ⏳ Offen |
 | 8 | Outfit-State (Supabase) | 🟡 Mittel | 2-3 Tage | ⏳ Offen |
 | 9 | Supabase Unique-Constraint Fix | 🟡 Mittel | 30 Min | ⏳ Offen |
-| 10 | UI/UX Redesign Wizard | 🟢 Niedrig | 1-2 Tage | ⏳ Warten auf Qualität |
-| 11 | OpenAI Tier 2 | 🟢 Niedrig | 5 Min | ⏳ Offen |
+| 10 | PDF-Export + Druckspezifikation | 🟡 Mittel | 1 Tag | ⏳ Warten auf Format-Entscheidung |
+| 11 | Seitenanzahl erhöhen (8-12 Seiten) | 🟡 Mittel | 2-3h | ⏳ Offen |
+| 12 | UI/UX Redesign Wizard | 🟢 Niedrig | 1-2 Tage | ⏳ Warten auf Qualität |
+| 13 | OpenAI Tier 2 | 🟢 Niedrig | 5 Min | ⏳ Offen |
 | — | gpt-image-2 Upgrade | — | — | ✅ Done |
 
 ---
