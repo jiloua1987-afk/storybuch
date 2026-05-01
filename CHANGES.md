@@ -5,6 +5,27 @@ Fixes für Opa/Oma-Abflug-Problem und Manga-Stil-Problem. Deployed auf Railway.
 
 ---
 
+## 📚 Lessons Learned — Style-Master-Panel Test
+
+**Was versucht wurde:**
+Neuer Schritt vor Cover: `images.generate()` ohne Foto → reiner Stil-Anker (Bande Dessinée Szene ohne Personen). Cover und alle Seiten sollten diesen Style-Master als Referenz nutzen statt User-Foto direkt.
+
+**Warum es nicht funktioniert hat:**
+`images.generate()` dauert auf OpenAI Tier 1 **60-80 Sekunden**. Das Frontend startet Cover und Seiten aber bereits nach ~15s — der Style-Master ist dann noch nicht fertig, `styleMasterUrl` ist leer, alle Seiten fallen auf den alten Pfad zurück. Der Style-Master wird generiert aber nie genutzt.
+
+**Was trotzdem funktioniert hat:**
+Seite 5 (Fußball/WM) hatte `generate-only` — kein Referenzbild, nur Text-Prompt. Trotzdem sehr guter Bande-Dessinée-Stil. Das zeigt: der neue `COMIC_STYLE` Prompt mit `STRICT PROHIBITION: NOT manga` + Blacksad/Bastien Vivès wirkt bereits ohne Referenzbild.
+
+**Lessons:**
+- Style-Master ist konzeptuell richtig, aber erst sinnvoll bei **OpenAI Tier 2** (50 IPM → ~5-10s statt 80s)
+- `generate-only` mit starkem Prompt ist besser als erwartet — kein Manga-Drift
+- Safety-Block bei Strand-Szenen mit User-Foto ist bekanntes Problem (Kinder + Badekleidung)
+- Supabase `saveCharacterRefs` hat fehlenden Unique-Constraint → `upsert` schlägt fehl (harmlos aber zu fixen)
+
+**Commit:** `252550b` (Style Panel) → revertiert mit `cd98a71`
+
+---
+
 ## ✅ DEPLOYED — Backend (Railway)
 
 ### 1. Opa/Oma erscheinen nicht mehr beim Abflug

@@ -10,13 +10,14 @@
 | 1 | Test-Run: Anti-Manga + Opa/Oma-Fix | 🔴 Kritisch | 30 Min | ⏳ Offen |
 | 2 | Quality Score + Auto-Retry | 🔴 Hoch (vor Launch) | 3-4h | ⏳ Offen |
 | 3 | Canonical Character Sheet | 🔴 Hoch | 1 Tag | ⏳ Offen |
-| 4 | Style-Master-Panel (Fallback) | 🟡 Mittel | 2-3h | ⏳ Warten auf Test |
+| 4 | Style-Master-Panel (Fallback) | 🟡 Mittel | 2-3h | ⏳ Warten auf Tier 2 |
 | 5 | Cover als Stil-Referenz für Opa/Oma-Seiten | 🟡 Mittel | 1h | ⏳ Offen |
 | 6 | Luca-Größenanker | 🔴 Hoch | 30 Min | ⏳ Offen |
 | 7 | "Neu illustrieren" mit Freitextfeld | 🟡 Mittel | 3-4h | ⏳ Offen |
 | 8 | Outfit-State (Supabase) | 🟡 Mittel | 2-3 Tage | ⏳ Offen |
-| 9 | UI/UX Redesign Wizard | 🟢 Niedrig | 1-2 Tage | ⏳ Warten auf Qualität |
-| 10 | OpenAI Tier 2 | 🟢 Niedrig | 5 Min | ⏳ Offen |
+| 9 | Supabase Unique-Constraint Fix | 🟡 Mittel | 30 Min | ⏳ Offen |
+| 10 | UI/UX Redesign Wizard | 🟢 Niedrig | 1-2 Tage | ⏳ Warten auf Qualität |
+| 11 | OpenAI Tier 2 | 🟢 Niedrig | 5 Min | ⏳ Offen |
 | — | gpt-image-2 Upgrade | — | — | ✅ Done |
 
 ---
@@ -145,24 +146,13 @@ const sheet = await openai.images.edit({
 
 ---
 
-### 4. Style-Master-Panel (Alternative / Fallback zu #3)
-**Status:** ⏳ Warten auf Test-Run + Character-Sheet-Ergebnis
+### 4. Style-Master-Panel ⚠️ erst ab Tier 2 sinnvoll
+**Status:** ⏳ Warten auf OpenAI Tier 2
 **Aufwand:** 2-3 Stunden
-**Datei:** `backend-railway/src/routes/comic.js`
 
-Wenn Character Sheet (#3) nicht zuverlässig funktioniert → Style-Master als Fallback.
+**Warum Tier 2:** `images.generate()` dauert auf Tier 1 **60-80 Sekunden**. Das Frontend startet Cover und Seiten nach ~15s — Style-Master ist dann noch nicht fertig und wird nie genutzt. Bei Tier 2 (~5-10s) funktioniert die Pipeline.
 
-**Unterschied zu Character Sheet:**
-- Style-Master: Kein Charakter-Input, nur Stil (z.B. tunesischer Innenhof)
-- Character Sheet: Alle Charaktere + Stil kombiniert
-
-**Hybrid-Ansatz (Kiro-Empfehlung):**
-```
-Style-Master → Cover (Stil-konsistent + erkennbare Gesichter via visual_anchors)
-Cover → Seiten (Charakter-Konsistenz)
-```
-
-**Kosten:** +1 `images.generate()` Call (~$0.04), +15-20s
+**Lesson Learned:** Getestet am 1. Mai 2026 — gescheitert an Tier 1 Geschwindigkeit. Konzept ist richtig, Timing ist das Problem. Commit `252550b` → revertiert.
 
 ---
 
@@ -259,6 +249,21 @@ if (lastOutfit?.context === currentContext) {
   // Gleicher Kontext → gleiches Outfit erzwingen
   prompt += `${charName} wears: ${lastOutfit.outfit_description}. Keep this exact outfit.`;
 }
+```
+
+---
+
+### 9. Supabase Unique-Constraint Fix
+**Status:** ⏳ Offen — Quick Fix, 30 Min
+**Datei:** Supabase SQL Editor
+
+**Problem:** `saveCharacterRefs` macht `upsert` mit `onConflict: "project_id,character_name"` — aber dieser Unique-Constraint fehlt in der Tabelle `character_ref_image`. Führt zu Fehler in den Logs, `visual_anchors` werden nicht korrekt gespeichert/aktualisiert.
+
+**Fix:**
+```sql
+ALTER TABLE character_ref_image
+ADD CONSTRAINT character_ref_image_project_id_character_name_key
+UNIQUE (project_id, character_name);
 ```
 
 ---
