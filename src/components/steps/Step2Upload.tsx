@@ -28,6 +28,7 @@ export default function Step2Upload() {
   const { setStep, project, updateProject } = useBookStore();
   const [images, setImages] = useState<UploadedImage[]>([]);
   const [consent, setConsent] = useState(false);
+  const [activeType, setActiveType] = useState<"person" | "location" | "situation">("person");
   const [labelInput, setLabelInput] = useState("");
   const [uploading, setUploading] = useState(false);
 
