@@ -333,14 +333,63 @@ Respond with ONLY the description, starting with the character name.`,
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
+// POST /api/comic/style-master
+// Generates an invisible style anchor — pure comic style, no characters, no photo
+// This is the canonical style reference for all subsequent images
+// ─────────────────────────────────────────────────────────────────────────────
+router.post("/style-master", async (req, res) => {
+  try {
+    const { location = "", comicStyle = "emotional" } = req.body;
+
+    // Scene hint based on story location — gives the style a warm, specific context
+    // without any characters (so it can't drift toward photo-realism)
+    const sceneHint = location
+      ? `A warm establishing shot of ${location} at golden hour — no people, just the setting.`
+      : "A warm Mediterranean courtyard at golden hour — terracotta walls, bougainvillea, soft shadows. No people.";
+
+    const mood = MOOD_MOD[comicStyle] || MOOD_MOD.emotional;
+
+    const prompt = `${COMIC_STYLE} ${mood}
+
+${sceneHint}
+
+This image is a STYLE REFERENCE ONLY — it defines the visual language for an entire comic book.
+Requirements:
+- Bold clean ink outlines on every edge
+- Flat cel-shaded colors, NO photographic gradients
+- Warm golden color palette: ochre, terracotta, deep shadow blues
+- Visible ink hatching in shadow areas
+- Crisp panel-quality illustration
+- This must look like a single panel from a printed Bande Dessinée album
+NO people, NO characters, NO faces, NO text, NO speech bubbles.`;
+
+    console.log("Generating style master panel...");
+    const { url: rawUrl } = await generateImage(prompt, null);
+    const storedUrl = await saveImage(rawUrl, "style-masters", `style-master-${Date.now()}`);
+    const finalUrl = storedUrl || rawUrl;
+
+    console.log("✓ Style master done");
+    res.json({ styleMasterUrl: finalUrl });
+  } catch (err) {
+    console.error("Style master error:", err.message);
+    res.status(500).json({ error: err.message, styleMasterUrl: "" });
+  }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
 // POST /api/comic/cover
-// Pure images.generate() — no user photo reference
-// Reason: images.edit() with photo produces photorealistic results
-// visual_anchors describe all characters precisely enough for recognition
+// Style-Master → Cover pipeline:
+// 1. If styleMasterUrl provided: use it as style reference (images.edit)
+// 2. Then use user photo as identity input on top of style master
+// 3. Fallback: user photo directly, then generate-only
 // ─────────────────────────────────────────────────────────────────────────────
 router.post("/cover", async (req, res) => {
   try {
-    const { characters = [], location = "", referenceImages = [], referenceImageUrls = [] } = req.body;
+    const {
+      characters = [], location = "",
+      referenceImages = [], referenceImageUrls = [],
+      styleMasterUrl = "",
+    } = req.body;
 
     // Primary reference URL (Supabase) > Base64 fallback
     const primaryRefUrl = referenceImageUrls[0]?.url || null;
@@ -349,7 +398,7 @@ router.post("/cover", async (req, res) => {
     const charDesc = characters.map(c => `${c.name}: ${c.visual_anchor}`).join("\n");
     const charNames = characters.map(c => c.name).join(", ");
 
-    const prompt = `${COMIC_STYLE}
+    const coverPrompt = `${COMIC_STYLE}
 
 Comic book COVER illustration.
 ALL of these characters MUST be visible: ${charNames}.
@@ -361,12 +410,52 @@ ${charDesc}
 Composition: dynamic group shot, characters prominently in foreground, vivid illustrated background showing the story world. Some looking at viewer, some interacting with each other.
 NO text, NO title, NO letters anywhere in the image.`;
 
-    // Use user photo for cover — via URL (Supabase) or base64 fallback
+    // Strategy 1: Style-Master as style reference + user photo identity
+    // Style-Master gives the comic style lock, user photo gives face identity
+    if (styleMasterUrl) {
+      try {
+        console.log("  → Cover: using style master as style anchor");
+        const styleMasterBuf = await fetchBuffer(styleMasterUrl);
+        const styleMasterFile = new File(
+          [new Blob([styleMasterBuf], { type: "image/png" })],
+          "style-master.png", { type: "image/png" }
+        );
+        const res2 = await openai.images.edit({
+          model: "gpt-image-2",
+          image: styleMasterFile,
+          prompt: `${COMIC_STYLE}
+
+Use the EXACT same art style, ink weight, color palette, and line quality as this reference image.
+This is a Bande Dessinée comic book cover. Draw ALL characters in this exact style.
+Draw ALL characters: ${charNames}.
+${primaryRefUrl || primaryRefBase64 ? `Base character faces and features on the family photo provided in the character descriptions.` : ""}
+Setting: ${location || "a beautiful Mediterranean setting"}.
+Character descriptions:
+${charDesc}
+Composition: dynamic group shot, characters in foreground, vivid illustrated background.
+NO text, NO title, NO letters anywhere in the image.`,
+          size: "1024x1536",
+          quality: "high",
+        });
+        const item = (res2.data || [])[0];
+        const url = item?.url || (item?.b64_json ? `data:image/png;base64,${item.b64_json}` : null);
+        if (url) {
+          const coverUrl = await saveImage(url, "covers", `cover-${Date.now()}`);
+          const projectId = req.body.projectId || `proj-${Date.now()}`;
+          await saveCharacterRefs(projectId, characters, coverUrl || url);
+          console.log("✓ Cover done (style master reference)");
+          return res.json({ coverImageUrl: coverUrl || url, projectId });
+        }
+      } catch (e) {
+        console.warn("  → Cover with style master failed:", e.message);
+      }
+    }
+
+    // Strategy 2: User photo directly (fallback if no style master)
     if (primaryRefUrl || primaryRefBase64) {
       try {
         let refFile;
         if (primaryRefUrl) {
-          // Fetch from Supabase URL
           const buf = await fetchBuffer(primaryRefUrl);
           const blob = new Blob([buf], { type: "image/jpeg" });
           refFile = new File([blob], "reference.jpg", { type: "image/jpeg" });
@@ -395,7 +484,7 @@ NO text, NO title, NO letters anywhere in the image.`,
           const coverUrl = await saveImage(url, "covers", `cover-${Date.now()}`);
           const projectId = req.body.projectId || `proj-${Date.now()}`;
           await saveCharacterRefs(projectId, characters, coverUrl || url);
-          console.log("✓ Cover done (with user photo)");
+          console.log("✓ Cover done (user photo fallback)");
           return res.json({ coverImageUrl: coverUrl || url, projectId });
         }
       } catch (e) {
@@ -403,8 +492,8 @@ NO text, NO title, NO letters anywhere in the image.`,
       }
     }
 
-    // Fallback: generate without reference
-    const { url: rawUrl } = await generateImage(prompt, null);
+    // Strategy 3: Generate without reference
+    const { url: rawUrl } = await generateImage(coverPrompt, null);
     const coverUrl = await saveImage(rawUrl, "covers", `cover-${Date.now()}`);
     const projectId = req.body.projectId || `proj-${Date.now()}`;
     await saveCharacterRefs(projectId, characters, coverUrl || rawUrl);
@@ -425,6 +514,7 @@ router.post("/page", async (req, res) => {
     const {
       page, characters = [], comicStyle = "emotional",
       referenceImages = [], referenceImageUrls = [], coverImageUrl = "",
+      styleMasterUrl = "",
     } = req.body;
 
     const projectId = req.body.projectId || page.id?.split("-")[0] || null;
@@ -488,10 +578,11 @@ RULES:
 - Background crowd: faceless silhouettes only
 - NO text, NO speech bubbles, NO letters, NO titles anywhere in image`;
 
-    // Reference strategy:
-    // - If ALL characters on this page are in the user photo → use cover as reference (consistent style)
-    // - If ANY character is NOT in the photo (e.g. Opa, Oma) → use images.generate() with visual_anchors only
-    //   Reason: images.edit() with cover/photo maps faces from the reference → Opa/Oma get replaced by Papa/Mama
+    // Reference strategy (priority order):
+    // 1. cover → best style+character anchor (all photo chars)
+    // 2. style-master → pure style anchor (non-photo chars, or cover fallback)
+    // 3. user-photo-style → last resort for non-photo char pages
+    // 4. generate-only → no reference available
     const pageCharNames = page.panels
       .flatMap(p => [p.speaker])
       .filter(Boolean)
@@ -506,9 +597,29 @@ RULES:
     let reference = null;
     let refSource = "none";
 
-    if (hasCharNotInPhoto) {
-      // Use user photo as STYLE reference only — for consistent art style
-      // The prompt explicitly describes all characters including those not in photo
+    if (!hasCharNotInPhoto && coverImageUrl) {
+      // All characters in photo → cover is best anchor
+      try {
+        reference = await fetchBuffer(coverImageUrl);
+        refSource = "cover";
+      } catch (e) {
+        console.warn("  → Cover fetch failed:", e.message);
+      }
+    }
+
+    // For non-photo char pages OR if cover failed → try style master
+    if (!reference && styleMasterUrl) {
+      try {
+        reference = await fetchBuffer(styleMasterUrl);
+        refSource = "style-master";
+        console.log(`  → Using style master (hasCharNotInPhoto: ${hasCharNotInPhoto})`);
+      } catch (e) {
+        console.warn("  → Style master fetch failed:", e.message);
+      }
+    }
+
+    // Last resort: user photo as style reference
+    if (!reference && hasCharNotInPhoto) {
       if (primaryRefUrl) {
         try {
           reference = await fetchBuffer(primaryRefUrl);
@@ -521,18 +632,9 @@ RULES:
         reference = primaryRefBase64;
         refSource = "user-photo-style";
       }
-      if (!reference) refSource = "generate-only";
-      console.log(`  → Page has non-photo characters, ref: ${refSource}`);
-    } else if (coverImageUrl) {
-      try {
-        reference = await fetchBuffer(coverImageUrl);
-        refSource = "cover";
-      } catch (e) {
-        console.warn("  → Cover fetch failed:", e.message);
-      }
     }
+
     if (!reference && !hasCharNotInPhoto) {
-      // Use URL if available, otherwise base64
       if (primaryRefUrl) {
         try {
           reference = await fetchBuffer(primaryRefUrl);
@@ -547,8 +649,12 @@ RULES:
       }
     }
 
+    if (!reference) refSource = "generate-only";
+
     const refNote = refSource === "cover"
       ? `${COMIC_STYLE}\nUse the EXACT same art style, character designs and color palette as this cover image.\n\n`
+      : refSource === "style-master"
+      ? `${COMIC_STYLE}\nUse the EXACT same art style, ink weight, color palette and line quality as this reference image. This is your style lock — every line, every color, every shadow must match this style exactly. NOT manga. NOT anime. NOT photorealistic.\n\n`
       : refSource === "user-photo"
       ? `${COMIC_STYLE}\nThe people in this photo are the main characters. Draw them in the comic style above. NOT photorealistic. IMPORTANT: IGNORE the clothing from the photo — use the clothing described in the prompt instead.\n\n`
       : refSource === "user-photo-style"
@@ -558,13 +664,15 @@ RULES:
     console.log(`Generating page "${page.title}" (${panelCount} panels, ref: ${refSource})`);
     let { url: rawUrl, usedReference } = await generateImage(`${refNote}${prompt}`, reference);
 
-    // If cover reference was blocked by safety filter → retry with user photo for style
-    if (!usedReference && (refSource === "cover" || refSource === "generate-only") && (primaryRefUrl || primaryRefBase64)) {
-      console.log(`  → Retrying with user photo for style consistency`);
-      const userRef = primaryRefUrl ? await fetchBuffer(primaryRefUrl).catch(() => null) : primaryRefBase64;
-      if (userRef) {
-        const userRefNote = `${COMIC_STYLE}\nUse this photo ONLY for the art style and color palette. Draw ALL characters exactly as described below. Franco-Belgian Bande Dessinée style — bold ink outlines, flat colors, NOT manga, NOT anime, NOT photorealistic. IGNORE clothing from photo.\n\n`;
-        const result2 = await generateImage(`${userRefNote}${prompt}`, userRef);
+    // If cover/style-master reference was blocked by safety filter → retry with style master or user photo
+    if (!usedReference && refSource !== "generate-only") {
+      const retryRef = styleMasterUrl
+        ? await fetchBuffer(styleMasterUrl).catch(() => null)
+        : primaryRefUrl ? await fetchBuffer(primaryRefUrl).catch(() => null) : primaryRefBase64;
+      if (retryRef) {
+        console.log(`  → Safety block, retrying with ${styleMasterUrl ? "style master" : "user photo"}`);
+        const retryNote = `${COMIC_STYLE}\nUse the EXACT same art style and color palette as this reference. Franco-Belgian Bande Dessinée — bold ink outlines, flat colors, NOT manga, NOT anime, NOT photorealistic. IGNORE any faces or people in the reference image — draw ALL characters from their descriptions only.\n\n`;
+        const result2 = await generateImage(`${retryNote}${prompt}`, retryRef);
         rawUrl = result2.url;
       }
     }
