@@ -82,6 +82,9 @@ export default function Step4Generate() {
       addLog(`${pages.length} Seiten geplant`, true);
       setProgress(15);
 
+      // ── Chapters sofort leeren — verhindert dass alte Seiten durchscheinen ──
+      updateProject({ chapters: [], coverImageUrl: undefined });
+
       // Ending sofort speichern wenn vorhanden
       if (endData?.endingText) {
         updateProject({
