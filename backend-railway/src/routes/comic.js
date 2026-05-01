@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const OpenAI = require("openai");
-const { saveImage, saveCharacterRefs, savePage } = require("../lib/storage");
+const { saveImage, saveCharacterRefs, savePage, getCharacterRefs } = require("../lib/storage");
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
@@ -419,6 +419,29 @@ router.post("/page", async (req, res) => {
       referenceImages = [], referenceImageUrls = [], coverImageUrl = "",
     } = req.body;
 
+    const projectId = req.body.projectId || page.id?.split("-")[0] || null;
+
+    // Enrich characters with visual_anchors from Supabase if missing
+    // This ensures regeneration works even if Store lost the data
+    let enrichedCharacters = characters;
+    const missingAnchors = characters.some(c => !c.visual_anchor || c.visual_anchor === c.role || c.visual_anchor === "Hauptfigur");
+    if (missingAnchors && projectId) {
+      try {
+        const refs = await getCharacterRefs(projectId);
+        if (refs.length > 0) {
+          console.log(`  → Enriching ${refs.length} characters from Supabase`);
+          enrichedCharacters = characters.map(c => {
+            const ref = refs.find(r => r.character_name.toLowerCase() === c.name.toLowerCase());
+            if (ref) return { ...c, visual_anchor: ref.visual_anchor || c.visual_anchor, inPhoto: ref.in_photo };
+            return c;
+          });
+        }
+      } catch (e) {
+        console.warn("  → Supabase character enrichment failed:", e.message);
+      }
+    }
+    const finalCharacters = enrichedCharacters;
+
     // Primary reference: Supabase URL > Base64 fallback
     const primaryRefUrl = referenceImageUrls[0]?.url || null;
     const primaryRefBase64 = referenceImages[0] || null;
@@ -432,7 +455,7 @@ router.post("/page", async (req, res) => {
       panelCount === 5 ? "2 panels top, 1 wide panel middle, 2 panels bottom" :
       "2×2 grid";
 
-    const charAnchors = characters.map(c => `${c.name}: ${c.visual_anchor}`).join(". ");
+    const charAnchors = finalCharacters.map(c => `${c.name}: ${c.visual_anchor}`).join(". ");
     const panelDescriptions = page.panels
       .map(p => `Panel ${p.nummer}: ${p.szene}`)
       .join("\n");
@@ -466,7 +489,7 @@ RULES:
       .filter(Boolean)
       .map(n => (n || "").toLowerCase());
 
-    const hasCharNotInPhoto = characters.some(c =>
+    const hasCharNotInPhoto = finalCharacters.some(c =>
       c.inPhoto === false &&
       (pageCharNames.some(n => n.includes(c.name.toLowerCase())) ||
        panelDescriptions.toLowerCase().includes(c.name.toLowerCase()))
@@ -565,7 +588,7 @@ RULES:
     // Save to memory
     const pageCharacters = page.panels.flatMap(p => p.speaker ? [p.speaker] : []).filter(Boolean);
     await savePage(
-      req.body.projectId || page.id?.split("-")[0] || "unknown",
+      projectId || page.id?.split("-")[0] || "unknown",
       page.pageNumber || 1,
       finalUrl,
       pageCharacters,
