@@ -1,3 +1,40 @@
+# CHANGES — Session 1. Mai 2026 (Abend)
+
+## Übersicht
+Fixes für Opa/Oma-Abflug-Problem und Manga-Stil-Problem. Deployed auf Railway.
+
+---
+
+## ✅ DEPLOYED — Backend (Railway)
+
+### 1. Opa/Oma erscheinen nicht mehr beim Abflug
+**Datei:** `backend-railway/src/routes/comic.js` — `/structure` Route
+- Struktur-Prompt für jeden Moment-GPT-Call hat jetzt explizite Regel:
+  "Only include characters explicitly mentioned in this scene"
+- Konkretes Beispiel im Prompt: Großeltern die in Tunesien warten dürfen nicht beim Abflug Frankfurt auftauchen
+- Root cause: GPT-4.1 bekam vollen `storyCtx` mit allen 6 Charakteren und "erfand" Opa/Oma in Szenen rein
+
+### 2. Anti-Manga: COMIC_STYLE stärker
+**Datei:** `backend-railway/src/routes/comic.js` — `COMIC_STYLE` Konstante
+- Vorher: "NOT manga, NOT anime" als Teil eines längeren Satzes
+- Jetzt: `"STRICT PROHIBITION: NOT manga. NOT anime. NOT Japanese comic style. NOT big anime eyes. NOT speed lines."`
+- Stil-Referenz: "EUROPEAN BANDE DESSINÉE ILLUSTRATION — Franco-Belgian comic book style, similar to Blacksad or Bastien Vivès"
+- `generate-only` Fallback-Prompt (genutzt wenn Opa/Oma-Seiten kein Referenzbild haben) explizit verstärkt
+
+### 3. Letzter guter Commit-Stand: 54f9b94
+- Commit "Fix: user photo as style reference for Opa/Oma pages and safety fallback"
+- HEAD (702f46f) enthält zusätzlich: Supabase-Enrichment für `visual_anchors` bei Regenerierung
+
+---
+
+## 📝 Offen nach diesem Deploy
+
+- Testen ob Grillen-Seite jetzt im richtigen Bande-Dessinée-Stil ist
+- Wenn nicht → Style-Master-Panel implementieren (siehe BACKLOG.md)
+- "Neu illustrieren" mit Freitextfeld (siehe BACKLOG.md)
+
+---
+
 # CHANGES — Session 30. April 2026
 
 ## Übersicht

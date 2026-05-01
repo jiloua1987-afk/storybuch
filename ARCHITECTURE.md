@@ -1,5 +1,5 @@
 # MyComicStory — Architecture & Status Summary
-*Stand: 1. Mai 2026*
+*Stand: 1. Mai 2026 (Abend)*
 
 ## Overview
 
@@ -53,15 +53,18 @@ Railway Backend (Node.js Orchestrator)
 ## Prompt Strategy
 
 ```
-COMIC_STYLE (constant, used everywhere):
-"European graphic novel, similar to Blacksad or Bastien Vivès.
-Warm cinematic colors, bold ink outlines, NOT photorealistic,
-NOT manga, NOT anime. Every page IDENTICAL in style."
+COMIC_STYLE (Konstante, überall genutzt):
+"EUROPEAN BANDE DESSINÉE ILLUSTRATION — Franco-Belgian comic book style,
+similar to Blacksad or Bastien Vivès.
+Bold clean ink outlines, flat cel-shaded colors.
+STRICT PROHIBITION: NOT manga. NOT anime. NOT photorealistic.
+Every page IDENTICAL in style."
 
 + MOOD_MOD (per comicStyle: action / emotional / humor)
-+ visual_anchors (per character, analyzed from photo)
-+ outfit context (detected from page.location in English)
-+ panel descriptions (from story moments)
++ visual_anchors (per Charakter, aus Foto analysiert oder aus Story generiert)
++ outfit context (aus page.location auf Englisch erkannt)
++ panel descriptions (aus Story-Momenten, 1 GPT-Call pro Moment)
++ "ONLY SHOW CHARACTERS PRESENT IN THIS SCENE" (Fix 1. Mai)
 ```
 
 ---
@@ -99,29 +102,31 @@ All subsequent pages use the cover as reference → consistent style across page
 
 ## Open Challenges
 
-### Style inconsistency
-- **Cover**: images.edit() with user photo → slightly photorealistic
-- **Pages with photo characters**: cover as reference → good comic style
-- **Pages with grandparents**: user photo as style reference → sometimes watercolor-ish
-- **Safety-blocked pages** (e.g. football/jubilation): fallback → sometimes manga style
-- Root cause: images.edit() weights reference image heavily, text prompt is weakened
+### 1. Stil-Inkonsistenz
+- **Cover**: `images.edit()` mit User-Foto → leicht fotorealistisch
+- **Seiten mit Foto-Charakteren**: Cover als Referenz → guter Comic-Stil
+- **Opa/Oma-Seiten**: User-Foto als Stil-Referenz (`user-photo-style`) → manchmal aquarellverwaschen
+- **Safety-Block-Seiten** (z.B. Fußball/Jubel): Fallback auf `generate-only` → manchmal Manga-Stil
+- **Fix deployed (1. Mai):** `COMIC_STYLE` mit `STRICT PROHIBITION: NOT manga. NOT anime.` + Bande Dessinée Referenz
+- **Nächste Eskalation wenn nötig:** Style-Master-Panel (siehe BACKLOG.md)
 
-### Character consistency
-- Papa/Mama look different across pages
-- images.edit() interprets reference image slightly differently each call
-- No mathematical face consistency (no face embeddings implemented)
-- visual_anchors in prompt help but don't guarantee pixel-level consistency
+### 2. Charakter-Konsistenz
+- Papa/Mama sehen auf verschiedenen Seiten unterschiedlich aus
+- `images.edit()` interpretiert Referenzbild bei jedem Call leicht anders
+- Keine mathematische Gesichts-Konsistenz (kein face embedding implementiert)
+- `visual_anchors` helfen aber garantieren keine Pixel-Konsistenz
+- **Teilweise gelöst:** Supabase lädt `visual_anchors` bei Regenerierung nach
 
-### Speed
-- ~12 minutes for 7 pages
-- OpenAI Tier 1: max 5 images/minute, 1 concurrent request
-- Cover is sequential → blocks page generation start
-- Would improve significantly at Tier 2 ($50+ loaded)
+### 3. Geschwindigkeit
+- ~12 Minuten für 7 Seiten
+- OpenAI Tier 1: max 5 Images/Minute, 1 concurrent request
+- Cover ist sequenziell → blockiert Seiten-Start
+- Würde sich bei Tier 2 ($50+ geladen) deutlich verbessern (5 IPM → 50 IPM)
 
-### Clothing
-- detectOutfitContext() works for beach/airport/garden/home
-- No memory across pages (outfit_state table not yet implemented)
-- Characters sometimes wear same clothes in different contexts
+### 4. Kleidung
+- `detectOutfitContext()` funktioniert für Beach/Airport/Garden/Home
+- Kein Gedächtnis über Seiten hinweg (kein `outfit_state` in Supabase)
+- Charaktere tragen manchmal gleiche Kleidung in verschiedenen Kontexten
 
 ---
 
@@ -158,23 +163,27 @@ CREATE TABLE last_page_image (
 
 ## What Works Well
 
-- All 7 story moments become separate pages ✅
-- Grandparents appear correctly (generated from story description) ✅
-- Cover shows all 6 characters including grandparents ✅
-- Speech bubbles: add, delete, drag, resize, edit speaker ✅
-- Supabase: photos, cover, pages, visual_anchors stored ✅
-- Retry on rate limit (429) ✅
-- visual_anchors loaded from Supabase on regeneration ✅
-- Outfit context detection (beach/airport/garden/home) ✅
-- Title above page (not in image) ✅
-- Consistent 2:3 aspect ratio across all pages ✅
+- Alle 7 Story-Momente werden zu separaten Seiten ✅
+- Opa/Oma erscheinen korrekt (aus Story-Beschreibung generiert) ✅
+- Cover zeigt alle 6 Charaktere inkl. Großeltern ✅
+- Sprechblasen: hinzufügen, löschen, ziehen, skalieren, Sprecher editieren ✅
+- Supabase: Fotos, Cover, Seiten, visual_anchors gespeichert ✅
+- Retry bei Rate Limit (429) ✅
+- visual_anchors aus Supabase bei Regenerierung ✅
+- Outfit-Kontext-Erkennung (Beach/Airport/Garden/Home) ✅
+- Seitentitel über dem Bild (nicht im Bild) ✅
+- Einheitliches 2:3 Format über alle Seiten ✅
+- Opa/Oma erscheinen nicht mehr beim Abflug (Fix 1. Mai) ✅
+- Anti-Manga: STRICT PROHIBITION in COMIC_STYLE (Fix 1. Mai) ✅
 
 ---
 
-## Next Steps (Prioritized)
+## Next Steps (Priorisiert)
 
-1. **Style consistency**: Replace Blacksad reference if football page still manga-style after current fix
-2. **outfit_state table**: Remember clothing per character per context across pages
-3. **Quality score**: GPT-4o Vision check after each page, retry if score < 70
-4. **UI/UX redesign**: Cleaner wizard (less emojis, more whitespace)
-5. **OpenAI Tier 2**: Load $50+ for faster generation (5 IPM → 50 IPM)
+1. **Test-Run** — Tunesien-Comic neu generieren, Grillen/Fußball-Stil prüfen
+2. **Style-Master-Panel** — wenn Manga-Problem nach Test noch besteht (siehe BACKLOG.md)
+3. **"Neu illustrieren" mit Freitextfeld** — User kann konkrete Änderungen angeben (siehe BACKLOG.md)
+4. **outfit_state Tabelle** — Kleidung pro Charakter pro Kontext über Seiten merken
+5. **Quality Score** — GPT-4o Vision Check nach jeder Seite, Retry wenn Score < 70
+6. **UI/UX Redesign** — Ruhigerer Wizard (weniger Emojis, mehr Weißraum)
+7. **OpenAI Tier 2** — $50+ laden für schnellere Generierung (5 IPM → 50 IPM)
