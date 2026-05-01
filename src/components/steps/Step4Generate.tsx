@@ -110,6 +110,7 @@ export default function Step4Generate() {
           location:             project?.guidedAnswers?.ort || project?.guidedAnswers?.location || "",
           referenceImages:      project?.referenceImages || [],
           referenceImageUrls:   project?.referenceImageUrls || [],
+          projectId:            project?.id || `proj-${Date.now()}`,
         });
         coverImageUrl = coverData.coverImageUrl || "";
         if (coverImageUrl) updateProject({ coverImageUrl });
@@ -141,6 +142,7 @@ export default function Step4Generate() {
               referenceImages:      project?.referenceImages || [],
               referenceImageUrls:   project?.referenceImageUrls || [],
               coverImageUrl,
+              projectId:            project?.id || "",
             });
 
             chapters[i] = {

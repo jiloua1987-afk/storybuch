@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const OpenAI = require("openai");
-const { saveImage } = require("../lib/storage");
+const { saveImage, saveCharacterRefs, savePage } = require("../lib/storage");
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
@@ -373,8 +373,10 @@ NO text, NO title, NO letters anywhere in the image.`,
         const url = item?.url || (item?.b64_json ? `data:image/png;base64,${item.b64_json}` : null);
         if (url) {
           const coverUrl = await saveImage(url, "covers", `cover-${Date.now()}`);
+          const projectId = req.body.projectId || `proj-${Date.now()}`;
+          await saveCharacterRefs(projectId, characters, coverUrl || url);
           console.log("✓ Cover done (with user photo)");
-          return res.json({ coverImageUrl: coverUrl || url });
+          return res.json({ coverImageUrl: coverUrl || url, projectId });
         }
       } catch (e) {
         console.warn("  → Cover with photo failed:", e.message);
@@ -384,8 +386,10 @@ NO text, NO title, NO letters anywhere in the image.`,
     // Fallback: generate without reference
     const { url: rawUrl } = await generateImage(prompt, null);
     const coverUrl = await saveImage(rawUrl, "covers", `cover-${Date.now()}`);
+    const projectId = req.body.projectId || `proj-${Date.now()}`;
+    await saveCharacterRefs(projectId, characters, coverUrl || rawUrl);
     console.log("✓ Cover done (generate only)");
-    res.json({ coverImageUrl: coverUrl || rawUrl });
+    res.json({ coverImageUrl: coverUrl || rawUrl, projectId });
   } catch (err) {
     console.error("Cover error:", err.message);
     res.status(500).json({ error: err.message, coverImageUrl: "" });
@@ -530,6 +534,17 @@ RULES:
     }
 
     console.log(`✓ Page "${page.title}" done`);
+
+    // Save to memory
+    const pageCharacters = page.panels.flatMap(p => p.speaker ? [p.speaker] : []).filter(Boolean);
+    await savePage(
+      req.body.projectId || page.id?.split("-")[0] || "unknown",
+      page.pageNumber || 1,
+      finalUrl,
+      pageCharacters,
+      refSource
+    );
+
     res.json({ imageUrl: finalUrl, panels: page.panels, panelPositions });
   } catch (err) {
     console.error("Page error:", err.message);
