@@ -558,13 +558,44 @@ RULES:
     console.log(`Generating page "${page.title}" (${panelCount} panels, ref: ${refSource})`);
     let { url: rawUrl, usedReference } = await generateImage(`${refNote}${prompt}`, reference);
 
-    // If reference was blocked by safety filter → fallback to generate-only immediately
-    // Retrying with user photo gets blocked again → wastes 60s → empty page
-    // generate-only with strong COMIC_STYLE prompt produces valid image
-    if (!usedReference && reference !== null) {
-      console.log(`  → Safety block on images.edit(), falling back to generate-only`);
-      const result2 = await generateImage(`${refNote}${prompt}`, null);
-      rawUrl = result2.url;
+    // If reference was blocked by safety filter → sanitize prompt and retry generate-only
+    // The panel descriptions themselves may trigger safety (e.g. jubilation, shouting, children)
+    // Sanitized prompt removes potentially triggering words while keeping the scene intent
+    if (!usedReference) {
+      console.log(`  → Safety block, retrying with sanitized prompt + generate-only`);
+      const sanitizedPanelDescs = page.panels
+        .map(p => `Panel ${p.nummer}: ${(p.szene || "")
+          .replace(/\b(shout|scream|yell|cry|hit|kick|fight|punch|grab|push|fall|hurt|pain|tears|crying|loud|aggressive)\b/gi, "")
+          .replace(/\b(ruft|schreit|weint|schlägt|tritt|kämpft|fällt|laut|aggressiv)\b/gi, "")
+          .trim()}`)
+        .join("\n");
+
+      const safePrompt = `${COMIC_STYLE} ${mood}
+
+Comic page — ${panelCount} panels in ${layoutDesc}. Bold black borders between panels.
+
+CHARACTERS — draw identically across all panels:
+${charAnchors}
+
+CLOTHING — characters wear ${outfit}.
+
+PANELS:
+${sanitizedPanelDescs}
+
+RULES:
+- Each panel shows a DIFFERENT scene/angle/moment
+- Each character appears ONLY ONCE per panel
+- Expressive happy faces, joyful atmosphere
+- Sharp detailed faces — eyes, nose, mouth clearly visible
+- NO text, NO speech bubbles, NO letters, NO titles anywhere in image`;
+
+      try {
+        const result2 = await generateImage(`${COMIC_STYLE} ${mood}\n\n${safePrompt}`, null);
+        rawUrl = result2.url;
+      } catch (e2) {
+        console.error(`  → Sanitized retry also failed:`, e2.message);
+        // rawUrl stays as whatever was returned (may be empty)
+      }
     }
 
     const bookId = page.id?.split("-")[0] || `book-${Date.now()}`;
