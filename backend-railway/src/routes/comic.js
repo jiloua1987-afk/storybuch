@@ -308,7 +308,7 @@ Comic page — ${panelCount} panels in ${layoutDesc}. Bold black borders between
 CHARACTERS — draw identically across all panels:
 ${charAnchors}
 
-CLOTHING — ${outfit}
+CLOTHING — characters wear ${outfit} OVERRIDE any clothing visible in the reference photo.
 
 PANELS:
 ${panelDescriptions}
@@ -341,7 +341,7 @@ RULES:
     const refNote = refSource === "cover"
       ? `${COMIC_STYLE}\nUse the EXACT same art style, character designs and color palette as this cover image.\n\n`
       : refSource === "user-photo"
-      ? `${COMIC_STYLE}\nThe people in this photo are the main characters. Draw them in the comic style above. NOT photorealistic.\n\n`
+      ? `${COMIC_STYLE}\nThe people in this photo are the main characters. Draw them in the comic style above. NOT photorealistic. IMPORTANT: IGNORE the clothing from the photo — use the clothing described in the prompt instead.\n\n`
       : "";
 
     console.log(`Generating page "${page.title}" (${panelCount} panels, ref: ${refSource})`);
