@@ -371,9 +371,10 @@ NO text, NO title, NO letters anywhere in the image.`;
           image: refFile,
           prompt: `${COMIC_STYLE}
 
-TRANSFORM this photo into a COMIC BOOK COVER illustration. The result must look like a drawn illustration, NOT a photo.
-Draw ALL characters as comic book characters: ${charNames}.
-For characters not in the photo, create them from their description.
+REDRAW everyone in this photo as hand-drawn comic book characters. This must look like a page from a printed comic book, NOT a photograph or photo-manipulation.
+Bold ink outlines on every person. Flat cel-shaded colors. Expressive cartoon faces. NO photographic lighting, NO realistic skin textures, NO photo-realistic details.
+Draw ALL characters: ${charNames}.
+For characters not in the photo, draw them from their description.
 Setting: ${location || "a beautiful Mediterranean setting"}.
 Character descriptions: ${charDesc}
 Composition: dynamic group shot, characters in foreground, vivid illustrated background.
