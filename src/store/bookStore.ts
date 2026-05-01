@@ -9,6 +9,8 @@ export interface Character {
   name: string;
   role: string;
   imageUrl?: string;
+  visual_anchor?: string;
+  inPhoto?: boolean;
 }
 
 export interface ChapterPanel {

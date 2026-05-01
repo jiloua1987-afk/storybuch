@@ -116,7 +116,12 @@ export default function Step5Preview() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         page: { ...pageData, panels: pageData.panels || [] },
-        characters: project?.characters?.map((c: any) => ({ name: c.name, visual_anchor: c.role || "" })) || [],
+        characters: project?.characters?.map((c: any) => ({
+          name: c.name,
+          visual_anchor: c.visual_anchor || c.role || "",
+          inPhoto: c.inPhoto ?? true,
+          age: c.age,
+        })) || [],
         comicStyle: project?.comicStyle || "emotional",
         category: project?.guidedAnswers?.category || "familie",
         referenceImages: project?.referenceImages || [],
