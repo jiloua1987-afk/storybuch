@@ -58,6 +58,7 @@ async function fetchBuffer(url) {
 }
 
 // ── Generate image — with or without reference ────────────────────────────────
+// Returns { url, usedReference: boolean }
 async function generateImage(prompt, referenceBase64OrBuffer = null, size = "1024x1536") {
   if (referenceBase64OrBuffer) {
     try {
@@ -65,7 +66,6 @@ async function generateImage(prompt, referenceBase64OrBuffer = null, size = "102
       if (typeof referenceBase64OrBuffer === "string") {
         file = toFile(referenceBase64OrBuffer);
       } else {
-        // Buffer (e.g. from cover URL)
         const blob = new Blob([referenceBase64OrBuffer], { type: "image/png" });
         file = new File([blob], "reference.png", { type: "image/png" });
       }
@@ -73,18 +73,19 @@ async function generateImage(prompt, referenceBase64OrBuffer = null, size = "102
         model: "gpt-image-2", image: file, prompt, size, quality: "high",
       });
       const item = (res.data || [])[0];
-      if (item?.url) return item.url;
-      if (item?.b64_json) return `data:image/png;base64,${item.b64_json}`;
+      const url = item?.url || (item?.b64_json ? `data:image/png;base64,${item.b64_json}` : null);
+      if (url) return { url, usedReference: true };
     } catch (e) {
       console.warn("  → images.edit() failed, falling back:", e.message);
     }
   }
+  // Fallback: generate without reference
   const res = await openai.images.generate({
     model: "gpt-image-2", prompt, n: 1, size, quality: "high",
   });
   const item = (res.data || [])[0];
-  if (item?.url) return item.url;
-  if (item?.b64_json) return `data:image/png;base64,${item.b64_json}`;
+  const url = item?.url || (item?.b64_json ? `data:image/png;base64,${item.b64_json}` : null);
+  if (url) return { url, usedReference: false };
   throw new Error("No image returned");
 }
 
@@ -299,54 +300,32 @@ Respond with ONLY the description, starting with the character name.`,
 
 // ─────────────────────────────────────────────────────────────────────────────
 // POST /api/comic/cover
-// Uses user photo via images.edit() for face likeness
+// Pure images.generate() — no user photo reference
+// Reason: images.edit() with photo produces photorealistic results
+// visual_anchors describe all characters precisely enough for recognition
 // ─────────────────────────────────────────────────────────────────────────────
 router.post("/cover", async (req, res) => {
   try {
-    const { characters = [], location = "", referenceImages = [] } = req.body;
+    const { characters = [], location = "" } = req.body;
 
-    const charDesc = characters.map(c => `${c.name} (${c.visual_anchor})`).join("; ");
+    const charDesc = characters.map(c => `${c.name}: ${c.visual_anchor}`).join("\n");
     const charNames = characters.map(c => c.name).join(", ");
+
     const prompt = `${COMIC_STYLE}
 
-Comic book COVER illustration. NOT a photograph.
+Comic book COVER illustration.
 ALL of these characters MUST be visible: ${charNames}.
-Show them together in ${location || "a beautiful setting"}.
-Characters: ${charDesc || "a family"}
-Dynamic group composition — some looking at viewer, some interacting.
-Vivid illustrated background showing the story world.
-NO text, NO title, NO letters.`;
+Show them together in ${location || "a beautiful Mediterranean setting"}.
 
-    let rawUrl = "";
-    if (referenceImages[0]) {
-      try {
-        rawUrl = await generateImage(
-          `${COMIC_STYLE}
-
-THIS IS A COMIC BOOK COVER — NOT a photograph, NOT a portrait photo, NOT realistic.
-Transform the people in this photo into comic book characters in the style described above.
-The result must look like a professional graphic novel cover illustration.
-
-Show ALL of these characters together: ${charNames}.
-For characters not visible in the photo, invent their appearance based on their description.
-Setting: ${location || "a beautiful Mediterranean setting"}.
-
-Character descriptions:
+Characters (draw each one accurately):
 ${charDesc}
 
-Composition: dynamic group shot, characters in foreground, vivid illustrated background.
-NO text, NO title, NO letters anywhere in the image.`,
-          referenceImages[0]
-        );
-        console.log("  → Cover with user photo");
-      } catch (e) {
-        console.warn("  → Cover photo failed:", e.message);
-      }
-    }
-    if (!rawUrl) rawUrl = await generateImage(prompt, null);
+Composition: dynamic group shot, characters prominently in foreground, vivid illustrated background showing the story world. Some looking at viewer, some interacting with each other.
+NO text, NO title, NO letters anywhere in the image.`;
 
+    const { url: rawUrl } = await generateImage(prompt, null);
     const coverUrl = await saveImage(rawUrl, "covers", `cover-${Date.now()}`);
-    console.log("✓ Cover done");
+    console.log("✓ Cover done (generate only)");
     res.json({ coverImageUrl: coverUrl || rawUrl });
   } catch (err) {
     console.error("Cover error:", err.message);
@@ -399,11 +378,29 @@ RULES:
 - Background crowd: faceless silhouettes only
 - NO text, NO speech bubbles, NO letters, NO titles anywhere in image`;
 
-    // Reference: cover buffer (already in comic style) > user photo > none
+    // Reference strategy:
+    // - If ALL characters on this page are in the user photo → use cover as reference (consistent style)
+    // - If ANY character is NOT in the photo (e.g. Opa, Oma) → use images.generate() with visual_anchors only
+    //   Reason: images.edit() with cover/photo maps faces from the reference → Opa/Oma get replaced by Papa/Mama
+    const pageCharNames = page.panels
+      .flatMap(p => [p.speaker])
+      .filter(Boolean)
+      .map(n => (n || "").toLowerCase());
+
+    const hasCharNotInPhoto = characters.some(c =>
+      c.inPhoto === false &&
+      (pageCharNames.some(n => n.includes(c.name.toLowerCase())) ||
+       panelDescriptions.toLowerCase().includes(c.name.toLowerCase()))
+    );
+
     let reference = null;
     let refSource = "none";
 
-    if (coverImageUrl) {
+    if (hasCharNotInPhoto) {
+      // Generate without reference — visual_anchors describe all characters precisely
+      refSource = "generate-only";
+      console.log(`  → Page has non-photo characters, using generate() for accurate faces`);
+    } else if (coverImageUrl) {
       try {
         reference = await fetchBuffer(coverImageUrl);
         refSource = "cover";
@@ -411,8 +408,8 @@ RULES:
         console.warn("  → Cover fetch failed:", e.message);
       }
     }
-    if (!reference && referenceImages[0]) {
-      reference = referenceImages[0]; // base64 string
+    if (!reference && !hasCharNotInPhoto && referenceImages[0]) {
+      reference = referenceImages[0];
       refSource = "user-photo";
     }
 
@@ -420,10 +417,18 @@ RULES:
       ? `${COMIC_STYLE}\nUse the EXACT same art style, character designs and color palette as this cover image.\n\n`
       : refSource === "user-photo"
       ? `${COMIC_STYLE}\nThe people in this photo are the main characters. Draw them in the comic style above. NOT photorealistic. IMPORTANT: IGNORE the clothing from the photo — use the clothing described in the prompt instead.\n\n`
-      : "";
+      : `${COMIC_STYLE}\n\n`;
 
     console.log(`Generating page "${page.title}" (${panelCount} panels, ref: ${refSource})`);
-    const rawUrl = await generateImage(`${refNote}${prompt}`, reference);
+    let { url: rawUrl, usedReference } = await generateImage(`${refNote}${prompt}`, reference);
+
+    // If cover reference was blocked by safety filter → retry with user photo
+    if (!usedReference && refSource === "cover" && referenceImages[0]) {
+      console.log(`  → Cover blocked by safety, retrying with user photo`);
+      const userRefNote = `${COMIC_STYLE}\nThe people in this photo are the main characters. Draw them in the comic style above. NOT photorealistic. IMPORTANT: IGNORE the clothing from the photo — use the clothing described in the prompt instead.\n\n`;
+      const result2 = await generateImage(`${userRefNote}${prompt}`, referenceImages[0]);
+      rawUrl = result2.url;
+    }
 
     const bookId = page.id?.split("-")[0] || `book-${Date.now()}`;
     const storedUrl = await saveImage(rawUrl, bookId, page.id || `page-${Date.now()}`);
