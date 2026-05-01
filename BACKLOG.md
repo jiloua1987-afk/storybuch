@@ -9,11 +9,12 @@
 |---|-------|------|---------|--------|
 | 1 | Test-Run: Anti-Manga + Opa/Oma-Fix | 🔴 Kritisch | 30 Min | ⏳ Offen |
 | 2 | Style-Master-Panel | 🔴 Hoch | 2-3h | ⏳ Warten auf Test |
-| 3 | "Neu illustrieren" mit Freitextfeld | 🟡 Mittel | 3-4h | ⏳ Offen |
-| 4 | Quality Score + Auto-Retry | 🟡 Mittel | 3-4h | ⏳ Offen |
-| 5 | Outfit-State (Supabase) | 🟡 Mittel | 2-3 Tage | ⏳ Offen |
-| 6 | UI/UX Redesign Wizard | 🟢 Niedrig | 1-2 Tage | ⏳ Warten auf Qualität |
-| 7 | OpenAI Tier 2 | 🟢 Niedrig | 5 Min | ⏳ Offen |
+| 3 | Luca-Größenanker | 🔴 Hoch | 30 Min | ⏳ Offen |
+| 4 | "Neu illustrieren" mit Freitextfeld | 🟡 Mittel | 3-4h | ⏳ Offen |
+| 5 | Quality Score + Auto-Retry | 🔴 Hoch (vor Launch) | 3-4h | ⏳ Offen |
+| 6 | Outfit-State (Supabase) | 🟡 Mittel | 2-3 Tage | ⏳ Offen |
+| 7 | UI/UX Redesign Wizard | 🟢 Niedrig | 1-2 Tage | ⏳ Warten auf Qualität |
+| 8 | OpenAI Tier 2 | 🟢 Niedrig | 5 Min | ⏳ Offen |
 | — | gpt-image-2 Upgrade | — | — | ✅ Done |
 
 ---
@@ -68,7 +69,27 @@ Das würde Charakter-Konsistenz kosten. Hybrid-Ansatz ist besser.
 
 ## 🟡 Nächste Priorität (nach Qualität stabil)
 
-### 3. "Neu illustrieren" mit Freitextfeld
+### 3. Luca-Größenanker — Quick Win
+**Status:** ⏳ Offen — sofort umsetzbar
+**Aufwand:** 30 Minuten
+**Datei:** `backend-railway/src/routes/comic.js` — `/structure` Route, Character-Extraktion
+
+**Problem:** Luca (3 Jahre) wirkt auf manchen Seiten älter als auf anderen. Kleine Kinder sind für Bildmodelle schwer konsistent zu halten.
+
+**Lösung:** Im Character-Extraktion-Prompt und in den `visual_anchors` explizit einen relativen Größenanker setzen:
+
+```javascript
+// Im charPromise System-Prompt ergänzen:
+"For very young children (under 5): add their approximate height and size relative 
+to other characters. Example: 'toddler, approximately 90cm tall, visibly smaller 
+than his 8-year-old sister — size ratio is critical to maintain across all panels'"
+```
+
+Das gibt dem Modell einen relativen Anker statt nur "3 Jahre alt".
+
+---
+
+### 4. "Neu illustrieren" mit Freitextfeld
 **Status:** ⏳ Offen
 **Aufwand:** 3-4 Stunden
 **Dateien:** `Step5Preview.tsx`, `PanelView.tsx`, `comic.js`
@@ -90,12 +111,12 @@ if (reillustrationNote) {
 
 ---
 
-### 4. Quality Score + Auto-Retry
+### 5. Quality Score + Auto-Retry ⚠️ vor Launch
 **Status:** ⏳ Offen
 **Aufwand:** 3-4 Stunden
 **Datei:** `backend-railway/src/routes/comic.js`
 
-**Problem:** Manga-Stil-Ausreißer werden nicht automatisch erkannt und korrigiert.
+**Warum vor Launch:** Manga-Stil-Ausreißer passieren zufällig. Ohne Auto-Retry landen schlechte Seiten beim Kunden.
 
 **Lösung:**
 ```javascript
@@ -212,4 +233,3 @@ Diese Punkte sind konzeptuell dokumentiert aber noch nicht priorisiert:
 - **Face Embeddings** — mathematische Gesichts-Konsistenz (pgvector in Supabase)
 - **SDXL + ControlNet** — Alternative zu OpenAI für mehr Kontrolle (GPU-Infrastruktur nötig)
 - **Image Worker** — asynchrone Job-Queue (BullMQ + Redis) für Background-Processing
-- **Luca-Größenanker** — "toddler, ~90cm, visibly smaller than 8-year-old sister Maria"
