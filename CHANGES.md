@@ -91,20 +91,97 @@ Alle Änderungen dieser Session. Backend muss auf Railway neu deployed werden da
 
 ---
 
-## 🔧 NOCH OFFEN / NÄCHSTE SCHRITTE
+## 🔴 NÄCHSTE SESSION — Fundamentale Fixes (nicht weiter patchen!)
 
-### Hohe Priorität
-- [ ] **Railway Deploy** — alle Backend-Änderungen sind lokal, müssen deployed werden
-- [ ] **Test-Run** nach Deploy mit dem Tunesien-Beispiel
-- [ ] **Character Sheet aus Structure entfernen** — wird nie genutzt, kostet $0.20 pro Comic
+### Root Cause Analyse (30. April 2026, Abend)
 
-### Mittlere Priorität
-- [ ] **Opa/Oma auf Cover** — fehlen weil nicht im User-Foto. Lösung: Cover-Prompt muss alle Charaktere aus `characters` Array explizit nennen und einfordern
-- [ ] **Konsistenz über Seiten** — `images.edit()` driftet pro Call leicht ab. Langfristig: Cover als Stil-Referenz sobald Parallelisierungs-Problem gelöst
+Nach mehreren Test-Runs sind die echten Probleme klar:
 
-### Niedrige Priorität
-- [ ] **UI/UX Redesign** (Wizard ruhiger, weniger Emojis) — aus Backlog
-- [ ] **Regenerate einzelner Seiten** — aktuell nur Dummy-Implementierung in Step5Preview
+#### Problem 1: Momente werden vermischt / doppelt dargestellt
+**Ursache:** Structure-Prompt bekommt alle 7 Momente auf einmal → GPT-4o kombiniert, erfindet, überspringt
+**Echte Lösung:** Jeden Moment einzeln strukturieren — ein GPT-Call pro Moment, parallel ausgeführt
+```
+Statt: POST /structure → GPT bekommt 7 Momente → gibt 7 Seiten zurück (unzuverlässig)
+Neu:   POST /structure → 7 parallele GPT-Calls → jeder bekommt NUR 1 Moment → 7 garantierte Seiten
+```
+
+#### Problem 2: Charakterkonsistenz fehlt
+**Ursache:** `images.edit()` interpretiert User-Foto bei jedem Call anders → Drift über Seiten
+**Echte Lösung:** Cover zuerst generieren, Cover-Buffer im Memory halten, alle Seiten-Calls bekommen Cover als Referenz
+```
+Ablauf:
+1. Cover-Promise starten (parallel)
+2. Seiten-Calls starten sofort (parallel)  
+3. Jeder Seiten-Call awaitet coverPromise intern (max ~45s Wartezeit)
+4. Seiten-Call nutzt Cover-Buffer als images.edit() Referenz
+→ Kein sequenzielles Warten, aber alle Seiten haben Cover-Referenz
+```
+
+#### Problem 3: Gleiche Klamotten überall
+**Ursache:** `detectOutfitContext()` prüft auf deutsche Keywords, aber `page.location` kommt von GPT-4o auf Englisch ("courtyard", "beach house", "living room")
+**Echte Lösung:** Keywords auf Englisch ausrichten + location aus Moment-Beschreibung ableiten (nicht von GPT)
+
+#### Problem 4: Alle lachen immer
+**Ursache:** `images.edit()` mit User-Foto — Familienfoto zeigt lächelnde Menschen → Modell übernimmt Emotion
+**Echte Lösung:** Emotion explizit in Panel-Szene beschreiben ("Luca crying, tears on cheeks") + Cover als Referenz statt Familienfoto für Seiten
+
+### Implementierungsplan für nächste Session
+
+**Schritt 1: Structure-Route umbauen**
+```javascript
+// Jeden Moment einzeln → parallele GPT-Calls
+const pageStructures = await Promise.all(momentsList.map(async (moment, i) => {
+  const res = await openai.chat.completions.create({
+    model: "gpt-4.1",
+    messages: [{
+      role: "system", 
+      content: `Create panels for ONE comic page in ${lang}. 2-4 panels. 
+      Show the EXACT scene described. Include correct emotions.`
+    }, {
+      role: "user",
+      content: `Scene: ${moment}\nCharacters: ${charListStr}\nTone: ${tone}`
+    }],
+    response_format: { type: "json_object" }
+  });
+  return { id: `page${i+1}`, pageNumber: i+1, ...JSON.parse(res.choices[0].message.content) };
+}));
+```
+
+**Schritt 2: Cover → Seiten Referenz-Kette (ohne Blockierung)**
+```javascript
+// Frontend: Cover und Seiten parallel, aber Seiten warten auf Cover
+const coverPromise = post("/api/comic/cover", {...});
+
+// Alle Seiten parallel starten
+await Promise.all(pages.map(async (page, i) => {
+  const coverUrl = await Promise.race([
+    coverPromise,
+    new Promise(r => setTimeout(() => r(""), 50000)) // 50s timeout
+  ]);
+  const pageData = await post("/api/comic/page", { ...page, coverImageUrl: coverUrl });
+  // ...
+}));
+```
+
+**Schritt 3: Location-Keywords auf Englisch**
+```javascript
+// Englische Keywords die GPT-4o tatsächlich verwendet
+const beachKw = ["beach", "sea", "pool", "shore", "coast", "swimming"];
+const gardenKw = ["courtyard", "garden", "yard", "terrace", "patio", "outdoor"];
+const homeKw = ["living room", "kitchen", "bedroom", "home", "house", "indoor"];
+const airportKw = ["airport", "gate", "terminal", "departure", "arrival"];
+```
+
+**Schritt 4: Emotion in Szenen-Beschreibung erzwingen**
+```javascript
+// Im Structure-Prompt pro Panel:
+// "szene" muss Emotion enthalten: "Luca crying on the ground next to fallen bicycle, Papa rushing over with worried face"
+// Nicht: "Luca falls from bicycle"
+```
+
+### Dateien die geändert werden müssen
+- `backend-railway/src/routes/comic.js` — Structure-Route, Page-Route
+- `src/components/steps/Step4Generate.tsx` — Cover-Promise Logik
 
 ---
 

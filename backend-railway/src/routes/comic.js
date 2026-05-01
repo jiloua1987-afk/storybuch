@@ -5,113 +5,195 @@ const { saveImage } = require("../lib/storage");
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-// ── Constants ─────────────────────────────────────────────────────────────────
-const CATEGORY_MOOD = {
-  familie:   "warm sunny family atmosphere, joyful children, cozy family moments",
-  urlaub:    "bright Mediterranean vacation, turquoise sea, golden sand, holiday joy",
-  liebe:     "romantic golden light, intimate couple moments, tender gestures",
-  feier:     "festive celebration atmosphere, colorful decorations, happy group",
-  biografie: "nostalgic warm atmosphere, timeless settings, life journey",
-  freunde:   "fun friendship moments, laughter, shared adventures",
-  sonstiges: "warm personal atmosphere, emotional storytelling",
+// ── Shared comic style — identical for every page ─────────────────────────────
+const COMIC_STYLE = "cinematic comic illustration, bold ink outlines, rich detailed colors, expressive faces, dramatic lighting, professional graphic novel quality. NOT photorealistic. NOT a photograph. Bold panel borders.";
+
+const MOOD_MOD = {
+  action:    "dynamic poses, motion energy, high contrast",
+  emotional: "warm golden tones, intimate close-ups, soft shadows",
+  humor:     "exaggerated expressions, bright colors, playful energy",
 };
 
-const COMIC_STYLE_MOD = {
-  action:    "dynamic poses, motion lines, exaggerated expressions, high energy",
-  emotional: "tender close-ups, soft warm lighting, emotional facial expressions",
-  humor:     "exaggerated funny reactions, comedic timing, playful body language",
-};
+// ── Outfit context from English location string ───────────────────────────────
+function getOutfit(location = "") {
+  const loc = location.toLowerCase();
+  if (["beach", "sea", "pool", "shore", "coast", "swimming", "water"].some(k => loc.includes(k)))
+    return "swimwear, swim shorts, light summer dresses, sandals. NO jeans, NO dark shirts.";
+  if (["airport", "gate", "terminal", "departure", "arrival", "flight"].some(k => loc.includes(k)))
+    return "comfortable travel clothes — casual shirts, jeans, sneakers, light jackets.";
+  if (["restaurant", "wedding", "celebration", "party", "dinner", "theater"].some(k => loc.includes(k)))
+    return "smart casual — dress shirts, blouses, nice trousers.";
+  if (["courtyard", "garden", "yard", "terrace", "patio", "outdoor", "backyard"].some(k => loc.includes(k)))
+    return "casual outdoor clothes — t-shirts, shorts, light trousers for warm weather.";
+  if (["living room", "kitchen", "bedroom", "home", "house", "sofa", "couch"].some(k => loc.includes(k)))
+    return "relaxed home clothes — t-shirts, comfortable trousers.";
+  if (["bike", "bicycle", "playground", "sport", "race", "riding"].some(k => loc.includes(k)))
+    return "casual sporty clothes — t-shirts, shorts, sneakers.";
+  return "casual everyday clothes appropriate for the scene and warm weather.";
+}
 
-// ── POST /api/comic/structure ─────────────────────────────────────────────────
+// ── Build image buffer from base64 ───────────────────────────────────────────
+function toFile(base64, name = "reference.jpg") {
+  const buf = Buffer.from(base64, "base64");
+  const blob = new Blob([buf], { type: "image/jpeg" });
+  return new File([blob], name, { type: "image/jpeg" });
+}
+
+// ── Fetch image buffer from URL ───────────────────────────────────────────────
+async function fetchBuffer(url) {
+  const res = await fetch(url, { signal: AbortSignal.timeout(25000) });
+  if (!res.ok) throw new Error(`Fetch failed: ${res.status}`);
+  return Buffer.from(await res.arrayBuffer());
+}
+
+// ── Generate image — with or without reference ────────────────────────────────
+async function generateImage(prompt, referenceBase64OrBuffer = null, size = "1024x1536") {
+  if (referenceBase64OrBuffer) {
+    try {
+      let file;
+      if (typeof referenceBase64OrBuffer === "string") {
+        file = toFile(referenceBase64OrBuffer);
+      } else {
+        // Buffer (e.g. from cover URL)
+        const blob = new Blob([referenceBase64OrBuffer], { type: "image/png" });
+        file = new File([blob], "reference.png", { type: "image/png" });
+      }
+      const res = await openai.images.edit({
+        model: "gpt-image-2", image: file, prompt, size, quality: "high",
+      });
+      const item = (res.data || [])[0];
+      if (item?.url) return item.url;
+      if (item?.b64_json) return `data:image/png;base64,${item.b64_json}`;
+    } catch (e) {
+      console.warn("  → images.edit() failed, falling back:", e.message);
+    }
+  }
+  const res = await openai.images.generate({
+    model: "gpt-image-2", prompt, n: 1, size, quality: "high",
+  });
+  const item = (res.data || [])[0];
+  if (item?.url) return item.url;
+  if (item?.b64_json) return `data:image/png;base64,${item.b64_json}`;
+  throw new Error("No image returned");
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// POST /api/comic/structure
+// Key change: each moment gets its OWN GPT call → guaranteed one page per moment
+// ─────────────────────────────────────────────────────────────────────────────
 router.post("/structure", async (req, res) => {
   try {
-    const { storyInput, guidedAnswers = {}, tone, comicStyle, mustHaveSentences,
-      language, category, numPages = 5, referenceImages = [] } = req.body;
+    const {
+      storyInput, guidedAnswers = {}, tone, comicStyle, mustHaveSentences,
+      language, category, numPages = 5, referenceImages = [],
+    } = req.body;
 
     const langMap = { de: "German", en: "English", fr: "French", es: "Spanish" };
     const lang = langMap[language] || "German";
-    const mood = CATEGORY_MOOD[category] || CATEGORY_MOOD.familie;
-    const comicMod = COMIC_STYLE_MOD[comicStyle] || COMIC_STYLE_MOD.emotional;
 
-    let ctx = storyInput || "";
+    // Build story context (without specialMoments — handled separately)
+    let storyCtx = storyInput || "";
     for (const [k, v] of Object.entries(guidedAnswers)) {
-      if (v && k !== "category" && k !== "specialMoments") ctx += `\n${k}: ${v}`;
+      if (v && k !== "category" && k !== "specialMoments") storyCtx += `\n${k}: ${v}`;
     }
 
-    // Momente explizit als Pflicht-Szenen extrahieren
+    // Extract moments
     const momentsText = guidedAnswers.specialMoments || "";
     const momentsList = momentsText
       ? momentsText.split("|").map(m => m.trim()).filter(Boolean)
       : [];
-    const momentsInstruction = momentsList.length > 0
-      ? `\n\nMANDATORY SCENES — these MUST each become their own comic page (one page per moment):\n${momentsList.map((m, i) => `${i + 1}. ${m}`).join("\n")}\nGenerate EXACTLY ${momentsList.length} pages, one per moment above. Do NOT invent new scenes. Do NOT skip any moment.`
-      : "";
 
-    const [structRes, charRes] = await Promise.all([
-      openai.chat.completions.create({
-        model: "gpt-4o",
-        messages: [
-          { role: "system", content: `You are a comic book author. Create a ${momentsList.length > 0 ? momentsList.length : numPages}-page comic structure in ${lang}.
-Tone: ${tone}. Visual mood: ${mood}. Comic style: ${comicMod}.
-${mustHaveSentences ? `MUST include these sentences: ${mustHaveSentences}` : ""}
-${momentsInstruction}
-Vary panel count per page based on story moment (2-5 panels). Each panel scene must work as a STANDALONE image prompt.
+    // Step 1: Extract characters (parallel with page structure)
+    const charPromise = openai.chat.completions.create({
+      model: "gpt-4.1",
+      messages: [{
+        role: "system",
+        content: `Extract ALL characters from the story. Include grandparents, parents, children, friends — everyone mentioned.
+For each write a DETAILED visual description (40-50 words):
+- Exact age, gender
+- Hair: color, length, style
+- Skin tone, eye color
+- Distinctive features: beard, glasses, hijab, wrinkles — write "always wears/has [feature]"
+- Body type
+Respond ONLY with JSON: {"characters":[{"name":"Name","age":30,"visual_anchor":"DETAILED English description..."}]}`
+      }, {
+        role: "user", content: storyCtx,
+      }],
+      response_format: { type: "json_object" },
+      temperature: 0.3,
+    });
 
-CRITICAL — PANEL VARIETY:
-- Every panel must show a COMPLETELY DIFFERENT scene, angle, and moment
-- NEVER repeat the same activity in two panels
-- Think cinematically: establishing shot → close-up → reaction → wide shot
-- Each character appears ONLY ONCE per panel — no duplicates
+    // Step 2: Structure pages
+    // If moments provided → one GPT call PER moment (guaranteed mapping)
+    // If no moments → one call for all pages
+    let pageStructures = [];
 
-CRITICAL — ALL CHARACTERS MUST APPEAR:
-- EVERY character mentioned MUST appear across the comic
-- Grandparents, parents, children — ALL must be shown in relevant scenes
+    if (momentsList.length > 0) {
+      console.log(`Structuring ${momentsList.length} moments individually...`);
 
-CRITICAL — CHARACTER VISIBILITY:
-- Characters should face the camera or be shown from the side — AVOID back views
-- Show faces clearly so readers can see expressions and emotions
+      // One GPT call per moment — all parallel
+      const pagePromises = momentsList.map((moment, i) =>
+        openai.chat.completions.create({
+          model: "gpt-4.1",
+          messages: [{
+            role: "system",
+            content: `You create ONE comic book page for a personal comic in ${lang}.
+Tone: ${tone}. Style: ${comicStyle}.
 
-Respond ONLY with JSON: {"pages": [{"id":"page1","pageNumber":1,"title":"Title in ${lang}","location":"English location","timeOfDay":"afternoon","panels":[{"nummer":1,"szene":"Specific English scene for SINGLE IMAGE generation","dialog":"Short ${lang} dialog 10-15 words","speaker":"Name or null","bubble_type":"speech"}]}]}` },
-          { role: "user", content: ctx },
-        ],
-        response_format: { type: "json_object" },
-        temperature: 0.85,
-      }),
-      openai.chat.completions.create({
-        model: "gpt-4o",
-        messages: [
-          { role: "system", content: `Extract all main characters from the story. For each character create a DETAILED visual description for sharp, high-quality face generation.
+Create 2-4 panels for this SINGLE scene. Each panel shows a different angle/moment of the SAME scene.
+Think cinematically: wide shot → close-up → reaction shot.
 
-CRITICAL: Descriptions must be detailed enough for gpt-image-2 to generate sharp, recognizable faces.
+EMOTIONS: Show the CORRECT emotion.
+- If someone falls/gets hurt → show pain, surprise, tears
+- If reunion → joy, open arms
+- If funny moment → laughter, surprise
+- Do NOT make everyone smile if the scene is sad or tense
 
-ACCESSORIES & CONSISTENT FEATURES:
-- If a character wears glasses, hijab, hat, jewelry, or other accessories: ALWAYS mention "always wears [accessory]"
-- If a character has facial hair (beard, mustache): specify exact style and ALWAYS include it
-- These features must appear in EVERY panel across ALL pages
+DIALOGS: Every panel needs dialog or narrator caption (10-15 words in ${lang}).
 
 Respond ONLY with JSON:
-{
-  "characters": [
-    {
-      "name": "Character name",
-      "age": 30,
-      "visual_anchor": "DETAILED English description for sharp face generation: exact age, precise hair color/length/style, eye color and shape, skin tone, facial features (jawline, cheekbones, nose shape, smile type), distinctive marks, body type, typical clothing colors, ALWAYS wears [consistent accessories like glasses/hijab/beard]. 40-50 words."
-    }
-  ]
-}
+{"id":"page${i + 1}","pageNumber":${i + 1},"title":"Short title in ${lang}","location":"English location description","timeOfDay":"daytime","panels":[{"nummer":1,"szene":"Specific English scene — what characters DO and FEEL","dialog":"${lang} dialog","speaker":"Name or null","bubble_type":"speech"}]}`
+          }, {
+            role: "user",
+            content: `Scene to illustrate: ${moment}\n\nStory context: ${storyCtx}${mustHaveSentences ? `\nInclude somewhere: ${mustHaveSentences}` : ""}`,
+          }],
+          response_format: { type: "json_object" },
+          temperature: 0.8,
+        }).then(r => {
+          const data = JSON.parse(r.choices[0].message.content || "{}");
+          return { id: `page${i + 1}`, pageNumber: i + 1, ...data };
+        }).catch(e => {
+          console.error(`Page ${i + 1} structure failed:`, e.message);
+          return { id: `page${i + 1}`, pageNumber: i + 1, title: `Moment ${i + 1}`, location: "", timeOfDay: "daytime", panels: [] };
+        })
+      );
 
-Example: "Emma: 6-year-old girl with shoulder-length wavy auburn hair, bright hazel eyes, round face with rosy cheeks, small freckles across nose, warm smile showing front teeth gap, fair skin, petite build, always wears yellow t-shirt and denim shorts"` },
-          { role: "user", content: ctx },
-        ],
+      pageStructures = await Promise.all(pagePromises);
+    } else {
+      // No moments — single call for all pages
+      const structRes = await openai.chat.completions.create({
+        model: "gpt-4.1",
+        messages: [{
+          role: "system",
+          content: `Create a ${numPages}-page comic structure in ${lang}. Tone: ${tone}.
+Each page: 2-5 panels. Vary panel count based on scene complexity.
+Show correct emotions — not everyone smiles in every panel.
+All characters must appear across the comic.
+Respond ONLY with JSON: {"pages":[{"id":"page1","pageNumber":1,"title":"Title in ${lang}","location":"English location","timeOfDay":"afternoon","panels":[{"nummer":1,"szene":"English scene description","dialog":"${lang} dialog 10-15 words","speaker":"Name or null","bubble_type":"speech"}]}]}`
+        }, {
+          role: "user", content: storyCtx,
+        }],
         response_format: { type: "json_object" },
-        temperature: 0.3,
-      }),
-    ]);
+        temperature: 0.85,
+      });
+      pageStructures = JSON.parse(structRes.choices[0].message.content || "{}").pages || [];
+    }
 
-    const pages = JSON.parse(structRes.choices[0].message.content || "{}").pages || [];
+    // Wait for characters
+    const charRes = await charPromise;
     let characters = JSON.parse(charRes.choices[0].message.content || "{}").characters || [];
 
-    // Analyze reference photos
+    // Enrich character descriptions from reference photos
     if (referenceImages.length > 0) {
       console.log(`Analyzing ${referenceImages.length} reference photo(s)...`);
       characters = await Promise.all(characters.map(async (char, i) => {
@@ -119,10 +201,10 @@ Example: "Emma: 6-year-old girl with shoulder-length wavy auburn hair, bright ha
         if (!ref) return char;
         try {
           const r = await openai.chat.completions.create({
-            model: "gpt-4o",
+            model: "gpt-4.1",
             messages: [{ role: "user", content: [
               { type: "image_url", image_url: { url: `data:image/jpeg;base64,${ref}`, detail: "high" } },
-              { type: "text", text: `Describe the visual appearance of the person for a comic artist. Focus ONLY on: approximate age, hair color/texture, skin tone, clothing colors. Do NOT identify anyone. English, max 60 words. Start with "Person ${i+1} (${char.name}):"` },
+              { type: "text", text: `Describe this person for a comic artist. Age, hair color/texture/length, skin tone, eye color, distinctive features (beard, glasses, hijab etc), body type. Do NOT identify anyone. English, max 60 words. Start with "${char.name}:"` },
             ]}],
             max_tokens: 120,
           });
@@ -134,287 +216,45 @@ Example: "Emma: 6-year-old girl with shoulder-length wavy auburn hair, bright ha
       }));
     }
 
-    res.json({ pages, characters });
+    console.log(`✓ Structure: ${pageStructures.length} pages, ${characters.length} characters`);
+    res.json({ pages: pageStructures, characters });
   } catch (err) {
     console.error("Structure error:", err.message);
     res.status(500).json({ error: err.message });
   }
 });
 
-// ── POST /api/comic/page ──────────────────────────────────────────────────────
-router.post("/page", async (req, res) => {
-  try {
-    const { page, characters = [], comicStyle = "emotional", category = "familie",
-            illustrationStyle = "comic", referenceImages = [] } = req.body;
-
-    // Fixed base style — same for every page, every category
-    // This is what produces the consistent comic look seen in the good test pages
-    const BASE_STYLE = "cinematic comic illustration, bold ink outlines, rich detailed colors, expressive faces, dramatic lighting, professional graphic novel quality";
-    const MOOD_MOD = {
-      action:    "dynamic poses, motion energy, high contrast",
-      emotional: "warm golden tones, intimate close-ups, soft shadows",
-      humor:     "exaggerated expressions, bright colors, playful energy",
-    };
-    const style = `${BASE_STYLE}, ${MOOD_MOD[comicStyle] || MOOD_MOD.emotional}`;
-    const charListStr = characters.map(c => `${c.name} (${c.age || ""}, ${c.visual_anchor})`).join(", ");
-    const panelList = page.panels.map(p => `${p.nummer}. ${p.szene}`).join("\n");
-    const panelCount = page.panels.length;
-    const layoutDesc = panelCount <= 3 ? "1 large panel on top, 2 panels on bottom"
-      : panelCount === 5 ? "2 on top, 1 wide middle, 2 on bottom" : "2×2 grid";
-
-    // Context-aware outfit detection — computed once, used in both prompt rewriter and images.edit()
-    const pageLocation = (page.location || "").toLowerCase();
-    const beachKeywords = ["strand", "beach", "meer", "sea", "pool", "planschbecken", "schwimmbad", "wasser", "küste", "coast"];
-    const homeKeywords = ["wohnzimmer", "küche", "schlafzimmer", "living room", "kitchen", "bedroom", "indoor", "innen"];
-    const gardenKeywords = ["hof", "garten", "courtyard", "garden", "terrasse", "terrace", "outdoor", "außen", "backyard"];
-    const formalKeywords = ["restaurant", "theater", "hochzeit", "feier", "party", "celebration", "wedding", "dinner"];
-    const airportKeywords = ["flughafen", "airport", "gate", "terminal", "abflug", "ankunft"];
-    const sportKeywords = ["fahrrad", "bike", "bicycle", "sport", "spielplatz", "playground", "rennen", "race"];
-
-    let outfitContext = "";
-    if (beachKeywords.some(kw => pageLocation.includes(kw))) {
-      outfitContext = "CLOTHING: swimwear, swim shorts, light summer dresses, sandals — beach/pool appropriate. NO jeans, NO dark shirts.";
-    } else if (formalKeywords.some(kw => pageLocation.includes(kw))) {
-      outfitContext = "CLOTHING: smart casual to formal — dress shirts, blouses, nice trousers. NO sportswear.";
-    } else if (airportKeywords.some(kw => pageLocation.includes(kw))) {
-      outfitContext = "CLOTHING: comfortable travel clothes — casual shirts, jeans, sneakers, light jackets.";
-    } else if (gardenKeywords.some(kw => pageLocation.includes(kw))) {
-      outfitContext = "CLOTHING: casual outdoor clothes — t-shirts, shorts, light trousers. Appropriate for warm outdoor setting.";
-    } else if (sportKeywords.some(kw => pageLocation.includes(kw))) {
-      outfitContext = "CLOTHING: casual sporty clothes — t-shirts, shorts, sneakers. Comfortable and active.";
-    } else if (homeKeywords.some(kw => pageLocation.includes(kw))) {
-      outfitContext = "CLOTHING: relaxed home clothes — t-shirts, comfortable trousers.";
-    } else {
-      outfitContext = "CLOTHING: casual everyday clothes appropriate for the scene and weather.";
-    }
-
-    // Step 1: GPT-4o Prompt Rewriter — writes like an Art Director
-    let imagePrompt = "";
-    try {
-      const rewriteRes = await openai.chat.completions.create({
-        model: "gpt-4o",
-        messages: [{
-          role: "system",
-          content: `You rewrite comic scene descriptions into short, natural image prompts for gpt-image-2.
-
-Write like an art director briefing an illustrator — NOT like a prompt engineer.
-
-⚠️ CRITICAL - ABSOLUTELY NO TEXT IN IMAGE ⚠️
-The image generator MUST NOT write ANY text, titles, captions, or letters.
-- NO page titles like "Ankunft in Tunesien" or "Abflug nach Tunesien"
-- NO panel titles, NO scene titles, NO location names
-- NO speech bubbles, NO captions, NO labels
-- NO letters, NO words, NO text of any kind
-- Text is added separately by the frontend - the image must be PURE ILLUSTRATION
-- If you see a title in the panel description, IGNORE IT - do not include it in the image prompt
-- This is CRITICAL - any text in the image will ruin the comic
-
-OUTPUT STRUCTURE (exactly this, nothing else):
-1. One master sentence: style + layout + motif + story context
-2. One character anchor sentence (if reference photo exists)
-3. Panel breakdown: one short visual sentence per panel
-4. One style tail: short style keywords + negatives
-
-CRITICAL RULES FOR SHARP FACES:
-- ALWAYS include: "Sharp, detailed facial features with clearly defined eyes, nose, mouth, and expressions"
-- ALWAYS include: "Each panel shows a COMPLETELY DIFFERENT scene, angle, and moment"
-- ALWAYS include: "Maximum 2-4 people per panel with visible faces — avoid large crowds"
-- CRITICAL: "Each character appears ONLY ONCE per panel — no duplicates of the same person"
-- CRITICAL: "Prefer showing characters facing camera or from side to see expressions — back views OK when story needs it"
-- For characters: mention "recognizable face" or "distinct facial features"
-- For crowd scenes: "Background people as silhouettes or out of focus"
-- Total output: max 130 words
-
-NO INVENTED CHARACTERS:
-- ONLY draw characters listed in the Characters section below
-- Do NOT add any extra people, children, strangers, or background figures with faces
-- Background crowd = faceless silhouettes only, NO distinct faces on unnamed people
-
-CLOTHING CONTEXT:
-- ${outfitContext}
-- Characters can change clothes between DIFFERENT locations (airport → beach → home)
-- BUT: Same outfit within the SAME location across multiple panels
-- Example: If Mama wears brown top at beach in panel 1, she wears brown top in ALL beach panels
-- Keep character faces/hair/features identical, but adapt clothing to scene
-
-STYLE RULES:
-- No block headers (no "QUALITY:", "STYLE:", "LAYOUT:" etc.)
-- No redundant synonyms
-- No meta-language, no prompt engineering jargon
-- Write naturally, like describing a scene to an artist
-- Each panel: max 1 sentence, purely what is VISIBLE
-- Emphasize variety: close-ups, wide shots, different actions, different angles
-- CRITICAL: End with "NO text, NO speech bubbles, NO letters, NO titles in image"`,
-        }, {
-          role: "user",
-          content: `${panelCount} panels in a ${layoutDesc}. Category: ${category}, style: ${comicStyle}.
-Characters: ${charListStr}
-Location: ${page.location || "not specified"}, Time: ${page.timeOfDay || "daytime"}
-
-Panels:
-${panelList}`,
-        }],
-        max_tokens: 250,
-        temperature: 0.2,
-      });
-      imagePrompt = rewriteRes.choices[0].message.content || "";
-      if (imagePrompt.length < 80) imagePrompt = "";
-      else console.log(`  → Prompt rewritten (${imagePrompt.length} chars)`);
-    } catch (e) {
-      console.warn("Prompt rewrite failed:", e.message);
-    }
-    // Fallback prompt — also needs outfit context
-    if (!imagePrompt) {
-      const loc2 = (page.location || "").toLowerCase();
-      const beachKw = ["strand", "beach", "meer", "sea", "pool", "planschbecken", "schwimmbad", "wasser"];
-      const gardenKw = ["hof", "garten", "courtyard", "garden", "terrasse"];
-      let outfitNote = "";
-      if (beachKw.some(kw => loc2.includes(kw))) {
-        outfitNote = " CLOTHING: swimwear, swim shorts, light summer clothes — NO jeans.";
-      } else if (gardenKw.some(kw => loc2.includes(kw))) {
-        outfitNote = " CLOTHING: casual t-shirts, shorts, light trousers for warm outdoor setting.";
-      }
-
-      imagePrompt = `Create a premium European comic book page with ${panelCount} panels in a ${layoutDesc}. 
-
-CRITICAL: Sharp, detailed facial features with clearly defined eyes, nose, mouth, and expressions. Maximum 2-4 people per panel with visible faces. Each panel shows a COMPLETELY DIFFERENT scene, angle, and moment — no duplicates, no similar compositions.
-
-Characters (keep identical in every panel with recognizable faces): ${characters.map(c => `${c.name}: ${c.visual_anchor}`).join(". ")}${outfitNote}
-${page.panels.map(p => `Panel ${p.nummer}: ${p.szene}`).join("\n")}
-${page.location ? `\nSetting: ${page.location}.` : ""}${page.timeOfDay ? ` ${page.timeOfDay} lighting.` : ""}
-
-Style: ${style}, bold panel borders, professional graphic novel quality. Background crowd: silhouettes only. CRITICAL: NO text, NO speech bubbles, NO letters in the generated image.`;
-    }
-
-    console.log(`Generating page "${page.title}" (${panelCount} panels)`);
-    let rawUrl = "";
-
-    // Primary: images.edit() with user photo — keeps character likeness in comic style
-    const primaryRef = referenceImages[0];
-    if (primaryRef) {
-      try {
-        const refBuf = Buffer.from(primaryRef, "base64");
-        const refBlob = new Blob([refBuf], { type: "image/jpeg" });
-        const refFile = new File([refBlob], "reference.jpg", { type: "image/jpeg" });
-        const charAnchors = characters.map(c => `${c.name} (${c.visual_anchor})`).join(", ");
-        const editRes = await openai.images.edit({
-          model: "gpt-image-2",
-          image: refFile,
-          prompt: `The people in this photo are the main characters. Draw them as European comic book illustrations — bold ink outlines, flat cel-shaded colors, expressive cartoon faces. NOT photorealistic. NOT a photograph.\n\n${outfitContext}\n\nCharacter consistency: ${charAnchors}\n\n${imagePrompt}`,
-          size: "1024x1536",
-          quality: "high",
-        });
-        const item = (editRes.data || [])[0];
-        if (item?.url) rawUrl = item.url;
-        else if (item?.b64_json) rawUrl = `data:image/png;base64,${item.b64_json}`;
-        if (rawUrl) console.log(`  → Generated with user photo reference`);
-      } catch (e) {
-        console.warn(`  → images.edit() failed:`, e.message);
-      }
-    }
-
-    // Fallback: images.generate() without reference
-    if (!rawUrl) {
-      try {
-        const genRes = await openai.images.generate({
-          model: "gpt-image-2", prompt: imagePrompt, n: 1, size: "1024x1536", quality: "high",
-        });
-        const item = (genRes.data || [])[0];
-        if (item?.url) rawUrl = item.url;
-        else if (item?.b64_json) rawUrl = `data:image/png;base64,${item.b64_json}`;
-        if (rawUrl) console.log(`  → Generated without reference (fallback)`);
-      } catch (e) {
-        console.error(`Generation failed for "${page.title}":`, e.message);
-      }
-    }
-
-    if (!rawUrl) return res.json({ imageUrl: "", panels: page.panels, panelPositions: null });
-
-    // Save to Supabase
-    const bookId = page.id?.split("-")[0] || `book-${Date.now()}`;
-    const storedUrl = await saveImage(rawUrl, bookId, page.id || `page-${Date.now()}`);
-    const finalUrl = storedUrl || rawUrl;
-
-    // Panel Position Detection via GPT-4o Vision
-    let panelPositions = null;
-    try {
-      const visionRes = await openai.chat.completions.create({
-        model: "gpt-4o",
-        messages: [{
-          role: "user",
-          content: [
-            { type: "image_url", image_url: { url: finalUrl, detail: "low" } },
-            { type: "text", text: `This is a comic page with ${panelCount} panels. Return panel positions as percentage coordinates. JSON only: {"panels":[{"nummer":1,"top":5,"left":0,"width":100,"height":45}]}` }
-          ]
-        }],
-        response_format: { type: "json_object" },
-        max_tokens: 200,
-        temperature: 0.1,
-      });
-      const posData = JSON.parse(visionRes.choices[0].message.content || "{}");
-      if (posData.panels && posData.panels.length > 0) {
-        panelPositions = posData.panels;
-        console.log(`✓ Panel positions detected for "${page.title}"`);
-      }
-    } catch (e) {
-      console.warn(`Panel detection failed:`, e.message);
-    }
-
-    console.log(`✓ Page "${page.title}" done → ${storedUrl ? "Supabase" : "inline"}`);
-    res.json({ imageUrl: finalUrl, panels: page.panels, panelPositions });
-  } catch (err) {
-    console.error("Page error:", err.message);
-    res.status(500).json({ error: err.message, imageUrl: "", panels: [] });
-  }
-});
+// ─────────────────────────────────────────────────────────────────────────────
+// POST /api/comic/cover
+// Uses user photo via images.edit() for face likeness
+// ─────────────────────────────────────────────────────────────────────────────
 router.post("/cover", async (req, res) => {
   try {
-    const { title, characters = [], category = "familie", illustrationStyle = "comic", location = "", referenceImages = [] } = req.body;
+    const { characters = [], location = "", referenceImages = [] } = req.body;
 
-    const charDesc = characters.map(c => `${c.name}: ${c.visual_anchor}`).join(", ");
-
-    const prompt = `Create a premium European comic book COVER illustration showing ${charDesc || "a family"} in ${location || "a beautiful setting"}.
-Characters prominently featured in foreground, looking at the viewer. Cinematic composition, portrait orientation.
-Style: crisp ink outlines, vivid saturated colors, expressive faces, professional graphic novel cover quality. No watercolor. No soft blur. No text, no title, no letters.`;
+    const charDesc = characters.map(c => `${c.name} (${c.visual_anchor})`).join("; ");
+    const prompt = `Comic book COVER. ${COMIC_STYLE}
+Show all main characters together in ${location || "a beautiful setting"}.
+Characters: ${charDesc || "a family"}
+Dynamic group composition — some looking at viewer, some interacting.
+Vivid background showing the story world. NO text, NO title, NO letters.`;
 
     let rawUrl = "";
-
-    // Primary: images.edit() with user photo only
-    const primaryRef = referenceImages[0];
-    if (primaryRef) {
+    if (referenceImages[0]) {
       try {
-        const refBuf = Buffer.from(primaryRef, "base64");
-        const refBlob = new Blob([refBuf], { type: "image/jpeg" });
-        const refFile = new File([refBlob], "reference.jpg", { type: "image/jpeg" });
-        const editRes = await openai.images.edit({
-          model: "gpt-image-2",
-          image: refFile,
-          prompt: `The people in this photo are the main characters. Create a premium European comic book COVER showing them in ${location || "a beautiful setting"}. Keep their exact faces recognizable but drawn in crisp comic illustration style — bold ink outlines, flat colors, expressive cartoon faces. NOT photorealistic. NOT a photograph. Portrait orientation, characters in foreground.\nStyle: crisp ink outlines, vivid colors, expressive faces, professional graphic novel cover. No watercolor. No soft blur. No text, no title, no letters.`,
-          size: "1024x1536",
-          quality: "high",
-        });
-        const item = (editRes.data || [])[0];
-        if (item?.url) rawUrl = item.url;
-        else if (item?.b64_json) rawUrl = `data:image/png;base64,${item.b64_json}`;
-        if (rawUrl) console.log("  → Cover generated with reference photo");
+        rawUrl = await generateImage(
+          `Draw the people from this photo as comic book characters. ${COMIC_STYLE}\nShow them together in ${location || "a beautiful setting"} for the comic COVER.\nCharacters: ${charDesc}\nNO text, NO title, NO letters.`,
+          referenceImages[0]
+        );
+        console.log("  → Cover with user photo");
       } catch (e) {
-        console.warn("  → Cover reference photo failed:", e.message);
+        console.warn("  → Cover photo failed:", e.message);
       }
     }
-
-    // Fallback: images.generate()
-    if (!rawUrl) {
-      const genRes = await openai.images.generate({
-        model: "gpt-image-2", prompt, n: 1, size: "1024x1536", quality: "high"
-      });
-      const item = (genRes.data || [])[0];
-      if (item?.url) rawUrl = item.url;
-      else if (item?.b64_json) rawUrl = `data:image/png;base64,${item.b64_json}`;
-    }
-
-    if (!rawUrl) return res.json({ coverImageUrl: "" });
+    if (!rawUrl) rawUrl = await generateImage(prompt, null);
 
     const coverUrl = await saveImage(rawUrl, "covers", `cover-${Date.now()}`);
+    console.log("✓ Cover done");
     res.json({ coverImageUrl: coverUrl || rawUrl });
   } catch (err) {
     console.error("Cover error:", err.message);
@@ -422,50 +262,137 @@ Style: crisp ink outlines, vivid saturated colors, expressive faces, professiona
   }
 });
 
-// ── POST /api/comic/ending ────────────────────────────────────────────────────
-// Returns ending text as JSON — NO SVG image. Frontend renders via CSS.
+// ─────────────────────────────────────────────────────────────────────────────
+// POST /api/comic/page
+// Reference priority: coverImageUrl (comic style) > userPhoto > none
+// ─────────────────────────────────────────────────────────────────────────────
+router.post("/page", async (req, res) => {
+  try {
+    const {
+      page, characters = [], comicStyle = "emotional",
+      referenceImages = [], coverImageUrl = "",
+    } = req.body;
+
+    const mood = MOOD_MOD[comicStyle] || MOOD_MOD.emotional;
+    const fullStyle = `${COMIC_STYLE} ${mood}`;
+    const outfit = getOutfit(page.location);
+    const panelCount = page.panels.length;
+    const layoutDesc =
+      panelCount <= 2 ? "2 equal panels" :
+      panelCount === 3 ? "1 large panel top, 2 smaller panels bottom" :
+      panelCount === 5 ? "2 panels top, 1 wide panel middle, 2 panels bottom" :
+      "2×2 grid";
+
+    const charAnchors = characters.map(c => `${c.name}: ${c.visual_anchor}`).join(". ");
+    const panelDescriptions = page.panels
+      .map(p => `Panel ${p.nummer}: ${p.szene}`)
+      .join("\n");
+
+    const prompt = `${fullStyle}
+
+Comic page — ${panelCount} panels in ${layoutDesc}. Bold black borders between panels.
+
+CHARACTERS — keep identical across all panels:
+${charAnchors}
+
+CLOTHING — ${outfit}
+
+PANELS:
+${panelDescriptions}
+
+RULES:
+- Each panel shows a DIFFERENT scene/angle/moment
+- Each character appears ONLY ONCE per panel
+- Show correct emotions — if scene is sad show sadness, if funny show laughter
+- Sharp detailed faces — eyes, nose, mouth clearly visible
+- Background crowd: faceless silhouettes only
+- NO text, NO speech bubbles, NO letters anywhere in image`;
+
+    // Reference: cover buffer (already in comic style) > user photo > none
+    let reference = null;
+    let refSource = "none";
+
+    if (coverImageUrl) {
+      try {
+        reference = await fetchBuffer(coverImageUrl);
+        refSource = "cover";
+      } catch (e) {
+        console.warn("  → Cover fetch failed:", e.message);
+      }
+    }
+    if (!reference && referenceImages[0]) {
+      reference = referenceImages[0]; // base64 string
+      refSource = "user-photo";
+    }
+
+    const refNote = refSource === "cover"
+      ? `Use the EXACT same art style, character designs and color palette as this cover image.\n\n`
+      : refSource === "user-photo"
+      ? `Draw the people from this photo as comic characters in this style: ${fullStyle}. NOT photorealistic.\n\n`
+      : "";
+
+    console.log(`Generating page "${page.title}" (${panelCount} panels, ref: ${refSource})`);
+    const rawUrl = await generateImage(`${refNote}${prompt}`, reference);
+
+    const bookId = page.id?.split("-")[0] || `book-${Date.now()}`;
+    const storedUrl = await saveImage(rawUrl, bookId, page.id || `page-${Date.now()}`);
+    const finalUrl = storedUrl || rawUrl;
+
+    // Panel position detection
+    let panelPositions = null;
+    try {
+      const visionRes = await openai.chat.completions.create({
+        model: "gpt-4.1",
+        messages: [{ role: "user", content: [
+          { type: "image_url", image_url: { url: finalUrl, detail: "low" } },
+          { type: "text", text: `Comic page with ${panelCount} panels. Return positions as % coordinates. JSON only: {"panels":[{"nummer":1,"top":5,"left":0,"width":100,"height":45}]}` },
+        ]}],
+        response_format: { type: "json_object" },
+        max_tokens: 200, temperature: 0.1,
+      });
+      const posData = JSON.parse(visionRes.choices[0].message.content || "{}");
+      if (posData.panels?.length > 0) panelPositions = posData.panels;
+    } catch (e) {
+      console.warn("  Panel detection failed:", e.message);
+    }
+
+    console.log(`✓ Page "${page.title}" done`);
+    res.json({ imageUrl: finalUrl, panels: page.panels, panelPositions });
+  } catch (err) {
+    console.error("Page error:", err.message);
+    res.status(500).json({ error: err.message, imageUrl: "", panels: [] });
+  }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// POST /api/comic/ending
+// ─────────────────────────────────────────────────────────────────────────────
 router.post("/ending", async (req, res) => {
   try {
     const { storyInput, guidedAnswers = {}, tone, language, dedication, dedicationFrom } = req.body;
-    const langMap = { de: "German", en: "English", fr: "French", es: "Spanish" };
-    const lang = langMap[language] || "German";
+    const lang = { de: "German", en: "English", fr: "French", es: "Spanish" }[language] || "German";
 
     const r = await openai.chat.completions.create({
-      model: "gpt-4o",
-      messages: [
-        { role: "system", content: `Du schreibst eine persönliche Widmung für die letzte Seite eines Comic-Buchs in ${lang}.
-
-WICHTIG — Das ist eine WIDMUNG, keine Zusammenfassung!
-- Schreibe wie eine handgeschriebene Widmung auf der letzten Seite eines Geschenks
-- Maximal 2-3 kurze, herzliche Sätze
-- Sprich die Hauptperson(en) DIREKT an
-- Wenn die Geschichte von Großeltern handelt: "Für Opa und Oma..." oder "Für euch, liebe Großeltern..."
-- Wenn die Geschichte von einem Kind handelt: "Für Dich, lieber [Name]..."
-- Erwähne EIN konkretes Detail aus der Geschichte
-- Ton: ${tone || "liebevoll, persönlich, warm"}
-
-KRITISCH — ABSENDER:
-- Schreibe NUR die Widmung selbst
-- Füge KEINEN Absender hinzu (kein "Von:", kein "Deine Familie", etc.)
-- Der Absender wird separat angezeigt
-${dedicationFrom ? `- Info: Der Absender ist "${dedicationFrom}" — aber schreibe das NICHT in die Widmung` : ''}
-
-VERBOTEN:
-- "Von:", "Deine Familie", "[Dein Name]", "[Familienmitglied]" im Text
-- "Liebe Leserinnen", "dieses Buch", "diese Geschichte"
-- Zusammenfassungen der Handlung
-- Doppelungen wie "Von: Von..."
-
-Schreibe so, als würde ein Familienmitglied die Widmung von Hand schreiben — aber ohne Unterschrift (die kommt separat).` },
-        { role: "user", content: `Geschichte: ${storyInput || ""}\n${Object.entries(guidedAnswers).filter(([k,v]) => v && k !== "category").map(([k,v]) => `${k}: ${v}`).join("\n")}${dedication ? `\nWidmung vom Nutzer: ${dedication}` : ""}` },
-      ],
+      model: "gpt-4.1",
+      messages: [{
+        role: "system",
+        content: `Write a personal dedication for the last page of a comic book in ${lang}.
+This is a DEDICATION — like handwritten on the last page of a gift.
+- Max 2-3 short heartfelt sentences
+- Address the main person(s) DIRECTLY
+- Mention ONE concrete detail from the story
+- Tone: ${tone || "warm, personal, loving"}
+- NO sender ("Von:", "Deine Familie") — that is shown separately
+${dedicationFrom ? `Info: sender is "${dedicationFrom}" — do NOT write this in the dedication` : ""}`
+      }, {
+        role: "user",
+        content: `Story: ${storyInput || ""}\n${Object.entries(guidedAnswers).filter(([k, v]) => v && k !== "category").map(([k, v]) => `${k}: ${v}`).join("\n")}${dedication ? `\nUser dedication: ${dedication}` : ""}`,
+      }],
       max_tokens: 100, temperature: 0.8,
     });
 
     const endingText = r.choices[0].message.content || "";
-    console.log(`✓ Ending text generated (${endingText.length} chars)`);
-
-    // Return text as JSON — frontend renders it
+    console.log(`✓ Ending generated`);
     res.json({ endingText, dedication: dedication || "", dedicationFrom: dedicationFrom || "" });
   } catch (err) {
     console.error("Ending error:", err.message);
