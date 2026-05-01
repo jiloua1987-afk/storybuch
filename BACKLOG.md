@@ -8,13 +8,15 @@
 | # | Thema | Prio | Aufwand | Status |
 |---|-------|------|---------|--------|
 | 1 | Test-Run: Anti-Manga + Opa/Oma-Fix | 🔴 Kritisch | 30 Min | ⏳ Offen |
-| 2 | Style-Master-Panel | 🔴 Hoch | 2-3h | ⏳ Warten auf Test |
-| 3 | Luca-Größenanker | 🔴 Hoch | 30 Min | ⏳ Offen |
-| 4 | "Neu illustrieren" mit Freitextfeld | 🟡 Mittel | 3-4h | ⏳ Offen |
-| 5 | Quality Score + Auto-Retry | 🔴 Hoch (vor Launch) | 3-4h | ⏳ Offen |
-| 6 | Outfit-State (Supabase) | 🟡 Mittel | 2-3 Tage | ⏳ Offen |
-| 7 | UI/UX Redesign Wizard | 🟢 Niedrig | 1-2 Tage | ⏳ Warten auf Qualität |
-| 8 | OpenAI Tier 2 | 🟢 Niedrig | 5 Min | ⏳ Offen |
+| 2 | Quality Score + Auto-Retry | 🔴 Hoch (vor Launch) | 3-4h | ⏳ Offen |
+| 3 | Canonical Character Sheet | 🔴 Hoch | 1 Tag | ⏳ Offen |
+| 4 | Style-Master-Panel (Fallback) | 🟡 Mittel | 2-3h | ⏳ Warten auf Test |
+| 5 | Cover als Stil-Referenz für Opa/Oma-Seiten | 🟡 Mittel | 1h | ⏳ Offen |
+| 6 | Luca-Größenanker | 🔴 Hoch | 30 Min | ⏳ Offen |
+| 7 | "Neu illustrieren" mit Freitextfeld | 🟡 Mittel | 3-4h | ⏳ Offen |
+| 8 | Outfit-State (Supabase) | 🟡 Mittel | 2-3 Tage | ⏳ Offen |
+| 9 | UI/UX Redesign Wizard | 🟢 Niedrig | 1-2 Tage | ⏳ Warten auf Qualität |
+| 10 | OpenAI Tier 2 | 🟢 Niedrig | 5 Min | ⏳ Offen |
 | — | gpt-image-2 Upgrade | — | — | ✅ Done |
 
 ---
@@ -30,46 +32,165 @@ Tunesien-Geschichte neu generieren und prüfen:
 - [ ] Grillen-Seite (Moment #4) im Bande-Dessinée-Stil, kein Manga
 - [ ] Fußball-Seite (Moment #5) konsistenter Stil
 
-**Wenn Grillen/Fußball immer noch Manga → weiter zu #2 (Style-Master)**
+**Wenn Grillen/Fußball immer noch Manga → weiter zu #3 (Character Sheet) oder #4 (Style-Master)**
 
 ---
 
-### 2. Style-Master-Panel — Stil-Konsistenz ohne Fotorealismus-Drift
-**Status:** ⏳ Warten auf Test-Run Ergebnis
+### 2. Quality Score + Auto-Retry ⚠️ vor Launch
+**Status:** ⏳ Offen
+**Aufwand:** 3-4 Stunden
+**Datei:** `backend-railway/src/routes/comic.js`
+
+**Warum vor Launch:** Manga-Stil-Ausreißer passieren zufällig. Ohne Auto-Retry landen schlechte Seiten beim Kunden.
+
+**Lösung:** Nach jeder Seiten-Generierung ein schneller Vision-Check:
+
+```javascript
+// ~$0.005 pro Seite, ~3s zusätzlich
+const check = await openai.chat.completions.create({
+  model: "gpt-4.1",
+  messages: [{ role: "user", content: [
+    { type: "image_url", image_url: { url: rawUrl, detail: "low" } },
+    { type: "text", text: `Is this image in European Bande Dessinée / graphic novel style
+    (like Blacksad, Tintin, Bastien Vivès)?
+    Or does it look like manga / anime / Studio Ghibli / photorealistic?
+    Answer with ONE word: "ok" or "wrong"` }
+  ]}],
+  max_tokens: 5,
+});
+const styleOk = check.choices[0].message.content?.toLowerCase().includes("ok");
+
+if (!styleOk) {
+  console.log(`  → Style check failed, retrying with stronger prompt`);
+  // Retry mit expliziterem Anti-Manga-Prompt
+  // Wenn Cover-Referenz geblockt war → User-Foto als Fallback
+}
+```
+
+**Kosten:** ~$0.005 pro Seite (GPT-4.1 Vision, low detail)
+
+---
+
+### 3. Canonical Character Sheet — größter Hebel für Stil-Konsistenz
+**Status:** ⏳ Offen
+**Aufwand:** 1 Tag
+**Datei:** `backend-railway/src/routes/comic.js` — neue `/character-sheet` Route
+
+**Analyse (GPT-4, bewertet von Kiro):**
+
+GPT beschreibt den entscheidenden Architektur-Shift:
+
+> "Nicht Cover als Style Anchor + User Photo als Identity Anchor.
+> Sondern: Ein einziges kanonisches Style+Identity Anchor System."
+
+Die aktuelle Pipeline:
+```
+User Photo → Cover → Seiten
+```
+Problem: Cover ist gleichzeitig Marketing-Artwork UND Stilanker. Das ist zu viel für ein Bild.
+Cover ist ein Ausgabe-Artefakt, kein Produktions-Asset.
+
+Die neue Pipeline:
+```
+User Photo → Character Sheet → Cover → Seiten
+```
+
+**Was das Character Sheet ist:**
+- Internes Produktions-Asset, nie dem User gezeigt
+- Alle Charaktere frontal / 3/4-Ansicht auf neutralem Hintergrund
+- Gleiche Stilwelt, gleiche Line-Qualität, gleiche Farbpalette
+- Neutrale Posen — kein Storytelling, nur Charakter-Definition
+- Wie ein echtes Character Design Sheet aus Animation/Comics
+
+**Warum das funktioniert:**
+- Foto beantwortet: *Wer sind diese Menschen?*
+- Character Sheet beantwortet: *Wie sehen diese Menschen in diesem Comic aus?*
+- Cover + Seiten referenzieren nur noch das Sheet — nicht mehr das Foto direkt
+- Eliminiert laut GPT ~70% der Stil-Drift
+
+**Kiro-Bewertung:**
+Das ist konzeptuell die stärkste Lösung. Wichtiger Unterschied zum alten Character-Sheet-Versuch (der scheiterte): Damals wurde das Sheet ohne User-Foto generiert. Jetzt: User Photo → Sheet (mit Foto als Input). Das Modell hat dann echte Gesichtsmerkmale als Basis.
+
+**Risiko:** `images.edit()` könnte das Sheet als "zu editierendes Bild" behandeln statt als Stil-Referenz. Muss getestet werden.
+
+**Implementierung:**
+```javascript
+// Neue Route: POST /api/comic/character-sheet
+// Input: characters (visual_anchors), userPhoto
+// Output: characterSheetUrl (in Supabase gespeichert)
+
+const sheetPrompt = `${COMIC_STYLE}
+
+CHARACTER REFERENCE SHEET — internal production asset, never shown to users.
+Draw ALL these characters as clean comic book character designs:
+${charDesc}
+
+Layout: each character shown TWICE — front view and 3/4 view.
+Neutral poses, no action, no background (white or light grey).
+Same ink weight, same color palette, same face stylization for ALL characters.
+This is a style bible — every character must look like they belong to the same comic.
+NO text, NO labels, NO speech bubbles.`;
+
+const sheet = await openai.images.edit({
+  model: "gpt-image-2",
+  image: userPhotoFile,   // ← User-Foto als Identity-Input
+  prompt: sheetPrompt,
+  size: "1024x1536",
+  quality: "high",
+});
+// → In Supabase speichern als character_sheet_url
+```
+
+**Danach:** Cover und alle Seiten nutzen `characterSheetUrl` statt `coverImageUrl` als primäre Referenz.
+
+---
+
+### 4. Style-Master-Panel (Alternative / Fallback zu #3)
+**Status:** ⏳ Warten auf Test-Run + Character-Sheet-Ergebnis
 **Aufwand:** 2-3 Stunden
 **Datei:** `backend-railway/src/routes/comic.js`
 
-**Problem:**
-User-Foto → `images.edit()` → Cover (leicht fotorealistisch) → Seiten erben Fotorealismus.
-Wenn Safety-Filter greift oder Opa/Oma-Seiten auf `generate-only` fallen → Stilbruch.
+Wenn Character Sheet (#3) nicht zuverlässig funktioniert → Style-Master als Fallback.
 
-**Lösung: Hybrid-Ansatz**
+**Unterschied zu Character Sheet:**
+- Style-Master: Kein Charakter-Input, nur Stil (z.B. tunesischer Innenhof)
+- Character Sheet: Alle Charaktere + Stil kombiniert
+
+**Hybrid-Ansatz (Kiro-Empfehlung):**
 ```
-Schritt 1: Style-Master-Panel (unsichtbar, nie dem User gezeigt)
-  → images.generate() mit reinem COMIC_STYLE-Prompt
-  → Keine Charaktere, nur Stil-Referenz (z.B. tunesischer Innenhof, goldene Stunde)
-  → Speichern in Supabase als style_master_url
-
-Schritt 2: Cover
-  → images.edit() mit Style-Master als Input (NICHT User-Foto direkt)
-  → Prompt: "Adapt this comic style, add these characters: [visual_anchors]"
-  → Ergebnis: Comic-Stil-konsistent + erkennbare Gesichter
-
-Schritt 3: Alle Seiten
-  → Cover weiterhin als Referenz (behält Charakter-Konsistenz)
-  → Style-Master als Fallback wenn Cover nicht verfügbar
+Style-Master → Cover (Stil-konsistent + erkennbare Gesichter via visual_anchors)
+Cover → Seiten (Charakter-Konsistenz)
 ```
 
-**Hinweis:** Claude schlug vor, Style-Master direkt für alle Seiten zu nutzen.
-Das würde Charakter-Konsistenz kosten. Hybrid-Ansatz ist besser.
+**Kosten:** +1 `images.generate()` Call (~$0.04), +15-20s
 
-**Kosten:** +1 `images.generate()` Call (~$0.04), +15-20s Generierungszeit
+---
+
+### 5. Cover als Stil-Referenz auch für Opa/Oma-Seiten
+**Status:** ⏳ Offen — Quick Fix, 1 Stunde
+**Datei:** `backend-railway/src/routes/comic.js`
+
+Aktuell: Seiten mit Opa/Oma (`hasCharNotInPhoto = true`) → `user-photo-style` oder `generate-only` → Manga-Risiko.
+
+**Fix:** Cover für alle Seiten als Referenz, mit explizitem Prompt-Hinweis:
+```javascript
+// Für Opa/Oma-Seiten:
+refNote = `${COMIC_STYLE}
+Match the art style of this cover image exactly.
+IMPORTANT: Some characters in this scene are NOT visible in the reference image.
+Draw them ONLY from their text descriptions — do NOT copy or invent faces from the reference.
+Characters NOT in reference: ${charsNotInPhoto.map(c => c.name).join(", ")}.
+\n\n`;
+```
+
+**Risiko:** gpt-image-2 könnte Opa/Oma-Gesichter aus dem Cover "erfinden" (Papa-Gesicht auf Opa).
+**Vorteil:** Stil ist garantiert konsistent, kein Manga-Risiko.
 
 ---
 
 ## 🟡 Nächste Priorität (nach Qualität stabil)
 
-### 3. Luca-Größenanker — Quick Win
+### 6. Luca-Größenanker — Quick Win
 **Status:** ⏳ Offen — sofort umsetzbar
 **Aufwand:** 30 Minuten
 **Datei:** `backend-railway/src/routes/comic.js` — `/structure` Route, Character-Extraktion
@@ -89,7 +210,7 @@ Das gibt dem Modell einen relativen Anker statt nur "3 Jahre alt".
 
 ---
 
-### 4. "Neu illustrieren" mit Freitextfeld
+### 7. "Neu illustrieren" mit Freitextfeld
 **Status:** ⏳ Offen
 **Aufwand:** 3-4 Stunden
 **Dateien:** `Step5Preview.tsx`, `PanelView.tsx`, `comic.js`
@@ -111,37 +232,7 @@ if (reillustrationNote) {
 
 ---
 
-### 5. Quality Score + Auto-Retry ⚠️ vor Launch
-**Status:** ⏳ Offen
-**Aufwand:** 3-4 Stunden
-**Datei:** `backend-railway/src/routes/comic.js`
-
-**Warum vor Launch:** Manga-Stil-Ausreißer passieren zufällig. Ohne Auto-Retry landen schlechte Seiten beim Kunden.
-
-**Lösung:**
-```javascript
-// Nach jeder Seiten-Generierung: GPT-4.1 Vision Check
-const check = await openai.chat.completions.create({
-  model: "gpt-4.1",
-  messages: [{ role: "user", content: [
-    { type: "image_url", image_url: { url: generatedPageUrl } },
-    { type: "text", text: `Is this image in European Bande Dessinée / graphic novel style 
-      (like Blacksad, Bastien Vivès)? Or does it look manga/anime/photorealistic?
-      Return JSON: {"style": "bande-dessinee|manga|photorealistic|other", "score": 0-100}` }
-  ]}],
-  max_tokens: 50,
-});
-
-if (score < 70) {
-  // Retry mit verstärktem Anti-Manga-Prompt
-}
-```
-
-**Kosten:** ~$0.005 pro Seite (GPT-4.1 Vision, low detail)
-
----
-
-### 5. Outfit-State (Supabase)
+### 8. Outfit-State (Supabase)
 **Status:** ⏳ Offen
 **Aufwand:** 2-3 Tage
 **Dateien:** Supabase Schema + `comic.js`
@@ -174,7 +265,7 @@ if (lastOutfit?.context === currentContext) {
 
 ## 🟢 Niedrige Priorität (nach Qualität + UX stabil)
 
-### 6. UI/UX Redesign — Wizard ruhiger gestalten
+### 9. UI/UX Redesign — Wizard ruhiger gestalten
 **Status:** ⏳ Warten bis Bildqualität stabil
 **Aufwand:** 1-2 Tage
 **Dateien:** `Step1Story.tsx`, `Step2Upload.tsx`, `Step3Style.tsx`, `page.tsx`, `ueber-uns/page.tsx`
@@ -193,7 +284,7 @@ Momente-Feature, Custom Dialogs, alle Validierungen bleiben erhalten.
 
 ---
 
-### 7. OpenAI Tier 2
+### 10. OpenAI Tier 2
 **Status:** ⏳ Offen
 **Aufwand:** 5 Minuten ($50+ laden)
 
