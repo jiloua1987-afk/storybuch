@@ -457,25 +457,33 @@ export default function PanelView({ imageUrl, title, panels = [], panelPositions
                   {(w, h) => (
                     <HanddrawnBubble w={w} h={h} type="speech">
                       {isEditing ? (
-                        <div className="flex flex-col gap-1 w-full h-full">
+                        <div
+                          className="flex flex-col gap-1 w-full h-full"
+                          onMouseDown={(e) => e.stopPropagation()}
+                        >
                           <input
+                            autoFocus
                             value={bubble.speaker}
                             onChange={(e) => setExtraBubbles(prev => prev.map(b => b.id === bubble.id ? { ...b, speaker: e.target.value } : b))}
                             placeholder="Sprecher (optional)"
-                            className="bg-transparent outline-none text-[#1A1410] border-b border-[#C9963A]/40 text-xs font-bold"
+                            className="bg-transparent outline-none text-[#1A1410] border-b border-[#C9963A]/40 text-xs font-bold w-full"
                             style={{ fontFamily: "'Comic Neue', cursive", fontSize: "11px" }}
                             onClick={(e) => e.stopPropagation()}
+                            onKeyDown={(e) => e.key === "Tab" && e.preventDefault()}
                           />
                           <textarea
-                            autoFocus
                             value={bubble.dialog}
                             onChange={(e) => setExtraBubbles(prev => prev.map(b => b.id === bubble.id ? { ...b, dialog: e.target.value } : b))}
-                            onBlur={() => setEditingExtra(null)}
                             onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && setEditingExtra(null)}
                             className="w-full flex-1 bg-transparent outline-none resize-none text-[#1A1410]"
                             style={{ fontFamily: "'Comic Neue', cursive", fontSize: "12px" }}
                             onClick={(e) => e.stopPropagation()}
+                            placeholder="Text eingeben…"
                           />
+                          <button
+                            className="text-xs text-[#C9963A] font-semibold text-right"
+                            onMouseDown={(e) => { e.stopPropagation(); setEditingExtra(null); }}
+                          >Fertig ✓</button>
                         </div>
                       ) : (
                         <p
