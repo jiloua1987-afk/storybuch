@@ -91,7 +91,80 @@ Alle Änderungen dieser Session. Backend muss auf Railway neu deployed werden da
 
 ---
 
-## 🔴 NÄCHSTE SESSION — Fundamentale Fixes (nicht weiter patchen!)
+## 🏗️ FALLBACK-ARCHITEKTUR — Railway + Supabase (wenn Test weiterhin schlecht)
+
+### Wann umsetzen?
+Wenn nach dem aktuellen Deploy folgende Probleme weiterhin bestehen:
+- Charaktere sehen auf verschiedenen Seiten unterschiedlich aus
+- Stil inkonsistent zwischen Seiten
+- Klamotten ändern sich nicht trotz OVERRIDE
+
+### Architektur-Übersicht
+
+```
+Frontend (Next.js/Vercel)
+    ↓ POST /api/comic/generate
+Railway Backend (Orchestrator)
+    ↓ speichert/liest
+Supabase (Gedächtnis)
+    ↓ generiert Bilder
+OpenAI gpt-image-2
+```
+
+### Railway = Orchestrator
+Steuert den gesamten Ablauf:
+1. Cover generieren → in Supabase speichern als `character_reference`
+2. Cover-Buffer für alle Seiten-Calls bereithalten (im Memory, kein Re-Download)
+3. Nach jeder Seite: Quality Score berechnen (GPT-4o Vision)
+4. Bei Score < 70: automatisch retry mit Cover statt User-Foto
+
+### Supabase = Gedächtnis
+Tabellen:
+- `projects` — project_id, cover_url, character_anchors, style_reference
+- `pages` — project_id, page_number, image_url, quality_score
+- `character_memory` — project_id, character_name, best_image_url, visual_anchor
+
+### Implementierungsplan (ca. 1 Tag)
+
+**Schritt 1: Supabase Tabellen anlegen**
+```sql
+CREATE TABLE projects (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  cover_url TEXT,
+  character_anchors JSONB,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE TABLE pages (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  project_id UUID REFERENCES projects(id),
+  page_number INT,
+  image_url TEXT,
+  quality_score INT,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+```
+
+**Schritt 2: Railway Cover-Route erweitern**
+- Cover generieren
+- Cover-Buffer im Railway-Memory cachen (Map: projectId → buffer)
+- Cover-URL in Supabase `projects` speichern
+
+**Schritt 3: Railway Page-Route erweitern**
+- Cover-Buffer aus Memory holen (kein HTTP-Download mehr)
+- Nach Generierung: GPT-4o Vision Quality Check
+- Score in Supabase speichern
+- Bei Score < 70: retry mit Cover als Referenz
+
+**Schritt 4: Frontend vereinfachen**
+- Nur noch einen einzigen POST an Railway: `/api/comic/generate`
+- Railway orchestriert alles intern
+- Frontend pollt Status oder bekommt SSE-Stream
+
+### Kosten dieser Architektur
+- Supabase: kostenlos bis 500MB
+- Quality Check: +$0.01 pro Seite (GPT-4o Vision)
+- Gesamt: +$0.05-0.10 pro Comic
 
 ### Root Cause Analyse (30. April 2026, Abend)
 
