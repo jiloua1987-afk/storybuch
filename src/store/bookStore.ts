@@ -81,7 +81,8 @@ export interface BookProject {
   characters: Character[];
   chapters: Chapter[];
   coverImageUrl?: string;
-  referenceImages?: string[];   // Base64 Personenfotos
+  referenceImages?: string[];   // Base64 Personenfotos (legacy, wird durch referenceImageUrls ersetzt)
+  referenceImageUrls?: { label: string; url: string }[]; // Supabase URLs der hochgeladenen Fotos
   locationImages?: string[];    // Base64 Ortsfotos
   status: "draft" | "generating" | "preview" | "checkout" | "ordered";
   createdAt: string;

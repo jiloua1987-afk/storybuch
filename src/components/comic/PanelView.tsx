@@ -246,10 +246,251 @@ function initBubbleSize(dialog: string, speaker: string): { w: number; h: number
 export default function PanelView({ imageUrl, title, panels = [], panelPositions, pageNumber }: PanelViewProps) {
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [editedDialogs, setEditedDialogs] = useState<Record<number, string>>({});
+  const [hiddenBubbles, setHiddenBubbles] = useState<Set<number>>(new Set());
+  const [extraBubbles, setExtraBubbles] = useState<Array<{ id: number; top: number; left: number; dialog: string; speaker: string }>>([]);
+  const [editingExtra, setEditingExtra] = useState<number | null>(null);
   const [dragPositions, setDragPositions] = useState<Record<number, { top: number; left: number }>>({});
-  const [dragging, setDragging] = useState<number | null>(null);
+  const [dragging, setDragging] = useState<{ type: "panel" | "extra"; index: number } | null>(null);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+  const [addMode, setAddMode] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const nextExtraId = useRef(1000);
+
+  const isValidDialog = (d?: string | null) =>
+    d && d.trim().length > 0 && d.trim().toLowerCase() !== "null";
+
+  const getDialog = (panel: PanelData, i: number) => {
+    const edited = editedDialogs[i];
+    if (edited !== undefined) return edited;
+    return isValidDialog(panel.dialog) ? panel.dialog! : "";
+  };
+
+  const dialogPanels = panels
+    .map((p, i) => ({ ...p, originalIndex: i }))
+    .filter((p) => isValidDialog(p.dialog) && !hiddenBubbles.has(p.originalIndex ?? 0));
+
+  const hasDetectedPositions = panelPositions && panelPositions.length > 0;
+
+  const resolvedPositions = useMemo(() => {
+    const initial = dialogPanels.map((panel) => {
+      const i = panel.originalIndex;
+      let top = 5;
+      let left = 2;
+      if (hasDetectedPositions) {
+        const pos = panelPositions!.find(p => p.nummer === i + 1) || panelPositions![i];
+        if (pos) { top = pos.top + 2; left = pos.left + 2; }
+      } else {
+        const style = getFallbackPosition(i, panels.length);
+        top  = parseFloat(String(style.top  ?? "5%"));
+        left = parseFloat(String(style.left ?? style.right ?? "2%"));
+      }
+      const text = (panel.speaker || "") + (panel.dialog || "");
+      const wPx = Math.min(220, Math.max(100, 80 + text.length * 3.2));
+      const lines = Math.ceil(text.length / 22);
+      const hPx = Math.max(48, 28 + lines * 20);
+      return { top, left, w: (wPx / 400) * 100, h: (hPx / 600) * 100 };
+    });
+    return resolveCollisions(initial);
+  }, [dialogPanels.length, hasDetectedPositions, panels.length]); // eslint-disable-line
+
+  const handleMouseDown = (e: React.MouseEvent, type: "panel" | "extra", index: number) => {
+    if (editingIndex !== null || editingExtra !== null) return;
+    e.preventDefault();
+    setDragging({ type, index });
+    const rect = e.currentTarget.getBoundingClientRect();
+    setDragOffset({ x: e.clientX - rect.left, y: e.clientY - rect.top });
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!dragging || !containerRef.current) return;
+    e.preventDefault();
+    const containerRect = containerRef.current.getBoundingClientRect();
+    const newLeft = ((e.clientX - containerRect.left - dragOffset.x) / containerRect.width) * 100;
+    const newTop = ((e.clientY - containerRect.top - dragOffset.y) / containerRect.height) * 100;
+    const clampedLeft = Math.max(0, Math.min(75, newLeft));
+    const clampedTop = Math.max(0, Math.min(90, newTop));
+
+    if (dragging.type === "panel") {
+      setDragPositions(prev => ({ ...prev, [dragging.index]: { left: clampedLeft, top: clampedTop } }));
+    } else {
+      setExtraBubbles(prev => prev.map(b => b.id === dragging.index ? { ...b, left: clampedLeft, top: clampedTop } : b));
+    }
+  };
+
+  const handleMouseUp = () => setDragging(null);
+
+  // Click on image to add new bubble
+  const handleImageClick = (e: React.MouseEvent) => {
+    if (!addMode || !containerRef.current) return;
+    e.stopPropagation();
+    const containerRect = containerRef.current.getBoundingClientRect();
+    const left = ((e.clientX - containerRect.left) / containerRect.width) * 100;
+    const top = ((e.clientY - containerRect.top) / containerRect.height) * 100;
+    const id = nextExtraId.current++;
+    setExtraBubbles(prev => [...prev, { id, top: Math.max(2, top - 5), left: Math.max(2, left - 10), dialog: "Neuer Text", speaker: "" }]);
+    setEditingExtra(id);
+    setAddMode(false);
+  };
+
+  const getFinalPosition = (panelIndex: number, bubbleIndex: number): React.CSSProperties => {
+    const dragPos = dragPositions[panelIndex];
+    if (dragPos) return { position: "absolute", top: `${dragPos.top}%`, left: `${dragPos.left}%`, zIndex: 10 };
+    const resolved = resolvedPositions[bubbleIndex];
+    if (resolved) return { position: "absolute", top: `${resolved.top}%`, left: `${resolved.left}%`, zIndex: 10 };
+    return getFallbackPosition(panelIndex, panels.length);
+  };
+
+  return (
+    <div className="space-y-2">
+      {/* Toolbar */}
+      <div className="flex gap-2 px-1">
+        <button
+          onClick={() => setAddMode(a => !a)}
+          className={`text-xs px-3 py-1.5 rounded-lg border transition-all ${addMode ? "bg-[#C9963A] text-white border-[#C9963A]" : "border-[#E8D9C0] text-[#8B7355] hover:bg-[#F5EDE0]"}`}
+        >
+          {addMode ? "Klick ins Bild zum Platzieren…" : "+ Sprechblase hinzufügen"}
+        </button>
+        {(hiddenBubbles.size > 0 || extraBubbles.length > 0) && (
+          <button
+            onClick={() => { setHiddenBubbles(new Set()); setExtraBubbles([]); setEditedDialogs({}); }}
+            className="text-xs px-3 py-1.5 rounded-lg border border-[#E8D9C0] text-[#8B7355] hover:bg-[#F5EDE0] transition-all"
+          >
+            Alle zurücksetzen
+          </button>
+        )}
+      </div>
+
+      <div
+        ref={containerRef}
+        className={`relative w-full bg-[#F5EDE0] rounded-xl overflow-hidden shadow-xl ${addMode ? "cursor-crosshair" : ""}`}
+        style={{ aspectRatio: "1024 / 1536" }}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseUp}
+        onClick={handleImageClick}
+      >
+        <div className="relative w-full h-full">
+          {imageUrl ? (
+            <img src={imageUrl} alt={title || "Comic page"} className="w-full h-full object-cover block" />
+          ) : (
+            <div className="w-full h-full bg-gray-100 flex items-center justify-center">
+              <p className="text-gray-400 text-sm">Kein Bild</p>
+            </div>
+          )}
+
+          {/* Existing bubbles from panels */}
+          {dialogPanels.map((panel, bubbleIndex) => {
+            const i = panel.originalIndex;
+            const dialog = getDialog(panel, i);
+            if (!dialog) return null;
+            const isEditing = editingIndex === i;
+            const posStyle = getFinalPosition(i, bubbleIndex);
+            const isDragging = dragging?.type === "panel" && dragging.index === i;
+            const { w: initW, h: initH } = initBubbleSize(dialog, panel.speaker || "");
+
+            return (
+              <div
+                key={i}
+                className="group"
+                style={{ ...posStyle, cursor: isDragging ? "grabbing" : "grab" }}
+                onMouseDown={(e) => { e.stopPropagation(); handleMouseDown(e, "panel", i); }}
+              >
+                <ResizableBubble initW={initW} initH={initH} style={{}}>
+                  {(w, h) => (
+                    <HanddrawnBubble w={w} h={h} type={panel.bubble_type}>
+                      {/* Delete button */}
+                      <button
+                        className="absolute -top-3 -right-3 w-5 h-5 bg-red-500 text-white rounded-full text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-40 hover:bg-red-600"
+                        style={{ position: "absolute", top: -10, right: -10 }}
+                        onMouseDown={(e) => e.stopPropagation()}
+                        onClick={(e) => { e.stopPropagation(); setHiddenBubbles(prev => new Set([...prev, i])); }}
+                      >×</button>
+                      {isEditing ? (
+                        <textarea
+                          autoFocus
+                          value={dialog}
+                          onChange={(e) => setEditedDialogs({ ...editedDialogs, [i]: e.target.value })}
+                          onBlur={() => setEditingIndex(null)}
+                          onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && setEditingIndex(null)}
+                          className="w-full h-full bg-transparent outline-none resize-none text-[#1A1410]"
+                          style={{ fontFamily: "'Comic Neue', cursive", fontSize: "12px" }}
+                          onClick={(e) => e.stopPropagation()}
+                        />
+                      ) : (
+                        <p
+                          className="text-[#1A1410] leading-snug select-none"
+                          style={{ fontFamily: "'Comic Neue', cursive", fontSize: "12px", fontWeight: 500 }}
+                          onDoubleClick={(e) => { e.stopPropagation(); setEditingIndex(i); }}
+                        >
+                          {panel.speaker && panel.speaker !== "narrator" && panel.speaker.toLowerCase() !== "null" && (
+                            <span className="font-bold">{panel.speaker}: </span>
+                          )}
+                          {dialog}
+                        </p>
+                      )}
+                    </HanddrawnBubble>
+                  )}
+                </ResizableBubble>
+              </div>
+            );
+          })}
+
+          {/* Extra bubbles added by user */}
+          {extraBubbles.map((bubble) => {
+            const isEditing = editingExtra === bubble.id;
+            const { w: initW, h: initH } = initBubbleSize(bubble.dialog, bubble.speaker);
+            return (
+              <div
+                key={bubble.id}
+                className="group"
+                style={{ position: "absolute", top: `${bubble.top}%`, left: `${bubble.left}%`, zIndex: 15, cursor: "grab" }}
+                onMouseDown={(e) => { e.stopPropagation(); handleMouseDown(e, "extra", bubble.id); }}
+              >
+                <ResizableBubble initW={initW} initH={initH} style={{}}>
+                  {(w, h) => (
+                    <HanddrawnBubble w={w} h={h} type="speech">
+                      {/* Delete button */}
+                      <button
+                        className="absolute w-5 h-5 bg-red-500 text-white rounded-full text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-40 hover:bg-red-600"
+                        style={{ position: "absolute", top: -10, right: -10 }}
+                        onMouseDown={(e) => e.stopPropagation()}
+                        onClick={(e) => { e.stopPropagation(); setExtraBubbles(prev => prev.filter(b => b.id !== bubble.id)); }}
+                      >×</button>
+                      {isEditing ? (
+                        <textarea
+                          autoFocus
+                          value={bubble.dialog}
+                          onChange={(e) => setExtraBubbles(prev => prev.map(b => b.id === bubble.id ? { ...b, dialog: e.target.value } : b))}
+                          onBlur={() => setEditingExtra(null)}
+                          onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && setEditingExtra(null)}
+                          className="w-full h-full bg-transparent outline-none resize-none text-[#1A1410]"
+                          style={{ fontFamily: "'Comic Neue', cursive", fontSize: "12px" }}
+                          onClick={(e) => e.stopPropagation()}
+                        />
+                      ) : (
+                        <p
+                          className="text-[#1A1410] leading-snug select-none"
+                          style={{ fontFamily: "'Comic Neue', cursive", fontSize: "12px", fontWeight: 500 }}
+                          onDoubleClick={(e) => { e.stopPropagation(); setEditingExtra(bubble.id); }}
+                        >
+                          {bubble.dialog}
+                        </p>
+                      )}
+                    </HanddrawnBubble>
+                  )}
+                </ResizableBubble>
+              </div>
+            );
+          })}
+        </div>
+
+        {pageNumber && (
+          <div className="absolute bottom-1 left-0 right-0 text-center text-xs text-white/60 pointer-events-none">Seite {pageNumber}</div>
+        )}
+      </div>
+    </div>
+  );
+}
 
   const isValidDialog = (d?: string | null) =>
     d && d.trim().length > 0 && d.trim().toLowerCase() !== "null";

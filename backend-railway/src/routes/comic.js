@@ -97,8 +97,12 @@ router.post("/structure", async (req, res) => {
   try {
     const {
       storyInput, guidedAnswers = {}, tone, comicStyle, mustHaveSentences,
-      language, category, numPages = 5, referenceImages = [],
+      language, category, numPages = 5, referenceImages = [], referenceImageUrls = [],
     } = req.body;
+
+    // Primary reference: Supabase URLs (no size limit) > Base64 fallback
+    const primaryRefUrl = referenceImageUrls[0]?.url || null;
+    const primaryRefBase64 = referenceImages[0] || null;
 
     const langMap = { de: "German", en: "English", fr: "French", es: "Spanish" };
     const lang = langMap[language] || "German";
@@ -224,16 +228,19 @@ Respond ONLY with JSON: {"pages":[{"id":"page1","pageNumber":1,"title":"Title in
     // Enrich characters from reference photo
     // Step 1: Detect WHO is actually visible in the photo
     // Step 2: Only enrich characters that are in the photo — others get story-based visual_anchor
-    if (referenceImages.length > 0 && characters.length > 0) {
+    if ((referenceImageUrls.length > 0 || referenceImages.length > 0) && characters.length > 0) {
       console.log(`Analyzing photo — detecting which characters are visible...`);
-      const ref = referenceImages[0];
+
+      // Use URL if available, otherwise base64
+      const refImageContent = primaryRefUrl
+        ? { type: "image_url", image_url: { url: primaryRefUrl, detail: "high" } }
+        : { type: "image_url", image_url: { url: `data:image/jpeg;base64,${primaryRefBase64}`, detail: "high" } };
 
       try {
-        // Ask GPT-4o Vision: who is in this photo?
         const detectionRes = await openai.chat.completions.create({
           model: "gpt-4.1",
           messages: [{ role: "user", content: [
-            { type: "image_url", image_url: { url: `data:image/jpeg;base64,${ref}`, detail: "high" } },
+            refImageContent,
             { type: "text", text: `This photo contains some of these characters: ${characters.map(c => `${c.name} (${c.age} years old)`).join(", ")}.
 How many people are visible in this photo? Which of the listed characters are most likely shown based on their age?
 Return JSON only: {"visible_count": 4, "likely_characters": ["Mama", "Papa", "Luca", "Maria"]}
@@ -247,17 +254,15 @@ Base your answer ONLY on ages and count of people visible. Do NOT identify anyon
         const likelyInPhoto = new Set((detection.likely_characters || []).map((n) => n.toLowerCase()));
         console.log(`  → Detected in photo: ${[...likelyInPhoto].join(", ")}`);
 
-        // Step 2: Enrich each character appropriately
         characters = await Promise.all(characters.map(async (char) => {
           const inPhoto = likelyInPhoto.has(char.name.toLowerCase());
 
           if (inPhoto) {
-            // Character is in photo → describe from photo
             try {
               const r = await openai.chat.completions.create({
                 model: "gpt-4.1",
                 messages: [{ role: "user", content: [
-                  { type: "image_url", image_url: { url: `data:image/jpeg;base64,${ref}`, detail: "high" } },
+                  refImageContent,
                   { type: "text", text: `Describe the person who is approximately ${char.age} years old in this photo, for a comic artist. Focus on: hair color/texture/length, skin tone, eye color, distinctive features (beard, glasses, hijab etc), body type. Do NOT identify anyone. English, max 60 words. Start with "${char.name}:"` },
                 ]}],
                 max_tokens: 120,
@@ -315,7 +320,11 @@ Respond with ONLY the description, starting with the character name.`,
 // ─────────────────────────────────────────────────────────────────────────────
 router.post("/cover", async (req, res) => {
   try {
-    const { characters = [], location = "" } = req.body;
+    const { characters = [], location = "", referenceImages = [], referenceImageUrls = [] } = req.body;
+
+    // Primary reference URL (Supabase) > Base64 fallback
+    const primaryRefUrl = referenceImageUrls[0]?.url || null;
+    const primaryRefBase64 = referenceImages[0] || null;
 
     const charDesc = characters.map(c => `${c.name}: ${c.visual_anchor}`).join("\n");
     const charNames = characters.map(c => c.name).join(", ");
@@ -332,6 +341,47 @@ ${charDesc}
 Composition: dynamic group shot, characters prominently in foreground, vivid illustrated background showing the story world. Some looking at viewer, some interacting with each other.
 NO text, NO title, NO letters anywhere in the image.`;
 
+    // Use user photo for cover — via URL (Supabase) or base64 fallback
+    if (primaryRefUrl || primaryRefBase64) {
+      try {
+        let refFile;
+        if (primaryRefUrl) {
+          // Fetch from Supabase URL
+          const buf = await fetchBuffer(primaryRefUrl);
+          const blob = new Blob([buf], { type: "image/jpeg" });
+          refFile = new File([blob], "reference.jpg", { type: "image/jpeg" });
+        } else {
+          refFile = toFile(primaryRefBase64);
+        }
+        const res2 = await openai.images.edit({
+          model: "gpt-image-2",
+          image: refFile,
+          prompt: `${COMIC_STYLE}
+
+THIS IS A COMIC BOOK COVER — NOT a photograph, NOT realistic.
+Transform the people in this photo into comic book characters in the style described above.
+Show ALL of these characters together: ${charNames}.
+For characters not visible in the photo, invent their appearance based on their description.
+Setting: ${location || "a beautiful Mediterranean setting"}.
+Character descriptions: ${charDesc}
+Composition: dynamic group shot, characters in foreground, vivid illustrated background.
+NO text, NO title, NO letters anywhere in the image.`,
+          size: "1024x1536",
+          quality: "high",
+        });
+        const item = (res2.data || [])[0];
+        const url = item?.url || (item?.b64_json ? `data:image/png;base64,${item.b64_json}` : null);
+        if (url) {
+          const coverUrl = await saveImage(url, "covers", `cover-${Date.now()}`);
+          console.log("✓ Cover done (with user photo)");
+          return res.json({ coverImageUrl: coverUrl || url });
+        }
+      } catch (e) {
+        console.warn("  → Cover with photo failed:", e.message);
+      }
+    }
+
+    // Fallback: generate without reference
     const { url: rawUrl } = await generateImage(prompt, null);
     const coverUrl = await saveImage(rawUrl, "covers", `cover-${Date.now()}`);
     console.log("✓ Cover done (generate only)");
@@ -350,8 +400,12 @@ router.post("/page", async (req, res) => {
   try {
     const {
       page, characters = [], comicStyle = "emotional",
-      referenceImages = [], coverImageUrl = "",
+      referenceImages = [], referenceImageUrls = [], coverImageUrl = "",
     } = req.body;
+
+    // Primary reference: Supabase URL > Base64 fallback
+    const primaryRefUrl = referenceImageUrls[0]?.url || null;
+    const primaryRefBase64 = referenceImages[0] || null;
 
     const mood = MOOD_MOD[comicStyle] || MOOD_MOD.emotional;
     const outfit = getOutfit(page.location);
@@ -417,9 +471,20 @@ RULES:
         console.warn("  → Cover fetch failed:", e.message);
       }
     }
-    if (!reference && !hasCharNotInPhoto && referenceImages[0]) {
-      reference = referenceImages[0];
-      refSource = "user-photo";
+    if (!reference && !hasCharNotInPhoto) {
+      // Use URL if available, otherwise base64
+      if (primaryRefUrl) {
+        try {
+          reference = await fetchBuffer(primaryRefUrl);
+          refSource = "user-photo";
+        } catch (e) {
+          console.warn("  → User photo URL fetch failed:", e.message);
+        }
+      }
+      if (!reference && primaryRefBase64) {
+        reference = primaryRefBase64;
+        refSource = "user-photo";
+      }
     }
 
     const refNote = refSource === "cover"
@@ -432,11 +497,14 @@ RULES:
     let { url: rawUrl, usedReference } = await generateImage(`${refNote}${prompt}`, reference);
 
     // If cover reference was blocked by safety filter → retry with user photo
-    if (!usedReference && refSource === "cover" && referenceImages[0]) {
+    if (!usedReference && refSource === "cover" && (primaryRefUrl || primaryRefBase64)) {
       console.log(`  → Cover blocked by safety, retrying with user photo`);
-      const userRefNote = `${COMIC_STYLE}\nThe people in this photo are the main characters. Draw them in the comic style above. NOT photorealistic. IMPORTANT: IGNORE the clothing from the photo — use the clothing described in the prompt instead.\n\n`;
-      const result2 = await generateImage(`${userRefNote}${prompt}`, referenceImages[0]);
-      rawUrl = result2.url;
+      const userRef = primaryRefUrl ? await fetchBuffer(primaryRefUrl).catch(() => null) : primaryRefBase64;
+      if (userRef) {
+        const userRefNote = `${COMIC_STYLE}\nThe people in this photo are the main characters. Draw them in the comic style above. NOT photorealistic. IMPORTANT: IGNORE the clothing from the photo — use the clothing described in the prompt instead.\n\n`;
+        const result2 = await generateImage(`${userRefNote}${prompt}`, userRef);
+        rawUrl = result2.url;
+      }
     }
 
     const bookId = page.id?.split("-")[0] || `book-${Date.now()}`;

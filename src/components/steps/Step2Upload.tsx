@@ -28,8 +28,8 @@ export default function Step2Upload() {
   const { setStep, project, updateProject } = useBookStore();
   const [images, setImages] = useState<UploadedImage[]>([]);
   const [consent, setConsent] = useState(false);
-  const [activeType, setActiveType] = useState<"person" | "location" | "situation">("person");
   const [labelInput, setLabelInput] = useState("");
+  const [uploading, setUploading] = useState(false);
 
   const onDrop = useCallback(
     async (acceptedFiles: File[]) => {
@@ -57,15 +57,48 @@ export default function Step2Upload() {
 
   const removeImage = (id: string) => setImages((prev) => prev.filter((img) => img.id !== id));
 
-  const handleNext = () => {
-    const characters = images
-      .filter((img) => img.type === "person")
-      .map((img) => ({ id: img.id, name: img.label, role: "Hauptfigur", imageUrl: img.preview, base64: img.base64 }));
-    const locationImages = images
-      .filter((img) => img.type === "location")
-      .map((img) => img.base64).filter(Boolean);
-    updateProject({ characters, referenceImages: characters.map((c) => c.base64).filter(Boolean), locationImages });
+  const handleNext = async () => {
+    setUploading(true);
+    try {
+    let referenceImageUrls: { label: string; url: string }[] = [];
+    const personImages = images.filter(img => img.type === "person");
+
+    if (personImages.length > 0) {
+      try {
+        const formData = new FormData();
+        personImages.forEach(img => {
+          formData.append("files", img.file);
+          formData.append("labels", img.label);
+        });
+        const res = await fetch("/api/upload", { method: "POST", body: formData });
+        if (res.ok) {
+          const data = await res.json();
+          referenceImageUrls = data.uploaded || [];
+        }
+      } catch (e) {
+        console.warn("Upload to Supabase failed, using base64 fallback");
+      }
+    }
+
+    const characters = personImages.map((img) => ({
+      id: img.id,
+      name: img.label,
+      role: "Hauptfigur",
+      imageUrl: img.preview,
+      base64: img.base64,
+    }));
+    const locationImages = images.filter(img => img.type === "location").map(img => img.base64).filter(Boolean);
+
+    updateProject({
+      characters,
+      referenceImages: characters.map(c => c.base64).filter(Boolean), // Base64 fallback
+      referenceImageUrls,  // Supabase URLs (primary)
+      locationImages,
+    });
     setStep(2);
+    } finally {
+      setUploading(false);
+    }
   };
 
   const typeLabels = {
@@ -169,7 +202,9 @@ export default function Step2Upload() {
 
       <div className="flex gap-3">
         <Button variant="secondary" onClick={() => setStep(0)}>← Zurück</Button>
-        <Button onClick={handleNext} fullWidth>Weiter zur Widmung →</Button>
+        <Button onClick={handleNext} fullWidth disabled={uploading}>
+          {uploading ? "Bilder werden hochgeladen…" : "Weiter zur Widmung →"}
+        </Button>
       </div>
     </motion.div>
   );

@@ -57,15 +57,16 @@ export default function Step4Generate() {
 
       const [{ pages, characters }, endData] = await Promise.all([
         post("/api/comic/structure", {
-          storyInput:        project?.storyInput || "",
-          guidedAnswers:     project?.guidedAnswers || {},
-          tone:              project?.tone || "humorvoll",
-          comicStyle:        project?.comicStyle || "emotional",
-          mustHaveSentences: project?.mustHaveSentences || "",
-          language:          project?.language || "de",
-          category:          project?.guidedAnswers?.category || "familie",
-          numPages:          project?.numPages || 5,
-          referenceImages:   project?.referenceImages || [],
+          storyInput:           project?.storyInput || "",
+          guidedAnswers:        project?.guidedAnswers || {},
+          tone:                 project?.tone || "humorvoll",
+          comicStyle:           project?.comicStyle || "emotional",
+          mustHaveSentences:    project?.mustHaveSentences || "",
+          language:             project?.language || "de",
+          category:             project?.guidedAnswers?.category || "familie",
+          numPages:             project?.numPages || 5,
+          referenceImages:      project?.referenceImages || [],
+          referenceImageUrls:   project?.referenceImageUrls || [],
         }),
         post("/api/comic/ending", {
           storyInput:     project?.storyInput || "",
@@ -103,11 +104,12 @@ export default function Step4Generate() {
       let coverImageUrl = "";
       try {
         const coverData = await post("/api/comic/cover", {
-          title:           project?.title || "Mein Comic",
+          title:                project?.title || "Mein Comic",
           characters,
-          category:        project?.guidedAnswers?.category || "familie",
-          location:        project?.guidedAnswers?.ort || project?.guidedAnswers?.location || "",
-          referenceImages: project?.referenceImages || [],
+          category:             project?.guidedAnswers?.category || "familie",
+          location:             project?.guidedAnswers?.ort || project?.guidedAnswers?.location || "",
+          referenceImages:      project?.referenceImages || [],
+          referenceImageUrls:   project?.referenceImageUrls || [],
         });
         coverImageUrl = coverData.coverImageUrl || "";
         if (coverImageUrl) updateProject({ coverImageUrl });
@@ -134,10 +136,11 @@ export default function Step4Generate() {
             const pageData = await post("/api/comic/page", {
               page,
               characters,
-              comicStyle:      project?.comicStyle || "emotional",
-              category:        project?.guidedAnswers?.category || "familie",
-              referenceImages: project?.referenceImages || [],
-              coverImageUrl,   // ← Cover als primäre Stil-Referenz
+              comicStyle:           project?.comicStyle || "emotional",
+              category:             project?.guidedAnswers?.category || "familie",
+              referenceImages:      project?.referenceImages || [],
+              referenceImageUrls:   project?.referenceImageUrls || [],
+              coverImageUrl,
             });
 
             chapters[i] = {
