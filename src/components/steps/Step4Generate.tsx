@@ -94,31 +94,11 @@ export default function Step4Generate() {
         addLog("Abschlussseite fertig", true);
       }
 
-      // ── Step 2: Style Master Panel — reiner Stil-Anker ohne Foto ──────────────
-      // Wird vor Cover generiert — gibt dem gesamten Comic einen konsistenten Stil-Lock
-      // Verhindert Manga/Ghibli-Drift bei warmen Szenen (Grillen, Abend, etc.)
-      setStepLabel("Stil wird definiert…");
-      setProgress(18);
-      addLog("Comic-Stil wird festgelegt…");
-
-      let styleMasterUrl = "";
-      try {
-        const styleMasterData = await post("/api/comic/style-master", {
-          location: project?.guidedAnswers?.ort || project?.guidedAnswers?.location || "",
-          comicStyle: project?.comicStyle || "emotional",
-        });
-        styleMasterUrl = styleMasterData.styleMasterUrl || "";
-        addLog("Stil-Referenz fertig", true);
-      } catch {
-        addLog("Stil-Referenz übersprungen", true);
-      }
-      setProgress(22);
-
-      // ── Step 3: Cover zuerst — sequenziell abwarten ────────────────────────
+      // ── Step 2: Cover zuerst — sequenziell abwarten ────────────────────────
       // Cover muss fertig sein bevor Seiten starten, damit alle Seiten
       // das Cover als Stil-Referenz nutzen können → konsistenter Stil
       setStepLabel("Cover wird erstellt…");
-      setProgress(25);
+      setProgress(20);
       addLog("Cover wird erstellt…");
 
       let coverImageUrl = "";
@@ -130,7 +110,6 @@ export default function Step4Generate() {
           location:             project?.guidedAnswers?.ort || project?.guidedAnswers?.location || "",
           referenceImages:      project?.referenceImages || [],
           referenceImageUrls:   project?.referenceImageUrls || [],
-          styleMasterUrl,
           projectId:            project?.id || `proj-${Date.now()}`,
         });
         coverImageUrl = coverData.coverImageUrl || "";
@@ -139,7 +118,7 @@ export default function Step4Generate() {
       } catch {
         addLog("Cover übersprungen", true);
       }
-      setProgress(35);
+      setProgress(30);
 
       // ── Step 3: Alle Seiten parallel mit Cover als Referenz ─────────────────
       setStepLabel("Seiten werden illustriert…");
@@ -163,7 +142,6 @@ export default function Step4Generate() {
               referenceImages:      project?.referenceImages || [],
               referenceImageUrls:   project?.referenceImageUrls || [],
               coverImageUrl,
-              styleMasterUrl,
               projectId:            project?.id || "",
             });
 
