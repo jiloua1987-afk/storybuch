@@ -8,15 +8,15 @@ const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 // ── Shared comic style — identical for every page ─────────────────────────────
 // Placed FIRST in every prompt — gpt-image-2 weights early instructions more heavily
 const COMIC_STYLE = [
-  "COMIC BOOK ILLUSTRATION STYLE — European graphic novel, similar to Blacksad or Bastien Vivès.",
-  "Warm cinematic colors with golden tones and soft dramatic shadows.",
-  "Bold but clean ink outlines, rich detailed colors, no harsh dark shadows.",
-  "Expressive faces with clear emotions, detailed eyes and features.",
-  "Realistic proportions — NOT manga, NOT anime, NOT cartoon exaggeration.",
-  "Professional graphic novel quality, similar to the Strand/beach page style.",
-  "ABSOLUTELY NOT photorealistic. NOT a photograph. NOT watercolor.",
-  "Every page must look IDENTICAL in style to every other page.",
-  "If this looks like a photo or manga/anime, it is WRONG.",
+  "EUROPEAN BANDE DESSINÉE ILLUSTRATION — Franco-Belgian comic book style, similar to Blacksad or Bastien Vivès.",
+  "Bold clean ink outlines on every figure and object. Flat cel-shaded color areas, NOT photographic gradients.",
+  "Warm cinematic colors: golden tones, rich shadows, vivid saturated hues.",
+  "Expressive stylized faces — clearly drawn eyes, nose, mouth. NOT photographic faces.",
+  "Realistic human proportions. Western comic book anatomy.",
+  "STRICT PROHIBITION: NOT manga. NOT anime. NOT Japanese comic style. NOT big anime eyes. NOT speed lines.",
+  "STRICT PROHIBITION: NOT photorealistic. NOT a photograph. NOT CGI render. NOT watercolor painting.",
+  "This must look like a page printed in a European comic album — ink outlines visible on every edge.",
+  "Every page in this comic MUST look identical in style. Consistent ink weight, color palette, and character design.",
 ].join(" ");
 
 const MOOD_MOD = {
@@ -195,6 +195,13 @@ EMOTIONS: Show the CORRECT emotion.
 - Do NOT make everyone smile if the scene is sad or tense
 
 DIALOGS: Every panel needs dialog or narrator caption (10-15 words in ${lang}).
+
+CRITICAL — ONLY SHOW CHARACTERS PRESENT IN THIS SCENE:
+- Read the scene description carefully. Only include characters explicitly mentioned in it.
+- Do NOT add characters from the broader story who are not part of this specific moment.
+- Example: if the scene is at an airport departure with Mama, Papa, Luca, Maria — do NOT add grandparents who are waiting in Tunisia.
+- Each panel's "szene" must only reference characters who are physically present in that scene.
+- A character can only be "speaker" if they appear in that panel's szene.
 
 Respond ONLY with JSON:
 {"id":"page${i + 1}","pageNumber":${i + 1},"title":"Short title in ${lang}","location":"English location description","timeOfDay":"daytime","panels":[{"nummer":1,"szene":"Specific English scene — what characters DO and FEEL","dialog":"${lang} dialog","speaker":"Name or null","bubble_type":"speech"}]}`
@@ -546,7 +553,7 @@ RULES:
       ? `${COMIC_STYLE}\nThe people in this photo are the main characters. Draw them in the comic style above. NOT photorealistic. IMPORTANT: IGNORE the clothing from the photo — use the clothing described in the prompt instead.\n\n`
       : refSource === "user-photo-style"
       ? `${COMIC_STYLE}\nUse this photo ONLY for the art style and color palette — NOT for the faces. Draw ALL characters exactly as described in the character descriptions below. NOT photorealistic. IGNORE the clothing from the photo.\n\n`
-      : `${COMIC_STYLE}\nDo NOT use soft watercolor or painterly style. Use the same sharp ink outlines and rich colors as a European graphic novel. Crisp, defined lines on every figure.\n\n`;
+      : `${COMIC_STYLE}\nDraw in the style of a printed Franco-Belgian comic album (Bande Dessinée) — bold ink outlines, flat cel-shaded colors, stylized expressive faces. NOT manga. NOT anime. NOT photorealistic. Crisp defined ink lines on every figure, identical style to a Blacksad or Bastien Vivès page.\n\n`;
 
     console.log(`Generating page "${page.title}" (${panelCount} panels, ref: ${refSource})`);
     let { url: rawUrl, usedReference } = await generateImage(`${refNote}${prompt}`, reference);
@@ -556,7 +563,7 @@ RULES:
       console.log(`  → Retrying with user photo for style consistency`);
       const userRef = primaryRefUrl ? await fetchBuffer(primaryRefUrl).catch(() => null) : primaryRefBase64;
       if (userRef) {
-        const userRefNote = `${COMIC_STYLE}\nUse this photo ONLY for the art style and color palette. Draw ALL characters exactly as described below. NOT photorealistic. IGNORE clothing from photo.\n\n`;
+        const userRefNote = `${COMIC_STYLE}\nUse this photo ONLY for the art style and color palette. Draw ALL characters exactly as described below. Franco-Belgian Bande Dessinée style — bold ink outlines, flat colors, NOT manga, NOT anime, NOT photorealistic. IGNORE clothing from photo.\n\n`;
         const result2 = await generateImage(`${userRefNote}${prompt}`, userRef);
         rawUrl = result2.url;
       }
