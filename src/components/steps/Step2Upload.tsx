@@ -169,7 +169,7 @@ export default function Step2Upload() {
 
       <div className="flex gap-3">
         <Button variant="secondary" onClick={() => setStep(0)}>← Zurück</Button>
-        <Button onClick={handleNext} fullWidth>Weiter zum Stil →</Button>
+        <Button onClick={handleNext} fullWidth>Weiter zur Widmung →</Button>
       </div>
     </motion.div>
   );
