@@ -150,7 +150,14 @@ Respond ONLY with JSON: {"characters":[{"name":"Name","age":30,"visual_anchor":"
             content: `You create ONE comic book page for a personal comic in ${lang}.
 Tone: ${tone}. Style: ${comicStyle}.
 
-Create 2-4 panels for this SINGLE scene. Each panel shows a different angle/moment of the SAME scene.
+PANEL COUNT — choose based on the scene:
+- 2 panels: one big moment, close emotional scene, single action (e.g. big hug, child's face reaction)
+- 3 panels: scene with clear beginning → middle → end, or 1 wide + 2 small
+- 4 panels: action sequence, multiple characters interacting, busy scene
+
+Do NOT always choose 4. Match the panel count to the scene complexity.
+
+Each panel shows a different angle/moment of the SAME scene.
 Think cinematically: wide shot → close-up → reaction shot.
 
 EMOTIONS: Show the CORRECT emotion.
@@ -203,27 +210,82 @@ Respond ONLY with JSON: {"pages":[{"id":"page1","pageNumber":1,"title":"Title in
     const charRes = await charPromise;
     let characters = JSON.parse(charRes.choices[0].message.content || "{}").characters || [];
 
-    // Enrich character descriptions from reference photos
-    if (referenceImages.length > 0) {
-      console.log(`Analyzing ${referenceImages.length} reference photo(s)...`);
-      characters = await Promise.all(characters.map(async (char, i) => {
-        const ref = referenceImages[i] || referenceImages[0];
-        if (!ref) return char;
-        try {
-          const r = await openai.chat.completions.create({
-            model: "gpt-4.1",
-            messages: [{ role: "user", content: [
-              { type: "image_url", image_url: { url: `data:image/jpeg;base64,${ref}`, detail: "high" } },
-              { type: "text", text: `Describe this person for a comic artist. Age, hair color/texture/length, skin tone, eye color, distinctive features (beard, glasses, hijab etc), body type. Do NOT identify anyone. English, max 60 words. Start with "${char.name}:"` },
-            ]}],
-            max_tokens: 120,
-          });
-          return { ...char, visual_anchor: r.choices[0].message.content || char.visual_anchor };
-        } catch (e) {
-          console.error("Photo analysis error:", e.message);
-          return char;
-        }
-      }));
+    // Enrich characters from reference photo
+    // Step 1: Detect WHO is actually visible in the photo
+    // Step 2: Only enrich characters that are in the photo — others get story-based visual_anchor
+    if (referenceImages.length > 0 && characters.length > 0) {
+      console.log(`Analyzing photo — detecting which characters are visible...`);
+      const ref = referenceImages[0];
+
+      try {
+        // Ask GPT-4o Vision: who is in this photo?
+        const detectionRes = await openai.chat.completions.create({
+          model: "gpt-4.1",
+          messages: [{ role: "user", content: [
+            { type: "image_url", image_url: { url: `data:image/jpeg;base64,${ref}`, detail: "high" } },
+            { type: "text", text: `This photo contains some of these characters: ${characters.map(c => `${c.name} (${c.age} years old)`).join(", ")}.
+How many people are visible in this photo? Which of the listed characters are most likely shown based on their age?
+Return JSON only: {"visible_count": 4, "likely_characters": ["Mama", "Papa", "Luca", "Maria"]}
+Base your answer ONLY on ages and count of people visible. Do NOT identify anyone.` },
+          ]}],
+          response_format: { type: "json_object" },
+          max_tokens: 100,
+        });
+
+        const detection = JSON.parse(detectionRes.choices[0].message.content || "{}");
+        const likelyInPhoto = new Set((detection.likely_characters || []).map((n) => n.toLowerCase()));
+        console.log(`  → Detected in photo: ${[...likelyInPhoto].join(", ")}`);
+
+        // Step 2: Enrich each character appropriately
+        characters = await Promise.all(characters.map(async (char) => {
+          const inPhoto = likelyInPhoto.has(char.name.toLowerCase());
+
+          if (inPhoto) {
+            // Character is in photo → describe from photo
+            try {
+              const r = await openai.chat.completions.create({
+                model: "gpt-4.1",
+                messages: [{ role: "user", content: [
+                  { type: "image_url", image_url: { url: `data:image/jpeg;base64,${ref}`, detail: "high" } },
+                  { type: "text", text: `Describe the person who is approximately ${char.age} years old in this photo, for a comic artist. Focus on: hair color/texture/length, skin tone, eye color, distinctive features (beard, glasses, hijab etc), body type. Do NOT identify anyone. English, max 60 words. Start with "${char.name}:"` },
+                ]}],
+                max_tokens: 120,
+              });
+              console.log(`  → ${char.name}: described from photo`);
+              return { ...char, visual_anchor: r.choices[0].message.content || char.visual_anchor, inPhoto: true };
+            } catch (e) {
+              console.error(`Photo description error for ${char.name}:`, e.message);
+              return { ...char, inPhoto: true };
+            }
+          } else {
+            // Character NOT in photo → generate visual_anchor from story description
+            try {
+              const r = await openai.chat.completions.create({
+                model: "gpt-4.1",
+                messages: [{
+                  role: "system",
+                  content: `Create a detailed visual description for a comic book character based on their name, age, and story context. 
+Write 40-50 words covering: exact age appearance, hair color/style, skin tone, eye color, distinctive features, body type.
+This character is NOT in any reference photo — invent a realistic appearance consistent with their age and cultural background.
+Respond with ONLY the description, starting with the character name.`,
+                }, {
+                  role: "user",
+                  content: `Character: ${char.name}, age ${char.age}. Story context: ${storyCtx}`,
+                }],
+                max_tokens: 120,
+              });
+              console.log(`  → ${char.name}: generated from story (not in photo)`);
+              return { ...char, visual_anchor: r.choices[0].message.content || char.visual_anchor, inPhoto: false };
+            } catch (e) {
+              console.error(`Story description error for ${char.name}:`, e.message);
+              return { ...char, inPhoto: false };
+            }
+          }
+        }));
+      } catch (e) {
+        console.error("Photo detection error:", e.message);
+        // Fallback: use story-based anchors for all
+      }
     }
 
     console.log(`✓ Structure: ${pageStructures.length} pages, ${characters.length} characters`);
@@ -246,18 +308,33 @@ router.post("/cover", async (req, res) => {
     const charNames = characters.map(c => c.name).join(", ");
     const prompt = `${COMIC_STYLE}
 
-Comic book COVER illustration.
+Comic book COVER illustration. NOT a photograph.
 ALL of these characters MUST be visible: ${charNames}.
 Show them together in ${location || "a beautiful setting"}.
 Characters: ${charDesc || "a family"}
 Dynamic group composition — some looking at viewer, some interacting.
-Vivid background showing the story world. NO text, NO title, NO letters.`;
+Vivid illustrated background showing the story world.
+NO text, NO title, NO letters.`;
 
     let rawUrl = "";
     if (referenceImages[0]) {
       try {
         rawUrl = await generateImage(
-          `${COMIC_STYLE}\n\nComic book COVER. The people in this photo are SOME of the characters. Draw ALL characters listed below — including those NOT in the photo.\nALL characters MUST appear: ${charNames}.\nCharacters: ${charDesc}\nSetting: ${location || "a beautiful setting"}.\nNO text, NO title, NO letters.`,
+          `${COMIC_STYLE}
+
+THIS IS A COMIC BOOK COVER — NOT a photograph, NOT a portrait photo, NOT realistic.
+Transform the people in this photo into comic book characters in the style described above.
+The result must look like a professional graphic novel cover illustration.
+
+Show ALL of these characters together: ${charNames}.
+For characters not visible in the photo, invent their appearance based on their description.
+Setting: ${location || "a beautiful Mediterranean setting"}.
+
+Character descriptions:
+${charDesc}
+
+Composition: dynamic group shot, characters in foreground, vivid illustrated background.
+NO text, NO title, NO letters anywhere in the image.`,
           referenceImages[0]
         );
         console.log("  → Cover with user photo");
