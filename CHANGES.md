@@ -91,7 +91,17 @@ Alle Änderungen dieser Session. Backend muss auf Railway neu deployed werden da
 
 ---
 
-## 🏗️ FALLBACK-ARCHITEKTUR — Railway + Supabase (wenn Test weiterhin schlecht)
+## 📝 OFFEN — Stil-Konsistenz generate() vs edit()
+
+**Problem:** Seiten mit Opa/Oma nutzen `images.generate()` (kein Referenzbild) → leicht anderer Stil als Seiten mit `images.edit()` (Cover als Referenz). Die Großeltern-Seiten wirken etwas "vermalter"/weicher.
+
+**Beobachtung:** Beide Stile sind gut, aber nicht identisch. Ziel: ein einheitlicher Stil über alle Seiten.
+
+**Mögliche Lösung:** 
+- Option A: Alle Seiten auf `images.generate()` umstellen — kein Referenzbild, nur `COMIC_STYLE` + `visual_anchors`. Konsistenz durch identischen Prompt-Stil.
+- Option B: Für Opa/Oma-Seiten das Cover trotzdem als Stil-Referenz mitgeben, aber explizit sagen "ignore the faces in the reference, only use the art style"
+
+**Wann angehen:** Nach dem nächsten Test-Run wenn Gesamtqualität bewertet ist.
 
 ### Wann umsetzen?
 Wenn nach dem aktuellen Deploy folgende Probleme weiterhin bestehen:

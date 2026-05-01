@@ -85,6 +85,8 @@ export default function Step5Preview() {
   const [currentPage, setCurrentPage] = useState(-1);
   const [direction, setDirection] = useState(1);
   const [regenerating, setRegenerating] = useState<string | null>(null);
+  const [regenCount, setRegenCount] = useState<Record<string, number>>({});
+  const MAX_REGEN = 1; // max 1x neu illustrieren pro Seite
   const [editingTitle, setEditingTitle] = useState(false);
   const [editingEnding, setEditingEnding] = useState(false);
 
@@ -126,15 +128,21 @@ export default function Step5Preview() {
   }
 
   const handleRegen = async (pageId: string) => {
+    if ((regenCount[pageId] || 0) >= MAX_REGEN) {
+      toast.error("Diese Seite wurde bereits neu illustriert.");
+      return;
+    }
     const pageData = comicPages.find(p => p.id === pageId);
     if (!pageData) return;
     setRegenerating(pageId);
     try {
       const result = await regenPage(pageId, pageData);
+      const newImageUrl = result.imageUrl || pageData.imageUrl;
       updateChapter(pageId, {
-        imageUrl: result.imageUrl || pageData.imageUrl,
+        imageUrl: newImageUrl,
         panelPositions: result.panelPositions || pageData.panelPositions,
       });
+      setRegenCount(prev => ({ ...prev, [pageId]: (prev[pageId] || 0) + 1 }));
       toast.success("Seite neu illustriert!");
     } catch (e) {
       toast.error("Fehler beim Neu-Illustrieren");
@@ -259,10 +267,10 @@ export default function Step5Preview() {
                 <div className="px-6 py-3 flex items-center justify-end border-t border-gray-100">
                   <button
                     onClick={() => handleRegen(page.id)}
-                    disabled={!!regenerating}
+                    disabled={!!regenerating || (regenCount[page.id] || 0) >= MAX_REGEN}
                     className="text-xs text-[#C9963A] hover:text-[#A67A28] border border-[#E8D9C0] px-3 py-1.5 rounded-lg hover:bg-[#F5EDE0] transition-all disabled:opacity-40"
                   >
-                    Neu illustrieren
+                    {(regenCount[page.id] || 0) >= MAX_REGEN ? "Bereits neu illustriert" : "Neu illustrieren"}
                   </button>
                 </div>
               </div>
