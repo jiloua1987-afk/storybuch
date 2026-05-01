@@ -103,6 +103,15 @@ router.post("/structure", async (req, res) => {
     const langMap = { de: "German", en: "English", fr: "French", es: "Spanish" };
     const lang = langMap[language] || "German";
 
+    const toneMap = {
+      humorvoll: "humorous and light-hearted",
+      kindgerecht: "warm and child-friendly",
+      romantisch: "romantic and tender",
+      biografisch: "nostalgic and personal",
+      episch: "epic and adventurous",
+    };
+    const toneEn = toneMap[tone] || tone || "warm and personal";
+
     // Build story context (without specialMoments — handled separately)
     let storyCtx = storyInput || "";
     for (const [k, v] of Object.entries(guidedAnswers)) {
@@ -150,7 +159,7 @@ Respond ONLY with JSON: {"characters":[{"name":"Name","age":30,"visual_anchor":"
           messages: [{
             role: "system",
             content: `You create ONE comic book page for a personal comic in ${lang}.
-Tone: ${tone}. Style: ${comicStyle}.
+Tone: ${toneEn}. Style: ${comicStyle}.
 
 PANEL COUNT — choose based on the scene:
 - 2 panels: one big moment, close emotional scene, single action (e.g. big hug, child's face reaction)
@@ -194,7 +203,7 @@ Respond ONLY with JSON:
         model: "gpt-4.1",
         messages: [{
           role: "system",
-          content: `Create a ${numPages}-page comic structure in ${lang}. Tone: ${tone}.
+          content: `Create a ${numPages}-page comic structure in ${lang}. Tone: ${toneEn}.
 Each page: 2-5 panels. Vary panel count based on scene complexity.
 Show correct emotions — not everyone smiles in every panel.
 All characters must appear across the comic.
@@ -417,7 +426,7 @@ RULES:
       ? `${COMIC_STYLE}\nUse the EXACT same art style, character designs and color palette as this cover image.\n\n`
       : refSource === "user-photo"
       ? `${COMIC_STYLE}\nThe people in this photo are the main characters. Draw them in the comic style above. NOT photorealistic. IMPORTANT: IGNORE the clothing from the photo — use the clothing described in the prompt instead.\n\n`
-      : `${COMIC_STYLE}\n\n`;
+      : `${COMIC_STYLE}\nDo NOT use soft watercolor or painterly style. Use the same sharp ink outlines and rich colors as a European graphic novel. Crisp, defined lines on every figure.\n\n`;
 
     console.log(`Generating page "${page.title}" (${panelCount} panels, ref: ${refSource})`);
     let { url: rawUrl, usedReference } = await generateImage(`${refNote}${prompt}`, reference);
@@ -467,6 +476,8 @@ router.post("/ending", async (req, res) => {
   try {
     const { storyInput, guidedAnswers = {}, tone, language, dedication, dedicationFrom } = req.body;
     const lang = { de: "German", en: "English", fr: "French", es: "Spanish" }[language] || "German";
+    const toneMap = { humorvoll: "humorous and light-hearted", kindgerecht: "warm and child-friendly", romantisch: "romantic and tender", biografisch: "nostalgic and personal", episch: "epic and adventurous" };
+    const toneEn = toneMap[tone] || "warm, personal, loving";
 
     const r = await openai.chat.completions.create({
       model: "gpt-4.1",
@@ -477,7 +488,7 @@ This is a DEDICATION — like handwritten on the last page of a gift.
 - Max 2-3 short heartfelt sentences
 - Address the main person(s) DIRECTLY
 - Mention ONE concrete detail from the story
-- Tone: ${tone || "warm, personal, loving"}
+- Tone: ${toneEn}
 - NO sender ("Von:", "Deine Familie") — that is shown separately
 ${dedicationFrom ? `Info: sender is "${dedicationFrom}" — do NOT write this in the dedication` : ""}`
       }, {
