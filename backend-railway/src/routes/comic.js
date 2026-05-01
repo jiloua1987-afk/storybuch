@@ -59,34 +59,47 @@ async function fetchBuffer(url) {
 
 // ── Generate image — with or without reference ────────────────────────────────
 // Returns { url, usedReference: boolean }
+// Retries once after 15s on rate limit (429)
 async function generateImage(prompt, referenceBase64OrBuffer = null, size = "1024x1536") {
-  if (referenceBase64OrBuffer) {
-    try {
-      let file;
-      if (typeof referenceBase64OrBuffer === "string") {
-        file = toFile(referenceBase64OrBuffer);
-      } else {
-        const blob = new Blob([referenceBase64OrBuffer], { type: "image/png" });
-        file = new File([blob], "reference.png", { type: "image/png" });
+  const attempt = async () => {
+    if (referenceBase64OrBuffer) {
+      try {
+        let file;
+        if (typeof referenceBase64OrBuffer === "string") {
+          file = toFile(referenceBase64OrBuffer);
+        } else {
+          const blob = new Blob([referenceBase64OrBuffer], { type: "image/png" });
+          file = new File([blob], "reference.png", { type: "image/png" });
+        }
+        const res = await openai.images.edit({
+          model: "gpt-image-2", image: file, prompt, size, quality: "high",
+        });
+        const item = (res.data || [])[0];
+        const url = item?.url || (item?.b64_json ? `data:image/png;base64,${item.b64_json}` : null);
+        if (url) return { url, usedReference: true };
+      } catch (e) {
+        console.warn("  → images.edit() failed, falling back:", e.message);
       }
-      const res = await openai.images.edit({
-        model: "gpt-image-2", image: file, prompt, size, quality: "high",
-      });
-      const item = (res.data || [])[0];
-      const url = item?.url || (item?.b64_json ? `data:image/png;base64,${item.b64_json}` : null);
-      if (url) return { url, usedReference: true };
-    } catch (e) {
-      console.warn("  → images.edit() failed, falling back:", e.message);
     }
+    const res = await openai.images.generate({
+      model: "gpt-image-2", prompt, n: 1, size, quality: "high",
+    });
+    const item = (res.data || [])[0];
+    const url = item?.url || (item?.b64_json ? `data:image/png;base64,${item.b64_json}` : null);
+    if (url) return { url, usedReference: false };
+    throw new Error("No image returned");
+  };
+
+  try {
+    return await attempt();
+  } catch (e) {
+    if (e?.status === 429 || e?.message?.includes("429") || e?.message?.includes("rate limit")) {
+      console.warn("  → Rate limit hit, waiting 20s before retry...");
+      await new Promise(r => setTimeout(r, 20000));
+      return await attempt();
+    }
+    throw e;
   }
-  // Fallback: generate without reference
-  const res = await openai.images.generate({
-    model: "gpt-image-2", prompt, n: 1, size, quality: "high",
-  });
-  const item = (res.data || [])[0];
-  const url = item?.url || (item?.b64_json ? `data:image/png;base64,${item.b64_json}` : null);
-  if (url) return { url, usedReference: false };
-  throw new Error("No image returned");
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -358,10 +371,9 @@ NO text, NO title, NO letters anywhere in the image.`;
           image: refFile,
           prompt: `${COMIC_STYLE}
 
-THIS IS A COMIC BOOK COVER — NOT a photograph, NOT realistic.
-Transform the people in this photo into comic book characters in the style described above.
-Show ALL of these characters together: ${charNames}.
-For characters not visible in the photo, invent their appearance based on their description.
+TRANSFORM this photo into a COMIC BOOK COVER illustration. The result must look like a drawn illustration, NOT a photo.
+Draw ALL characters as comic book characters: ${charNames}.
+For characters not in the photo, create them from their description.
 Setting: ${location || "a beautiful Mediterranean setting"}.
 Character descriptions: ${charDesc}
 Composition: dynamic group shot, characters in foreground, vivid illustrated background.

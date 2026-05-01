@@ -395,16 +395,16 @@ export default function PanelView({ imageUrl, title, panels = [], panelPositions
                 style={{ ...posStyle, cursor: isDragging ? "grabbing" : "grab" }}
                 onMouseDown={(e) => { e.stopPropagation(); handleMouseDown(e, "panel", i); }}
               >
+                {/* Delete button — always visible, red circle with white × */}
+                <button
+                  className="absolute z-50 w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full text-sm font-bold flex items-center justify-center shadow-md transition-colors"
+                  style={{ position: "absolute", top: -12, right: -12 }}
+                  onMouseDown={(e) => e.stopPropagation()}
+                  onClick={(e) => { e.stopPropagation(); setHiddenBubbles(prev => new Set([...prev, i])); }}
+                >✕</button>
                 <ResizableBubble initW={initW} initH={initH} style={{}}>
                   {(w, h) => (
                     <HanddrawnBubble w={w} h={h} type={panel.bubble_type}>
-                      {/* Delete button */}
-                      <button
-                        className="absolute -top-3 -right-3 w-5 h-5 bg-red-500 text-white rounded-full text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-40 hover:bg-red-600"
-                        style={{ position: "absolute", top: -10, right: -10 }}
-                        onMouseDown={(e) => e.stopPropagation()}
-                        onClick={(e) => { e.stopPropagation(); setHiddenBubbles(prev => new Set([...prev, i])); }}
-                      >×</button>
                       {isEditing ? (
                         <textarea
                           autoFocus
@@ -446,33 +446,46 @@ export default function PanelView({ imageUrl, title, panels = [], panelPositions
                 style={{ position: "absolute", top: `${bubble.top}%`, left: `${bubble.left}%`, zIndex: 15, cursor: "grab" }}
                 onMouseDown={(e) => { e.stopPropagation(); handleMouseDown(e, "extra", bubble.id); }}
               >
+                {/* Delete button — always visible */}
+                <button
+                  className="absolute z-50 w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full text-sm font-bold flex items-center justify-center shadow-md transition-colors"
+                  style={{ position: "absolute", top: -12, right: -12 }}
+                  onMouseDown={(e) => e.stopPropagation()}
+                  onClick={(e) => { e.stopPropagation(); setExtraBubbles(prev => prev.filter(b => b.id !== bubble.id)); }}
+                >✕</button>
                 <ResizableBubble initW={initW} initH={initH} style={{}}>
                   {(w, h) => (
                     <HanddrawnBubble w={w} h={h} type="speech">
-                      {/* Delete button */}
-                      <button
-                        className="absolute w-5 h-5 bg-red-500 text-white rounded-full text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-40 hover:bg-red-600"
-                        style={{ position: "absolute", top: -10, right: -10 }}
-                        onMouseDown={(e) => e.stopPropagation()}
-                        onClick={(e) => { e.stopPropagation(); setExtraBubbles(prev => prev.filter(b => b.id !== bubble.id)); }}
-                      >×</button>
                       {isEditing ? (
-                        <textarea
-                          autoFocus
-                          value={bubble.dialog}
-                          onChange={(e) => setExtraBubbles(prev => prev.map(b => b.id === bubble.id ? { ...b, dialog: e.target.value } : b))}
-                          onBlur={() => setEditingExtra(null)}
-                          onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && setEditingExtra(null)}
-                          className="w-full h-full bg-transparent outline-none resize-none text-[#1A1410]"
-                          style={{ fontFamily: "'Comic Neue', cursive", fontSize: "12px" }}
-                          onClick={(e) => e.stopPropagation()}
-                        />
+                        <div className="flex flex-col gap-1 w-full h-full">
+                          <input
+                            value={bubble.speaker}
+                            onChange={(e) => setExtraBubbles(prev => prev.map(b => b.id === bubble.id ? { ...b, speaker: e.target.value } : b))}
+                            placeholder="Sprecher (optional)"
+                            className="bg-transparent outline-none text-[#1A1410] border-b border-[#C9963A]/40 text-xs font-bold"
+                            style={{ fontFamily: "'Comic Neue', cursive", fontSize: "11px" }}
+                            onClick={(e) => e.stopPropagation()}
+                          />
+                          <textarea
+                            autoFocus
+                            value={bubble.dialog}
+                            onChange={(e) => setExtraBubbles(prev => prev.map(b => b.id === bubble.id ? { ...b, dialog: e.target.value } : b))}
+                            onBlur={() => setEditingExtra(null)}
+                            onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && setEditingExtra(null)}
+                            className="w-full flex-1 bg-transparent outline-none resize-none text-[#1A1410]"
+                            style={{ fontFamily: "'Comic Neue', cursive", fontSize: "12px" }}
+                            onClick={(e) => e.stopPropagation()}
+                          />
+                        </div>
                       ) : (
                         <p
                           className="text-[#1A1410] leading-snug select-none"
                           style={{ fontFamily: "'Comic Neue', cursive", fontSize: "12px", fontWeight: 500 }}
                           onDoubleClick={(e) => { e.stopPropagation(); setEditingExtra(bubble.id); }}
                         >
+                          {bubble.speaker && (
+                            <span className="font-bold">{bubble.speaker}: </span>
+                          )}
                           {bubble.dialog}
                         </p>
                       )}
