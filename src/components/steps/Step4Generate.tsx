@@ -83,7 +83,9 @@ export default function Step4Generate() {
       setProgress(15);
 
       // ── Chapters sofort leeren — verhindert dass alte Seiten durchscheinen ──
-      updateProject({ chapters: [], coverImageUrl: undefined });
+      // Neue projectId generieren — verhindert dass Supabase alte character_refs lädt
+      const newProjectId = `proj-${Date.now()}`;
+      updateProject({ chapters: [], coverImageUrl: undefined, id: newProjectId });
 
       // Ending sofort speichern wenn vorhanden
       if (endData?.endingText) {
@@ -113,7 +115,7 @@ export default function Step4Generate() {
           location:             project?.guidedAnswers?.ort || project?.guidedAnswers?.location || "",
           referenceImages:      project?.referenceImages || [],
           referenceImageUrls:   project?.referenceImageUrls || [],
-          projectId:            project?.id || `proj-${Date.now()}`,
+          projectId:            newProjectId,
         });
         coverImageUrl = coverData.coverImageUrl || "";
         if (coverImageUrl) updateProject({ coverImageUrl });
@@ -145,7 +147,7 @@ export default function Step4Generate() {
               referenceImages:      project?.referenceImages || [],
               referenceImageUrls:   project?.referenceImageUrls || [],
               coverImageUrl,
-              projectId:            project?.id || "",
+              projectId:            newProjectId,
             });
 
             chapters[i] = {
@@ -171,7 +173,7 @@ export default function Step4Generate() {
       // ── Finalisieren ────────────────────────────────────────────────────────
       const finalChapters = chapters.filter(Boolean);
       updateProject({
-        id:           project?.id || `proj-${Date.now()}`,
+        id:           newProjectId,
         title:        project?.title || "Mein Comic",
         storyInput:   project?.storyInput || "",
         guidedAnswers: project?.guidedAnswers || { characters: "", location: "", timeframe: "", specialMoments: "" },
