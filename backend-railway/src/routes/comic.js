@@ -9,13 +9,14 @@ const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 // Placed FIRST in every prompt — gpt-image-2 weights early instructions more heavily
 const COMIC_STYLE = [
   "COMIC BOOK ILLUSTRATION STYLE — European graphic novel, similar to Blacksad or Bastien Vivès.",
-  "Bold black ink outlines on every figure and object.",
-  "Rich detailed colors with dramatic lighting — warm shadows, cinematic depth.",
+  "Warm cinematic colors with golden tones and soft dramatic shadows.",
+  "Bold but clean ink outlines, rich detailed colors, no harsh dark shadows.",
   "Expressive faces with clear emotions, detailed eyes and features.",
-  "Clean panel composition, professional graphic novel quality.",
-  "ABSOLUTELY NOT photorealistic. NOT a photograph. NOT a painting. NOT watercolor.",
+  "Realistic proportions — NOT manga, NOT anime, NOT cartoon exaggeration.",
+  "Professional graphic novel quality, similar to the Strand/beach page style.",
+  "ABSOLUTELY NOT photorealistic. NOT a photograph. NOT watercolor.",
   "Every page must look IDENTICAL in style to every other page.",
-  "If this looks like a photo or a picture book, it is WRONG.",
+  "If this looks like a photo or manga/anime, it is WRONG.",
 ].join(" ");
 
 const MOOD_MOD = {

@@ -93,38 +93,37 @@ export default function Step4Generate() {
         addLog("Abschlussseite fertig", true);
       }
 
-      // ── Step 2+3: Cover zuerst, dann Seiten mit Cover als Referenz ────────────
-      // Cover startet sofort. Seiten starten auch sofort aber warten intern
-      // auf die Cover-URL (max 60s) bevor sie den API-Call machen.
-      // So haben alle Seiten den gleichen Stil wie das Cover.
-      setStepLabel("Cover und Seiten werden illustriert…");
+      // ── Step 2: Cover zuerst — sequenziell abwarten ────────────────────────
+      // Cover muss fertig sein bevor Seiten starten, damit alle Seiten
+      // das Cover als Stil-Referenz nutzen können → konsistenter Stil
+      setStepLabel("Cover wird erstellt…");
       setProgress(20);
       addLog("Cover wird erstellt…");
+
+      let coverImageUrl = "";
+      try {
+        const coverData = await post("/api/comic/cover", {
+          title:           project?.title || "Mein Comic",
+          characters,
+          category:        project?.guidedAnswers?.category || "familie",
+          location:        project?.guidedAnswers?.ort || project?.guidedAnswers?.location || "",
+          referenceImages: project?.referenceImages || [],
+        });
+        coverImageUrl = coverData.coverImageUrl || "";
+        if (coverImageUrl) updateProject({ coverImageUrl });
+        addLog("Cover fertig", true);
+      } catch {
+        addLog("Cover übersprungen", true);
+      }
+      setProgress(30);
+
+      // ── Step 3: Alle Seiten parallel mit Cover als Referenz ─────────────────
+      setStepLabel("Seiten werden illustriert…");
       pages.forEach((_: any, i: number) => addLog(`Seite ${i + 1}: "${pages[i].title}"…`));
 
       const chapters: any[] = new Array(pages.length).fill(null);
-      let coverImageUrl = "";
-
-      // Cover-Promise startet sofort
-      const coverPromise: Promise<string> = post("/api/comic/cover", {
-        title:           project?.title || "Mein Comic",
-        characters,
-        category:        project?.guidedAnswers?.category || "familie",
-        location:        project?.guidedAnswers?.ort || project?.guidedAnswers?.location || "",
-        referenceImages: project?.referenceImages || [],
-      }).then((data: any) => {
-        coverImageUrl = data.coverImageUrl || "";
-        if (coverImageUrl) updateProject({ coverImageUrl });
-        addLog("Cover fertig", true);
-        return coverImageUrl;
-      }).catch(() => {
-        addLog("Cover übersprungen", true);
-        return "";
-      });
-
-      // Alle Seiten parallel — jede wartet auf Cover (max 60s)
       const BATCH_SIZE = 3;
-      const progressPerPage = 70 / pages.length;
+      const progressPerPage = 60 / pages.length;
 
       for (let batchStart = 0; batchStart < pages.length; batchStart += BATCH_SIZE) {
         const batch = pages.slice(batchStart, Math.min(batchStart + BATCH_SIZE, pages.length));
@@ -132,19 +131,13 @@ export default function Step4Generate() {
         await Promise.all(batch.map(async (page: any, batchIdx: number) => {
           const i = batchStart + batchIdx;
           try {
-            // Warte auf Cover — mit 60s Timeout damit Seiten nicht ewig blockieren
-            const resolvedCover = await Promise.race([
-              coverPromise,
-              new Promise<string>(r => setTimeout(() => r(""), 60000)),
-            ]);
-
             const pageData = await post("/api/comic/page", {
               page,
               characters,
               comicStyle:      project?.comicStyle || "emotional",
               category:        project?.guidedAnswers?.category || "familie",
               referenceImages: project?.referenceImages || [],
-              coverImageUrl:   resolvedCover,
+              coverImageUrl,   // ← Cover als primäre Stil-Referenz
             });
 
             chapters[i] = {
@@ -162,12 +155,10 @@ export default function Step4Generate() {
             addLog(`Seite ${i + 1}: Fehler`, true);
           }
 
-          setProgress(20 + (chapters.filter(Boolean).length / pages.length) * progressPerPage);
+          setProgress(30 + (chapters.filter(Boolean).length / pages.length) * progressPerPage);
           updateProject({ chapters: chapters.filter((c): c is NonNullable<typeof c> => c !== null) });
         }));
       }
-
-      await coverPromise;
 
       // ── Finalisieren ────────────────────────────────────────────────────────
       const finalChapters = chapters.filter(Boolean);
