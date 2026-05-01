@@ -105,12 +105,42 @@ export default function Step5Preview() {
     if (currentPage > -1) { setDirection(-1); setCurrentPage((p) => p - 1); }
   };
 
+  const RAILWAY_URL = process.env.NEXT_PUBLIC_RAILWAY_URL || "";
+
+  async function regenPage(pageId: string, pageData: any) {
+    const fullUrl = RAILWAY_URL ? `${RAILWAY_URL}/api/comic/page` : "/api/comic/page";
+    const res = await fetch(fullUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        page: { ...pageData, panels: pageData.panels || [] },
+        characters: project?.characters?.map((c: any) => ({ name: c.name, visual_anchor: c.role || "" })) || [],
+        comicStyle: project?.comicStyle || "emotional",
+        category: project?.guidedAnswers?.category || "familie",
+        referenceImages: project?.referenceImages || [],
+        coverImageUrl: project?.coverImageUrl || "",
+      }),
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return res.json();
+  }
+
   const handleRegen = async (pageId: string) => {
+    const pageData = comicPages.find(p => p.id === pageId);
+    if (!pageData) return;
     setRegenerating(pageId);
-    await new Promise((r) => setTimeout(r, 2000));
-    updateChapter(pageId, { imageUrl: `https://picsum.photos/seed/${Date.now()}/1024/1792` });
-    setRegenerating(null);
-    toast.success("Seite neu erstellt!");
+    try {
+      const result = await regenPage(pageId, pageData);
+      updateChapter(pageId, {
+        imageUrl: result.imageUrl || pageData.imageUrl,
+        panelPositions: result.panelPositions || pageData.panelPositions,
+      });
+      toast.success("Seite neu illustriert!");
+    } catch (e) {
+      toast.error("Fehler beim Neu-Illustrieren");
+    } finally {
+      setRegenerating(null);
+    }
   };
 
   const pageLabel = isCover ? "Cover" : isEnding ? "Abschluss" : `Seite ${currentPage + 1} von ${total}`;

@@ -6,12 +6,22 @@ const { saveImage } = require("../lib/storage");
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 // ── Shared comic style — identical for every page ─────────────────────────────
-const COMIC_STYLE = "cinematic comic illustration, bold ink outlines, rich detailed colors, expressive faces, dramatic lighting, professional graphic novel quality. NOT photorealistic. NOT a photograph. Bold panel borders.";
+// Placed FIRST in every prompt — gpt-image-2 weights early instructions more heavily
+const COMIC_STYLE = [
+  "COMIC BOOK ILLUSTRATION STYLE — European graphic novel, similar to Blacksad or Bastien Vivès.",
+  "Bold black ink outlines on every figure and object.",
+  "Rich detailed colors with dramatic lighting — warm shadows, cinematic depth.",
+  "Expressive faces with clear emotions, detailed eyes and features.",
+  "Clean panel composition, professional graphic novel quality.",
+  "ABSOLUTELY NOT photorealistic. NOT a photograph. NOT a painting. NOT watercolor.",
+  "Every page must look IDENTICAL in style to every other page.",
+  "If this looks like a photo or a picture book, it is WRONG.",
+].join(" ");
 
 const MOOD_MOD = {
-  action:    "dynamic poses, motion energy, high contrast",
-  emotional: "warm golden tones, intimate close-ups, soft shadows",
-  humor:     "exaggerated expressions, bright colors, playful energy",
+  action:    "Dynamic poses, motion lines, high contrast colors.",
+  emotional: "Warm golden tones, intimate close-ups, soft dramatic shadows.",
+  humor:     "Exaggerated expressions, bright vivid colors, playful energy.",
 };
 
 // ── Outfit context from English location string ───────────────────────────────
@@ -233,8 +243,12 @@ router.post("/cover", async (req, res) => {
     const { characters = [], location = "", referenceImages = [] } = req.body;
 
     const charDesc = characters.map(c => `${c.name} (${c.visual_anchor})`).join("; ");
-    const prompt = `Comic book COVER. ${COMIC_STYLE}
-Show all main characters together in ${location || "a beautiful setting"}.
+    const charNames = characters.map(c => c.name).join(", ");
+    const prompt = `${COMIC_STYLE}
+
+Comic book COVER illustration.
+ALL of these characters MUST be visible: ${charNames}.
+Show them together in ${location || "a beautiful setting"}.
 Characters: ${charDesc || "a family"}
 Dynamic group composition — some looking at viewer, some interacting.
 Vivid background showing the story world. NO text, NO title, NO letters.`;
@@ -243,7 +257,7 @@ Vivid background showing the story world. NO text, NO title, NO letters.`;
     if (referenceImages[0]) {
       try {
         rawUrl = await generateImage(
-          `Draw the people from this photo as comic book characters. ${COMIC_STYLE}\nShow them together in ${location || "a beautiful setting"} for the comic COVER.\nCharacters: ${charDesc}\nNO text, NO title, NO letters.`,
+          `${COMIC_STYLE}\n\nComic book COVER. The people in this photo are SOME of the characters. Draw ALL characters listed below — including those NOT in the photo.\nALL characters MUST appear: ${charNames}.\nCharacters: ${charDesc}\nSetting: ${location || "a beautiful setting"}.\nNO text, NO title, NO letters.`,
           referenceImages[0]
         );
         console.log("  → Cover with user photo");
@@ -274,7 +288,6 @@ router.post("/page", async (req, res) => {
     } = req.body;
 
     const mood = MOOD_MOD[comicStyle] || MOOD_MOD.emotional;
-    const fullStyle = `${COMIC_STYLE} ${mood}`;
     const outfit = getOutfit(page.location);
     const panelCount = page.panels.length;
     const layoutDesc =
@@ -288,11 +301,11 @@ router.post("/page", async (req, res) => {
       .map(p => `Panel ${p.nummer}: ${p.szene}`)
       .join("\n");
 
-    const prompt = `${fullStyle}
+    const prompt = `${COMIC_STYLE} ${mood}
 
 Comic page — ${panelCount} panels in ${layoutDesc}. Bold black borders between panels.
 
-CHARACTERS — keep identical across all panels:
+CHARACTERS — draw identically across all panels:
 ${charAnchors}
 
 CLOTHING — ${outfit}
@@ -302,11 +315,11 @@ ${panelDescriptions}
 
 RULES:
 - Each panel shows a DIFFERENT scene/angle/moment
-- Each character appears ONLY ONCE per panel
-- Show correct emotions — if scene is sad show sadness, if funny show laughter
-- Sharp detailed faces — eyes, nose, mouth clearly visible
+- Each character appears ONLY ONCE per panel — no duplicates
+- Show CORRECT emotions per scene (sad=tears, funny=laughter, reunion=joy)
+- Sharp detailed faces — eyes, nose, mouth clearly visible, front or 3/4 view
 - Background crowd: faceless silhouettes only
-- NO text, NO speech bubbles, NO letters anywhere in image`;
+- NO text, NO speech bubbles, NO letters, NO titles anywhere in image`;
 
     // Reference: cover buffer (already in comic style) > user photo > none
     let reference = null;
@@ -326,9 +339,9 @@ RULES:
     }
 
     const refNote = refSource === "cover"
-      ? `Use the EXACT same art style, character designs and color palette as this cover image.\n\n`
+      ? `${COMIC_STYLE}\nUse the EXACT same art style, character designs and color palette as this cover image.\n\n`
       : refSource === "user-photo"
-      ? `Draw the people from this photo as comic characters in this style: ${fullStyle}. NOT photorealistic.\n\n`
+      ? `${COMIC_STYLE}\nThe people in this photo are the main characters. Draw them in the comic style above. NOT photorealistic.\n\n`
       : "";
 
     console.log(`Generating page "${page.title}" (${panelCount} panels, ref: ${refSource})`);
