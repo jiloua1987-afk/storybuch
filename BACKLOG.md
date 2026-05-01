@@ -1,5 +1,105 @@
 # Product Backlog - MyComicStory
 
+---
+
+## 🎨 Style-Master-Panel — Stil-Konsistenz ohne Fotorealismus-Drift
+
+**Status:** TODO — nach nächstem Test-Run entscheiden ob nötig
+**Priorität:** Hoch
+**Aufwand:** Mittel (2-3 Stunden)
+
+**Problem:**
+Aktuell: User-Foto → `images.edit()` → Cover (leicht fotorealistisch) → Seiten erben diesen Fotorealismus.
+Wenn Safety-Filter greift oder Opa/Oma-Seiten auf `generate-only` fallen → Stilbruch (Manga, Watercolor).
+
+**Lösung: Hybrid-Ansatz (Kiro-Empfehlung, abweichend von Claude)**
+
+```
+Schritt 1: Style-Master-Panel (unsichtbar, nie dem User gezeigt)
+  → images.generate() mit reinem COMIC_STYLE-Prompt
+  → Keine Charaktere, nur Stil-Referenz (z.B. tunesischer Innenhof, goldene Stunde)
+  → Speichern in Supabase als style_master_url
+
+Schritt 2: Cover
+  → images.edit() mit Style-Master als Input (NICHT User-Foto)
+  → Prompt: "Adapt this comic style, add these characters: [visual_anchors]"
+  → Ergebnis: Comic-Stil-konsistent + erkennbare Gesichter
+
+Schritt 3: Alle Seiten
+  → Cover weiterhin als Referenz (behält Charakter-Konsistenz)
+  → Style-Master als Fallback wenn Cover nicht verfügbar
+```
+
+**Warum Hybrid statt Claudes Vorschlag (Style-Master für alle Seiten):**
+- Claudes Vorschlag: Style-Master → alle Seiten (verliert Charakter-Konsistenz)
+- Hybrid: Style-Master → Cover → Seiten (behält beides)
+
+**Abweichung von Claude:** Claude wollte Style-Master direkt für alle Seiten nutzen.
+Das würde Charakter-Konsistenz kosten die wir durch das Cover gewonnen haben.
+
+**Wann umsetzen:**
+Erst testen ob Anti-Manga-Fix (Bande Dessinée Prompt) ausreicht.
+Wenn Grillen/Fußball-Seiten immer noch Stilbruch → Style-Master implementieren.
+
+**Kosten:** +1 `images.generate()` Call pro Comic (~$0.04)
+**Zeitaufwand:** +15-20s (Style-Master muss vor Cover fertig sein)
+
+**Betroffene Datei:** `backend-railway/src/routes/comic.js` — `/cover` Route + `/page` Route
+
+---
+
+## ✏️ "Neu illustrieren" mit Freitextfeld
+
+**Status:** TODO
+**Priorität:** Mittel
+**Aufwand:** Mittel (3-4 Stunden)
+
+**Problem:**
+Aktuell: "Neu illustrieren" Button generiert die Seite einfach neu — ohne dass der User sagen kann was er anders haben möchte. Ergebnis ist zufällig, oft nicht besser.
+
+**Lösung:**
+Freitextfeld beim Klick auf "Neu illustrieren" das dem User erlaubt konkrete Änderungswünsche einzugeben.
+
+**Beispiele:**
+- "Opa soll mehr im Vordergrund sein"
+- "Luca soll weinen, nicht lachen"
+- "Mehr Strand im Hintergrund sichtbar"
+- "Mama soll ein Kopftuch tragen"
+
+**Technische Umsetzung:**
+
+```typescript
+// Frontend: Step5Preview.tsx
+// Beim Klick auf "Neu illustrieren" → Modal/Inline-Input öffnen
+<textarea
+  placeholder="Was soll anders sein? (optional)"
+  value={reillustrationNote}
+  onChange={e => setReillustrationNote(e.target.value)}
+/>
+<button onClick={() => regeneratePage(page, reillustrationNote)}>
+  Neu generieren
+</button>
+
+// Backend: /page Route
+// reillustrationNote wird ans Ende des Prompts angehängt
+if (reillustrationNote) {
+  prompt += `\n\nUSER CORRECTION: ${reillustrationNote}. Apply this change while keeping all other elements identical.`;
+}
+```
+
+**UX-Details:**
+- Freitextfeld ist optional — leeres Feld = wie bisher (zufällige Neugeneration)
+- Placeholder: "Was soll anders sein? z.B. 'Opa mehr im Vordergrund'"
+- Nach Generierung: Feld leeren
+- Sprache: Deutsch (User-Input wird direkt an GPT weitergegeben, versteht Deutsch)
+
+**Betroffene Dateien:**
+- `src/components/steps/Step5Preview.tsx` — UI + State
+- `src/components/comic/PanelView.tsx` — Button-Logik
+- `backend-railway/src/routes/comic.js` — `/page` Route, `reillustrationNote` im Prompt
+
+---
+
 ## 🔥 UPGRADE: gpt-image-2 ✅ DONE
 
 **Status:** ✅ COMPLETED (Organization verifiziert, Code upgraded)
