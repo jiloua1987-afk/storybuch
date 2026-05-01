@@ -558,15 +558,13 @@ RULES:
     console.log(`Generating page "${page.title}" (${panelCount} panels, ref: ${refSource})`);
     let { url: rawUrl, usedReference } = await generateImage(`${refNote}${prompt}`, reference);
 
-    // If cover reference was blocked by safety filter → retry with user photo for style
-    if (!usedReference && (refSource === "cover" || refSource === "generate-only") && (primaryRefUrl || primaryRefBase64)) {
-      console.log(`  → Retrying with user photo for style consistency`);
-      const userRef = primaryRefUrl ? await fetchBuffer(primaryRefUrl).catch(() => null) : primaryRefBase64;
-      if (userRef) {
-        const userRefNote = `${COMIC_STYLE}\nUse this photo ONLY for the art style and color palette. Draw ALL characters exactly as described below. Franco-Belgian Bande Dessinée style — bold ink outlines, flat colors, NOT manga, NOT anime, NOT photorealistic. IGNORE clothing from photo.\n\n`;
-        const result2 = await generateImage(`${userRefNote}${prompt}`, userRef);
-        rawUrl = result2.url;
-      }
+    // If reference was blocked by safety filter → fallback to generate-only immediately
+    // Retrying with user photo gets blocked again → wastes 60s → empty page
+    // generate-only with strong COMIC_STYLE prompt produces valid image
+    if (!usedReference && reference !== null) {
+      console.log(`  → Safety block on images.edit(), falling back to generate-only`);
+      const result2 = await generateImage(`${refNote}${prompt}`, null);
+      rawUrl = result2.url;
     }
 
     const bookId = page.id?.split("-")[0] || `book-${Date.now()}`;
