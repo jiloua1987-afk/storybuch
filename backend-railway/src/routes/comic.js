@@ -476,9 +476,22 @@ RULES:
     let refSource = "none";
 
     if (hasCharNotInPhoto) {
-      // Generate without reference — visual_anchors describe all characters precisely
-      refSource = "generate-only";
-      console.log(`  → Page has non-photo characters, using generate() for accurate faces`);
+      // Use user photo as STYLE reference only — for consistent art style
+      // The prompt explicitly describes all characters including those not in photo
+      if (primaryRefUrl) {
+        try {
+          reference = await fetchBuffer(primaryRefUrl);
+          refSource = "user-photo-style";
+        } catch (e) {
+          console.warn("  → User photo fetch failed:", e.message);
+        }
+      }
+      if (!reference && primaryRefBase64) {
+        reference = primaryRefBase64;
+        refSource = "user-photo-style";
+      }
+      if (!reference) refSource = "generate-only";
+      console.log(`  → Page has non-photo characters, ref: ${refSource}`);
     } else if (coverImageUrl) {
       try {
         reference = await fetchBuffer(coverImageUrl);
@@ -507,17 +520,19 @@ RULES:
       ? `${COMIC_STYLE}\nUse the EXACT same art style, character designs and color palette as this cover image.\n\n`
       : refSource === "user-photo"
       ? `${COMIC_STYLE}\nThe people in this photo are the main characters. Draw them in the comic style above. NOT photorealistic. IMPORTANT: IGNORE the clothing from the photo — use the clothing described in the prompt instead.\n\n`
+      : refSource === "user-photo-style"
+      ? `${COMIC_STYLE}\nUse this photo ONLY for the art style and color palette — NOT for the faces. Draw ALL characters exactly as described in the character descriptions below. NOT photorealistic. IGNORE the clothing from the photo.\n\n`
       : `${COMIC_STYLE}\nDo NOT use soft watercolor or painterly style. Use the same sharp ink outlines and rich colors as a European graphic novel. Crisp, defined lines on every figure.\n\n`;
 
     console.log(`Generating page "${page.title}" (${panelCount} panels, ref: ${refSource})`);
     let { url: rawUrl, usedReference } = await generateImage(`${refNote}${prompt}`, reference);
 
-    // If cover reference was blocked by safety filter → retry with user photo
-    if (!usedReference && refSource === "cover" && (primaryRefUrl || primaryRefBase64)) {
-      console.log(`  → Cover blocked by safety, retrying with user photo`);
+    // If cover reference was blocked by safety filter → retry with user photo for style
+    if (!usedReference && (refSource === "cover" || refSource === "generate-only") && (primaryRefUrl || primaryRefBase64)) {
+      console.log(`  → Retrying with user photo for style consistency`);
       const userRef = primaryRefUrl ? await fetchBuffer(primaryRefUrl).catch(() => null) : primaryRefBase64;
       if (userRef) {
-        const userRefNote = `${COMIC_STYLE}\nThe people in this photo are the main characters. Draw them in the comic style above. NOT photorealistic. IMPORTANT: IGNORE the clothing from the photo — use the clothing described in the prompt instead.\n\n`;
+        const userRefNote = `${COMIC_STYLE}\nUse this photo ONLY for the art style and color palette. Draw ALL characters exactly as described below. NOT photorealistic. IGNORE clothing from photo.\n\n`;
         const result2 = await generateImage(`${userRefNote}${prompt}`, userRef);
         rawUrl = result2.url;
       }
