@@ -580,68 +580,87 @@ Composition: dynamic group shot, characters prominently in foreground, vivid ill
 NO text, NO title, NO letters anywhere in the image.`;
 
     // ── MULTI-PHOTO STRATEGY ──────────────────────────────────────────────────
-    // If multiple photos uploaded, use first photo as base, then describe others
+    // Problem: images.edit() can only use ONE photo
+    // Solution: Create composite image from both photos, then use images.edit()
     const hasMultiplePhotos = referenceImageUrls.length > 1 || referenceImages.length > 1;
     
-    if (hasMultiplePhotos) {
+    if (hasMultiplePhotos && referenceImageUrls.length === 2) {
       console.log(`  → Multi-photo mode: ${referenceImageUrls.length} photos`);
+      console.log(`  → Creating composite image from both photos for images.edit()`);
       
-      // Build detailed prompt mentioning ALL photos
-      const photoDescriptions = referenceImageUrls.map((ref, i) => 
-        `Photo ${i + 1} shows ${ref.label}: use this as reference for ${ref.label}'s appearance`
-      ).join(". ");
-      
-      const multiPhotoPrompt = `${COMIC_STYLE}
+      try {
+        // Fetch both photos
+        const photo1Buffer = await fetchBuffer(referenceImageUrls[0].url);
+        const photo2Buffer = await fetchBuffer(referenceImageUrls[1].url);
+        
+        // Create side-by-side composite using sharp
+        const sharp = require('sharp');
+        
+        // Resize both to same height (768px), maintain aspect ratio
+        const img1 = sharp(photo1Buffer).resize({ height: 768, fit: 'inside' });
+        const img2 = sharp(photo2Buffer).resize({ height: 768, fit: 'inside' });
+        
+        const [meta1, meta2] = await Promise.all([
+          img1.metadata(),
+          img2.metadata()
+        ]);
+        
+        // Create composite: side by side
+        const compositeWidth = meta1.width + meta2.width;
+        const compositeHeight = 768;
+        
+        const compositeBuffer = await sharp({
+          create: {
+            width: compositeWidth,
+            height: compositeHeight,
+            channels: 3,
+            background: { r: 255, g: 255, b: 255 }
+          }
+        })
+        .composite([
+          { input: await img1.toBuffer(), left: 0, top: 0 },
+          { input: await img2.toBuffer(), left: meta1.width, top: 0 }
+        ])
+        .jpeg()
+        .toBuffer();
+        
+        // Now use images.edit() with composite
+        const blob = new Blob([compositeBuffer], { type: "image/jpeg" });
+        const refFile = new File([blob], "composite.jpg", { type: "image/jpeg" });
+        
+        const multiPhotoPrompt = `${COMIC_STYLE}
 
-REDRAW everyone as hand-drawn comic book characters. This must look like a page from a printed comic book, NOT a photograph.
+REDRAW both people in this photo as hand-drawn comic book characters standing together.
+This must look like a page from a printed comic book, NOT a photograph.
 Bold ink outlines on every person. Flat cel-shaded colors. Expressive cartoon faces.
 
-CRITICAL: You have ${referenceImageUrls.length} reference photos uploaded:
-${photoDescriptions}
+Left person is ${referenceImageUrls[0].label}: ${characters.find(c => c.name === referenceImageUrls[0].label)?.visual_anchor || ""}
+Right person is ${referenceImageUrls[1].label}: ${characters.find(c => c.name === referenceImageUrls[1].label)?.visual_anchor || ""}
 
-Draw ALL characters: ${charNames}.
-Character descriptions: ${charDesc}
-
-For each character, use their specific uploaded photo as reference for facial features, hair, skin tone, and overall appearance.
-Setting: ${location || "a beautiful Mediterranean setting"}.
-Composition: dynamic group shot, characters in foreground, vivid illustrated background.
+Draw BOTH characters together in ${location || "a beautiful Mediterranean setting"}.
+Composition: dynamic group shot, both characters prominently visible, vivid illustrated background.
 NO text, NO title, NO letters anywhere in the image.`;
 
-      // Use first photo as base image for images.edit()
-      const primaryRefUrl = referenceImageUrls[0]?.url || null;
-      const primaryRefBase64 = referenceImages[0] || null;
-      
-      if (primaryRefUrl || primaryRefBase64) {
-        try {
-          let refFile;
-          if (primaryRefUrl) {
-            const buf = await fetchBuffer(primaryRefUrl);
-            const blob = new Blob([buf], { type: "image/jpeg" });
-            refFile = new File([blob], "reference.jpg", { type: "image/jpeg" });
-          } else {
-            refFile = toFile(primaryRefBase64);
-          }
-          
-          const res2 = await openai.images.edit({
-            model: "gpt-image-2",
-            image: refFile,
-            prompt: multiPhotoPrompt,
-            size: "1024x1536",
-            quality: "high",
-          });
-          
-          const item = (res2.data || [])[0];
-          const url = item?.url || (item?.b64_json ? `data:image/png;base64,${item.b64_json}` : null);
-          if (url) {
-            const coverUrl = await saveImage(url, "covers", `cover-${Date.now()}`);
-            const projectId = req.body.projectId || `proj-${Date.now()}`;
-            await saveCharacterRefs(projectId, characters, coverUrl || url, referenceImageUrls);
-            console.log("✓ Cover done (multi-photo mode)");
-            return res.json({ coverImageUrl: coverUrl || url, projectId });
-          }
-        } catch (e) {
-          console.warn("  → Cover with multi-photo failed:", e.message);
+        const res2 = await openai.images.edit({
+          model: "gpt-image-2",
+          image: refFile,
+          prompt: multiPhotoPrompt,
+          size: "1024x1536",
+          quality: "high",
+        });
+        
+        const item = (res2.data || [])[0];
+        const url = item?.url || (item?.b64_json ? `data:image/png;base64,${item.b64_json}` : null);
+        if (url) {
+          const coverUrl = await saveImage(url, "covers", `cover-${Date.now()}`);
+          const projectId = req.body.projectId || `proj-${Date.now()}`;
+          await saveCharacterRefs(projectId, characters, coverUrl || url, referenceImageUrls);
+          console.log("✓ Cover done (multi-photo composite mode)");
+          return res.json({ coverImageUrl: coverUrl || url, projectId });
         }
+      } catch (e) {
+        console.warn("  → Cover with multi-photo composite failed:", e.message);
+        // Fall through to single photo strategy
       }
     }
 
@@ -850,7 +869,7 @@ RULES:
         }
       }
 
-      // ── STRATEGY 2: Multi-photo mode (for scenes with many people) ────────────
+      // ── STRATEGY 2: Crowd scenes (for scenes with many people) ────────────────
       // CRITICAL: Even if scene has "many guests", main characters must stay consistent
       // Use cover as base reference to maintain character appearance
       if (!reference && hasManyPeople && coverImageUrl) {
@@ -906,11 +925,6 @@ CRITICAL: Keep the SAME facial features, bone structure, eye shape, and overall 
 Only change: make skin smoother, hair darker/fuller, remove wrinkles, more youthful energy in poses.
 Draw the main characters (${finalCharacters.map(c => c.name).join(", ")}) with their recognizable faces from the cover, just younger.
 Match the art style and color palette of the cover exactly.\n\n`
-      : refSource === "cover-multi-photo" || refSource === "cover-multi-photo-crowd"
-      ? `${COMIC_STYLE}\nThis cover was generated from ${referenceImageUrls.length} photos and shows ALL characters.
-Use the EXACT same art style, character designs and color palette as this cover.
-Draw the main characters (${finalCharacters.map(c => c.name).join(", ")}) EXACTLY as they appear in this cover.
-${refSource.includes("crowd") ? "Add background guests/crowd as faceless silhouettes or simple figures.\n" : ""}\n`
       : refSource === "cover" || refSource === "cover-with-crowd"
       ? `${COMIC_STYLE}\nUse the EXACT same art style, character designs and color palette as this cover image.\nDraw the main characters (${finalCharacters.map(c => c.name).join(", ")}) EXACTLY as they appear in this cover.\n${hasManyPeople ? "Add background guests/crowd as faceless silhouettes or simple figures.\n" : ""}\n`
       : refSource === "user-photo"
