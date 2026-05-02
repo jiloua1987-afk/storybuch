@@ -151,20 +151,20 @@ export default function Step1Story() {
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="max-w-2xl mx-auto space-y-8">
 
       <div className="text-center space-y-3">
-        <h2 className="text-3xl font-bold text-gray-800" style={{ fontFamily: "var(--font-display)" }}>
+        <h2 className="text-4xl font-bold text-gray-900 tracking-tight" style={{ fontFamily: "var(--font-display)" }}>
           Erzähl uns deine Geschichte
         </h2>
-        <p className="text-gray-500 text-lg">Schreib frei oder lass dich Schritt für Schritt führen.</p>
-        <p className="text-sm text-gray-400 max-w-md mx-auto">
+        <p className="text-gray-600 text-lg leading-relaxed">Schreib frei oder lass dich Schritt für Schritt führen.</p>
+        <p className="text-sm text-gray-500 max-w-md mx-auto leading-relaxed">
           Stichpunkte reichen völlig – je mehr Details, desto persönlicher wird dein Comic
         </p>
       </div>
 
-      <div className="flex gap-3 bg-white border border-gray-200 p-1.5 rounded-xl shadow-sm">
-        <button onClick={() => setMode("gefuehrt")} className={`flex-1 py-3 rounded-lg text-sm font-medium transition-all ${mode === "gefuehrt" ? "bg-brand-600 text-white shadow-sm" : "text-gray-600 hover:text-brand-700"}`}>
+      <div className="flex gap-2 bg-white border border-gray-200 p-1 rounded-xl shadow-sm">
+        <button onClick={() => setMode("gefuehrt")} className={`flex-1 py-3 px-4 rounded-lg text-sm font-medium transition-all ${mode === "gefuehrt" ? "bg-brand-600 text-white shadow-sm" : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"}`}>
           Schritt für Schritt
         </button>
-        <button onClick={() => setMode("frei")} className={`flex-1 py-3 rounded-lg text-sm font-medium transition-all ${mode === "frei" ? "bg-brand-600 text-white shadow-sm" : "text-gray-600 hover:text-brand-700"}`}>
+        <button onClick={() => setMode("frei")} className={`flex-1 py-3 px-4 rounded-lg text-sm font-medium transition-all ${mode === "frei" ? "bg-brand-600 text-white shadow-sm" : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"}`}>
           Freitext
         </button>
       </div>
@@ -173,18 +173,18 @@ export default function Step1Story() {
         <div className="space-y-6">
           {/* Titel */}
           <div className="space-y-2">
-            <label className="text-sm font-semibold text-gray-700">Titel deines Comics</label>
+            <label className="text-sm font-semibold text-gray-900">Titel deines Comics</label>
             <input
               value={comicTitle}
               onChange={(e) => setComicTitle(e.target.value)}
               placeholder="z. B. Unser Sommer auf Sardinien"
-              className="w-full p-3 rounded-xl border-2 border-gray-200 focus:border-brand-500 focus:outline-none text-gray-700 bg-white transition-all"
+              className="w-full p-3.5 rounded-xl border border-gray-200 focus:border-brand-500 focus:ring-1 focus:ring-brand-500 focus:outline-none text-gray-900 bg-white transition-all"
             />
           </div>
 
           {/* Comic-Stil */}
-          <div className="space-y-3">
-            <label className="text-sm font-semibold text-gray-700">Comic-Stil</label>
+          <div className="space-y-4">
+            <label className="text-sm font-semibold text-gray-900">Comic-Stil</label>
             <div className="grid grid-cols-3 gap-3">
               {COMIC_STYLES.map((cs) => {
                 const IconComponent = styleIcons[cs.icon];
@@ -192,17 +192,19 @@ export default function Step1Story() {
                   <button
                     key={cs.id}
                     onClick={() => setComicStyle(cs.id)}
-                    className={`p-5 rounded-xl border-2 text-center transition-all shadow-sm hover:shadow-md space-y-2 ${
+                    className={`group p-6 rounded-xl border text-center transition-all space-y-3 ${
                       comicStyle === cs.id 
-                        ? "border-brand-500 bg-brand-50 shadow-lg shadow-brand-100" 
-                        : "border-gray-200 bg-white hover:border-brand-300 hover:bg-brand-50"
+                        ? "border-brand-600 bg-brand-50 shadow-sm" 
+                        : "border-gray-200 bg-white hover:border-brand-400 hover:bg-brand-50/30 hover:shadow-sm"
                     }`}
                   >
-                    <div className={`mx-auto ${comicStyle === cs.id ? 'text-brand-600 scale-110' : 'text-brand-500'} transition-all`}>
-                      <IconComponent className="w-10 h-10 mx-auto" />
+                    <div className={`mx-auto transition-all ${comicStyle === cs.id ? 'text-brand-600' : 'text-brand-500 group-hover:text-brand-600'}`}>
+                      <IconComponent className="w-9 h-9 mx-auto" />
                     </div>
-                    <div className="text-sm font-semibold text-gray-800">{cs.label}</div>
-                    <div className="text-xs text-gray-500 leading-snug">{cs.desc}</div>
+                    <div>
+                      <div className="text-sm font-semibold text-gray-900 mb-1">{cs.label}</div>
+                      <div className="text-xs text-gray-600 leading-relaxed">{cs.desc}</div>
+                    </div>
                   </button>
                 );
               })}
@@ -211,15 +213,15 @@ export default function Step1Story() {
 
           {/* Freitext */}
           <div className="space-y-3">
-            <label className="text-sm font-semibold text-gray-700">Deine Geschichte</label>
+            <label className="text-sm font-semibold text-gray-900">Deine Geschichte</label>
             <textarea
               value={storyInput}
               onChange={(e) => setStoryInput(e.target.value)}
               placeholder="Stichpunkte reichen! z. B.: Toskana, Sommer 2023, Emma 6 Jahre, erster Gelato, Sonnenuntergang am Strand, Papa hat Pizza verbrannt, Mama hat gelacht..."
               rows={12}
-              className="w-full p-4 rounded-xl border-2 border-gray-200 focus:border-brand-500 focus:outline-none resize-none text-gray-700 bg-white shadow-sm transition-all"
+              className="w-full p-4 rounded-xl border border-gray-200 focus:border-brand-500 focus:ring-1 focus:ring-brand-500 focus:outline-none resize-none text-gray-900 bg-white transition-all"
             />
-            <p className="text-xs text-gray-400 text-right">{storyInput.length} Zeichen</p>
+            <p className="text-xs text-gray-500 text-right">{storyInput.length} Zeichen</p>
           </div>
         </div>
       )}
@@ -228,8 +230,8 @@ export default function Step1Story() {
         <div className="space-y-6">
 
           {/* 1. Kategorie */}
-          <div className="space-y-3">
-            <label className="text-sm font-semibold text-gray-700">1. Um was für eine Geschichte handelt es sich?</label>
+          <div className="space-y-4">
+            <label className="text-sm font-semibold text-gray-900">1. Um was für eine Geschichte handelt es sich?</label>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               {CATEGORIES.map((cat) => {
                 const IconComponent = categoryIcons[cat.icon as keyof typeof categoryIcons];
@@ -237,16 +239,16 @@ export default function Step1Story() {
                   <button
                     key={cat.id}
                     onClick={() => { setCategory(cat.id); setAnswers({}); }}
-                    className={`p-5 rounded-xl border-2 text-center transition-all shadow-sm hover:shadow-md ${
+                    className={`group p-6 rounded-xl border transition-all ${
                       category === cat.id 
-                        ? "border-brand-500 bg-brand-50 shadow-lg shadow-brand-100" 
-                        : "border-gray-200 bg-white hover:border-brand-300 hover:bg-brand-50"
+                        ? "border-brand-600 bg-brand-50 shadow-sm" 
+                        : "border-gray-200 bg-white hover:border-brand-400 hover:bg-brand-50/30 hover:shadow-sm"
                     }`}
                   >
-                    <div className={`mx-auto mb-2 ${category === cat.id ? 'text-brand-600 scale-110' : 'text-brand-500'} transition-all`}>
-                      <IconComponent className="w-12 h-12 mx-auto" />
+                    <div className={`mx-auto mb-3 transition-all ${category === cat.id ? 'text-brand-600' : 'text-brand-500 group-hover:text-brand-600'}`}>
+                      <IconComponent className="w-10 h-10 mx-auto" />
                     </div>
-                    <div className="text-sm font-medium text-gray-800">{cat.label}</div>
+                    <div className="text-sm font-medium text-gray-900">{cat.label}</div>
                   </button>
                 );
               })}
@@ -256,8 +258,8 @@ export default function Step1Story() {
           {/* 2. Comic-Stil */}
           <AnimatePresence>
             {category && (
-              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-3">
-                <label className="text-sm font-semibold text-gray-700">2. Welchen Comic-Stil soll deine Geschichte haben?</label>
+              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-4">
+                <label className="text-sm font-semibold text-gray-900">2. Welchen Comic-Stil soll deine Geschichte haben?</label>
                 <div className="grid grid-cols-3 gap-3">
                   {COMIC_STYLES.map((cs) => {
                     const IconComponent = styleIcons[cs.icon];
@@ -265,17 +267,19 @@ export default function Step1Story() {
                       <button
                         key={cs.id}
                         onClick={() => setComicStyle(cs.id)}
-                        className={`p-5 rounded-xl border-2 text-center transition-all shadow-sm hover:shadow-md space-y-2 ${
+                        className={`group p-6 rounded-xl border text-center transition-all space-y-3 ${
                           comicStyle === cs.id 
-                            ? "border-brand-500 bg-brand-50 shadow-lg shadow-brand-100" 
-                            : "border-gray-200 bg-white hover:border-brand-300 hover:bg-brand-50"
+                            ? "border-brand-600 bg-brand-50 shadow-sm" 
+                            : "border-gray-200 bg-white hover:border-brand-400 hover:bg-brand-50/30 hover:shadow-sm"
                         }`}
                       >
-                        <div className={`mx-auto ${comicStyle === cs.id ? 'text-brand-600 scale-110' : 'text-brand-500'} transition-all`}>
-                          <IconComponent className="w-10 h-10 mx-auto" />
+                        <div className={`mx-auto transition-all ${comicStyle === cs.id ? 'text-brand-600' : 'text-brand-500 group-hover:text-brand-600'}`}>
+                          <IconComponent className="w-9 h-9 mx-auto" />
                         </div>
-                        <div className="text-sm font-semibold text-gray-800">{cs.label}</div>
-                        <div className="text-xs text-gray-500 leading-snug">{cs.desc}</div>
+                        <div>
+                          <div className="text-sm font-semibold text-gray-900 mb-1">{cs.label}</div>
+                          <div className="text-xs text-gray-600 leading-relaxed">{cs.desc}</div>
+                        </div>
                       </button>
                     );
                   })}

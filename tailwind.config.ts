@@ -10,16 +10,16 @@ const config: Config = {
     extend: {
       colors: {
         brand: {
-          50:  "#FFF7ED",  // Sehr helles Orange
-          100: "#FFEDD5",  // Helles Orange
-          200: "#FED7AA",  // Orange-Pastell
-          300: "#FDBA74",  // Mittleres Orange
-          400: "#FB923C",  // Orange
-          500: "#F97316",  // Kräftiges Orange
-          600: "#EA580C",  // Dunkles Orange
-          700: "#C2410C",  // Sehr dunkles Orange
-          800: "#9A3412",  // Dunkel-Orange
-          900: "#7C2D12",  // Sehr dunkel
+          50:  "#FAF8F5",  // Sehr helles Warm Beige
+          100: "#F5F1EA",  // Helles Warm Beige
+          200: "#E8E1D5",  // Soft Beige
+          300: "#D4C8B8",  // Muted Taupe
+          400: "#B8A68E",  // Warm Taupe
+          500: "#9C8670",  // Muted Bronze (Primär)
+          600: "#7D6B56",  // Dunkles Bronze
+          700: "#5F5242",  // Sehr dunkles Bronze
+          800: "#3F3830",  // Charcoal Brown
+          900: "#2A251F",  // Deep Charcoal
         },
         warm: {
           50:  "#FDF8F2",
