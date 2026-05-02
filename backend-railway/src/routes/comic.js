@@ -473,16 +473,17 @@ Respond with ONLY the description, starting with the character name.`,
                   max_tokens: 120,
                 });
                 console.log(`  → ${char.name}: generated from story (not in photo)`);
-              return { ...char, visual_anchor: r.choices[0].message.content || char.visual_anchor, inPhoto: false };
-            } catch (e) {
-              console.error(`Story description error for ${char.name}:`, e.message);
-              return { ...char, inPhoto: false };
+                return { ...char, visual_anchor: r.choices[0].message.content || char.visual_anchor, inPhoto: false };
+              } catch (e) {
+                console.error(`Story description error for ${char.name}:`, e.message);
+                return { ...char, inPhoto: false };
+              }
             }
-          }
-        }));
-      } catch (e) {
-        console.error("Photo detection error:", e.message);
-        // Fallback: use story-based anchors for all
+          }));
+        } catch (e) {
+          console.error("Photo detection error:", e.message);
+          // Fallback: use story-based anchors for all
+        }
       }
     }
 
@@ -621,7 +622,7 @@ NO text, NO title, NO letters anywhere in the image.`,
           const coverUrl = await saveImage(url, "covers", `cover-${Date.now()}`);
           const projectId = req.body.projectId || `proj-${Date.now()}`;
           await saveCharacterRefs(projectId, characters, coverUrl || url, referenceImageUrls);
-          console.log("✓ Cover done (with user photo)");
+          console.log("✓ Cover done (multi-photo mode)");
           return res.json({ coverImageUrl: coverUrl || url, projectId });
         }
       } catch (e) {
