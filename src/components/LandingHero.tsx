@@ -59,12 +59,9 @@ export default function LandingHero({ onStart }: { onStart: () => void }) {
         <div className="flex flex-col sm:flex-row gap-3 justify-center">
           <button
             onClick={onStart}
-            className="bg-[#1A1410] text-white px-8 py-3.5 rounded-lg text-[15px] font-medium hover:bg-[#2D2620] transition-colors"
+            className="bg-brand-600 text-white px-8 py-3.5 rounded-lg text-[15px] font-medium hover:bg-brand-700 transition-colors"
           >
             Jetzt Comic erstellen
-          </button>
-          <button className="border border-[#E8D9C0] text-[#1A1410] px-8 py-3.5 rounded-lg text-[15px] font-medium hover:border-[#8B7355] hover:bg-[#F5EDE0] transition-colors">
-            Beispiele ansehen
           </button>
         </div>
       </section>
@@ -164,7 +161,7 @@ export default function LandingHero({ onStart }: { onStart: () => void }) {
       </section>
 
       {/* ── STATS ── */}
-      <section className="bg-[#1A1410] py-20">
+      <section className="bg-brand-800 py-20">
         <div className="max-w-5xl mx-auto px-6 grid md:grid-cols-3 gap-0 divide-y md:divide-y-0 md:divide-x divide-white/10">
           {[
             { value: "30.000+", label: "Bücher gedruckt" },
@@ -172,8 +169,8 @@ export default function LandingHero({ onStart }: { onStart: () => void }) {
             { value: "5–7",     label: "Werktage Lieferzeit" },
           ].map((s) => (
             <div key={s.label} className="text-center py-10 md:py-0 px-8 space-y-2">
-              <p className="font-display text-[52px] font-semibold text-[#C9963A]">{s.value}</p>
-              <p className="text-[12px] text-[#8B7355] uppercase tracking-widest">{s.label}</p>
+              <p className="font-display text-[52px] font-semibold text-brand-500">{s.value}</p>
+              <p className="text-[12px] text-brand-400 uppercase tracking-widest">{s.label}</p>
             </div>
           ))}
         </div>
@@ -190,7 +187,7 @@ export default function LandingHero({ onStart }: { onStart: () => void }) {
           </p>
           <button
             onClick={onStart}
-            className="bg-[#1A1410] text-white px-10 py-4 rounded-lg font-medium text-lg hover:bg-[#2D2620] transition-colors"
+            className="bg-brand-600 text-white px-10 py-4 rounded-lg font-medium text-lg hover:bg-brand-700 transition-colors"
           >
             Jetzt Comic erstellen
           </button>
