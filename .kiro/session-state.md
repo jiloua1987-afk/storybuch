@@ -39,10 +39,9 @@ Web-App die personalisierte Comic-Bücher aus Familienfotos und Geschichten gene
 
 1. **Fußball-Seite (Safety-Block):** images.edit() + images.generate() beide geblockt bei Jubel-Szenen mit Kindern. Sanitized-Prompt-Fallback generiert ein Bild, aber Charaktere weniger erkennbar.
 2. ~~**Supabase Unique-Constraint:**~~ ✅ FIXED (2. Mai) — `saveCharacterRefs` nutzt jetzt `upsert` mit `onConflict`
-3. ~~**Stil-Konsistenz:**~~ ✅ IMPROVED (2. Mai) — Verstärkter Anti-Manga-Prompt für humorvolle/dynamische Szenen (z.B. "Wackelige Torte")
-   - `MOOD_MOD.humor` jetzt explizit: "NO anime sweat drops, NO manga speed lines, NO chibi style"
-   - Neue RULES: "Movement/action: show with TILTED POSES and MOTION BLUR in Bande Dessinée style"
-   - Gilt für normalen UND sanitized prompt
+3. ~~**Stil-Konsistenz:**~~ ✅ IMPROVED (2. Mai) — Verstärkter Anti-Manga-Prompt für humorvolle/dynamische Szenen
+4. ~~**Panel-Wiederholungen:**~~ ✅ FIXED (2. Mai) — Struktur-Prompt erzwingt jetzt visuelle Variation zwischen Panels
+5. ~~**Erfundene Details:**~~ ✅ FIXED (2. Mai) — Photo-Analyse und Seiten-Prompt verbieten jetzt erfundene Features (Brille, Schnurrbart etc.)
 
 ---
 

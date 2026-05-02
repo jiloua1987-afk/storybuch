@@ -2,10 +2,11 @@
 
 ## Übersicht
 Verstärkter Anti-Manga-Prompt für humorvolle/dynamische Szenen. Fix für Stilbruch bei "Wackelige Torte" und ähnlichen Action-Momenten.
+Fix für wiederholte Panel-Darstellungen und erfundene Charakter-Details.
 
 ---
 
-## Problem: Stilbruch bei humorvollen Action-Szenen
+## Problem 1: Stilbruch bei humorvollen Action-Szenen
 
 **Symptom:**
 Bei dynamischen/humorvollen Szenen (z.B. "Thomas trägt wackelnde 5-stöckige Torte, Felix lacht sich den Bauch vor Lachen") driftet gpt-image-2 trotz STRICT PROHIBITION zu Manga-Stil.
@@ -28,6 +29,57 @@ Bei dynamischen/humorvollen Szenen (z.B. "Thomas trägt wackelnde 5-stöckige To
 - `backend-railway/src/routes/comic.js` — `MOOD_MOD` Konstante (Zeile 22-26)
 - `backend-railway/src/routes/comic.js` — Seiten-Prompt RULES (Zeile 505-512)
 - `backend-railway/src/routes/comic.js` — Sanitized-Prompt RULES (Zeile 605-612)
+
+---
+
+## Problem 2: Wiederholte Panel-Darstellungen
+
+**Symptom:**
+Mehrere Panels auf einer Seite zeigen die gleiche Szene (z.B. "Familie hinter Baum" in Panel 1, 2, 3).
+
+**Root Cause:**
+GPT-4.1 bei der Struktur-Generierung erzeugt nicht genug Variation zwischen Panels.
+
+**Fix:**
+Struktur-Prompt verstärkt mit expliziten Variations-Regeln:
+```
+Each panel MUST show a DIFFERENT angle/moment/action of the scene.
+CRITICAL: Every panel must be VISUALLY DISTINCT — different camera angle, different character focus, different action.
+AVOID repetition: if panel 1 shows "family behind tree", panel 2 must NOT show "family behind tree" again.
+Show PROGRESSION: beginning → middle → end, or cause → action → reaction.
+```
+
+**Datei:**
+- `backend-railway/src/routes/comic.js` — `/structure` Route, System-Prompt (Zeile 195-199)
+
+---
+
+## Problem 3: Erfundene Charakter-Details
+
+**Symptom:**
+Charaktere bekommen Details die nicht im Original-Foto sind (z.B. Vater mit Brille, Opa mit Schnurrbart).
+
+**Root Cause:**
+GPT-4.1 Vision "erfindet" Details bei der visual_anchor Generierung aus dem Foto.
+
+**Fix:**
+1. Photo-Analyse-Prompt verstärkt:
+```
+Describe ONLY what you can ACTUALLY SEE.
+CRITICAL: If you CANNOT see a feature clearly (glasses, beard, mustache) → DO NOT mention it.
+Do NOT invent or assume details that are not clearly visible.
+```
+
+2. Seiten-Prompt verstärkt (normal + sanitized):
+```
+CRITICAL: Draw characters EXACTLY as described. Do NOT add features not mentioned (glasses, beard, mustache, jewelry, tattoos).
+If a feature is not in the description, the character does NOT have it.
+```
+
+**Dateien:**
+- `backend-railway/src/routes/comic.js` — Photo-Analyse (Zeile 295-305)
+- `backend-railway/src/routes/comic.js` — Seiten-Prompt (Zeile 502-504)
+- `backend-railway/src/routes/comic.js` — Sanitized-Prompt (Zeile 615-617)
 
 ---
 

@@ -195,8 +195,11 @@ PANEL COUNT — choose based on the scene:
 
 Do NOT always choose 4. Match the panel count to the scene complexity.
 
-Each panel shows a different angle/moment of the SAME scene.
-Think cinematically: wide shot → close-up → reaction shot.
+Each panel MUST show a DIFFERENT angle/moment/action of the scene.
+Think cinematically: wide shot → close-up → reaction shot → detail shot.
+CRITICAL: Every panel must be VISUALLY DISTINCT — different camera angle, different character focus, different action.
+AVOID repetition: if panel 1 shows "family behind tree", panel 2 must NOT show "family behind tree" again.
+Show PROGRESSION: beginning → middle → end, or cause → action → reaction.
 
 EMOTIONS: Show the CORRECT emotion.
 - If someone falls/gets hurt → show pain, surprise, tears
@@ -293,7 +296,17 @@ Base your answer ONLY on ages and count of people visible. Do NOT identify anyon
                 model: "gpt-4.1",
                 messages: [{ role: "user", content: [
                   refImageContent,
-                  { type: "text", text: `Describe the person who is approximately ${char.age} years old in this photo, for a comic artist. Focus on: hair color/texture/length, skin tone, eye color, distinctive features (beard, glasses, hijab etc), body type. Do NOT identify anyone. English, max 60 words. Start with "${char.name}:"` },
+                  { type: "text", text: `Describe ONLY what you can ACTUALLY SEE on the person who is approximately ${char.age} years old in this photo.
+
+CRITICAL RULES:
+- Describe ONLY visible features: hair color/length/style, skin tone, approximate eye color, body type
+- If you CANNOT see a feature clearly (glasses, beard, mustache, jewelry) → DO NOT mention it
+- If facial features are not clearly visible → describe only hair, skin tone, body type
+- Do NOT invent or assume details that are not clearly visible
+- Do NOT identify anyone
+
+Format: "${char.name}: [age] years old, [visible features only]"
+English, max 50 words.` },
                 ]}],
                 max_tokens: 120,
               });
@@ -485,6 +498,9 @@ Comic page — ${panelCount} panels in ${layoutDesc}. Bold black borders between
 CHARACTERS — draw identically across all panels:
 ${charAnchors}
 
+CRITICAL: Draw characters EXACTLY as described above. Do NOT add features not mentioned (glasses, beard, mustache, jewelry, tattoos).
+If a feature is not in the description, the character does NOT have it.
+
 CRITICAL SIZE RULES — enforce in every panel:
 - Children must be drawn at their correct height relative to adults
 - A 3-year-old is approximately half the height of an adult — always visibly much smaller
@@ -594,6 +610,8 @@ Comic page — ${panelCount} panels in ${layoutDesc}. Bold black borders between
 
 CHARACTERS — draw identically across all panels:
 ${charAnchors}
+
+CRITICAL: Draw characters EXACTLY as described. Do NOT add features not mentioned (glasses, beard, mustache, jewelry).
 
 CLOTHING — characters wear ${outfit}.
 
