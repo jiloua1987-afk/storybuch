@@ -149,22 +149,22 @@ export default function Step1Story() {
   return (
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="max-w-2xl mx-auto space-y-8">
 
-      <div className="text-center space-y-2">
+      <div className="text-center space-y-3">
         <h2 className="text-3xl font-bold text-brand-800" style={{ fontFamily: "var(--font-display)" }}>
-          Erzähl uns deine Geschichte ✍️
+          Erzähl uns deine Geschichte
         </h2>
-        <p className="text-gray-500">Schreib frei oder lass dich Schritt für Schritt führen.</p>
-        <div className="inline-flex items-center gap-2 bg-green-50 text-green-700 border border-green-200 px-4 py-2 rounded-full text-sm">
-          💡 Stichpunkte reichen völlig – je mehr Details, desto persönlicher wird dein Comic
-        </div>
+        <p className="text-gray-500 text-lg">Schreib frei oder lass dich Schritt für Schritt führen.</p>
+        <p className="text-sm text-gray-400 max-w-md mx-auto">
+          Stichpunkte reichen völlig – je mehr Details, desto persönlicher wird dein Comic
+        </p>
       </div>
 
-      <div className="flex gap-3 bg-brand-50 p-1 rounded-2xl">
-        <button onClick={() => setMode("gefuehrt")} className={`flex-1 py-2 rounded-xl text-sm font-medium transition-all ${mode === "gefuehrt" ? "bg-white shadow text-brand-700" : "text-gray-500"}`}>
-          🧭 Schritt für Schritt
+      <div className="flex gap-3 bg-white border border-gray-200 p-1.5 rounded-xl shadow-sm">
+        <button onClick={() => setMode("gefuehrt")} className={`flex-1 py-3 rounded-lg text-sm font-medium transition-all ${mode === "gefuehrt" ? "bg-brand-600 text-white shadow-sm" : "text-gray-600 hover:text-brand-700"}`}>
+          Schritt für Schritt
         </button>
-        <button onClick={() => setMode("frei")} className={`flex-1 py-2 rounded-xl text-sm font-medium transition-all ${mode === "frei" ? "bg-white shadow text-brand-700" : "text-gray-500"}`}>
-          ✍️ Freitext
+        <button onClick={() => setMode("frei")} className={`flex-1 py-3 rounded-lg text-sm font-medium transition-all ${mode === "frei" ? "bg-brand-600 text-white shadow-sm" : "text-gray-600 hover:text-brand-700"}`}>
+          Freitext
         </button>
       </div>
 
@@ -172,28 +172,27 @@ export default function Step1Story() {
         <div className="space-y-6">
           {/* Titel */}
           <div className="space-y-2">
-            <label className="text-sm font-semibold text-brand-700">📚 Titel deines Comics</label>
+            <label className="text-sm font-semibold text-brand-700">Titel deines Comics</label>
             <input
               value={comicTitle}
               onChange={(e) => setComicTitle(e.target.value)}
               placeholder="z. B. Unser Sommer auf Sardinien"
-              className="w-full p-3 rounded-xl border-2 border-brand-100 focus:border-brand-400 focus:outline-none text-gray-700 bg-white transition-all"
+              className="w-full p-3 rounded-xl border-2 border-gray-200 focus:border-brand-500 focus:outline-none text-gray-700 bg-white transition-all"
             />
           </div>
 
           {/* Comic-Stil */}
           <div className="space-y-3">
-            <label className="text-sm font-semibold text-brand-700">🎨 Comic-Stil</label>
+            <label className="text-sm font-semibold text-brand-700">Comic-Stil</label>
             <div className="grid grid-cols-3 gap-3">
               {COMIC_STYLES.map((cs) => (
                 <button
                   key={cs.id}
                   onClick={() => setComicStyle(cs.id)}
-                  className={`p-4 rounded-2xl border-2 text-center transition-all space-y-1 ${comicStyle === cs.id ? "border-brand-400 bg-brand-50 shadow-md" : "border-gray-100 bg-white hover:border-brand-200"}`}
+                  className={`p-5 rounded-xl border-2 text-center transition-all space-y-2 ${comicStyle === cs.id ? "border-brand-500 bg-brand-50 shadow-sm" : "border-gray-200 bg-white hover:border-brand-300"}`}
                 >
-                  <div className="text-2xl">{cs.emoji}</div>
-                  <div className="text-xs font-semibold text-brand-800">{cs.label}</div>
-                  <div className="text-xs text-gray-400 leading-snug">{cs.desc}</div>
+                  <div className="text-sm font-semibold text-brand-800">{cs.label}</div>
+                  <div className="text-xs text-gray-500 leading-snug">{cs.desc}</div>
                 </button>
               ))}
             </div>
@@ -201,13 +200,13 @@ export default function Step1Story() {
 
           {/* Freitext */}
           <div className="space-y-3">
-            <label className="text-sm font-semibold text-brand-700">✍️ Deine Geschichte</label>
+            <label className="text-sm font-semibold text-brand-700">Deine Geschichte</label>
             <textarea
               value={storyInput}
               onChange={(e) => setStoryInput(e.target.value)}
               placeholder="Stichpunkte reichen! z. B.: Toskana, Sommer 2023, Emma 6 Jahre, erster Gelato, Sonnenuntergang am Strand, Papa hat Pizza verbrannt, Mama hat gelacht..."
               rows={12}
-              className="w-full p-4 rounded-2xl border-2 border-brand-100 focus:border-brand-400 focus:outline-none resize-none text-gray-700 bg-white shadow-sm transition-all"
+              className="w-full p-4 rounded-xl border-2 border-gray-200 focus:border-brand-500 focus:outline-none resize-none text-gray-700 bg-white shadow-sm transition-all"
             />
             <p className="text-xs text-gray-400 text-right">{storyInput.length} Zeichen</p>
           </div>
@@ -220,15 +219,14 @@ export default function Step1Story() {
           {/* 1. Kategorie */}
           <div className="space-y-3">
             <label className="text-sm font-semibold text-brand-700">1. Um was für eine Geschichte handelt es sich?</label>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               {CATEGORIES.map((cat) => (
                 <button
                   key={cat.id}
                   onClick={() => { setCategory(cat.id); setAnswers({}); }}
-                  className={`p-3 rounded-2xl border-2 text-center transition-all ${category === cat.id ? "border-brand-400 bg-brand-50 shadow-md" : "border-gray-100 bg-white hover:border-brand-200"}`}
+                  className={`p-4 rounded-xl border-2 text-center transition-all ${category === cat.id ? "border-brand-500 bg-brand-50 shadow-sm" : "border-gray-200 bg-white hover:border-brand-300"}`}
                 >
-                  <div className="text-2xl mb-1">{cat.emoji}</div>
-                  <div className="text-xs font-medium text-brand-800">{cat.label}</div>
+                  <div className="text-sm font-medium text-brand-800">{cat.label}</div>
                 </button>
               ))}
             </div>
@@ -244,11 +242,10 @@ export default function Step1Story() {
                     <button
                       key={cs.id}
                       onClick={() => setComicStyle(cs.id)}
-                      className={`p-4 rounded-2xl border-2 text-center transition-all space-y-1 ${comicStyle === cs.id ? "border-brand-400 bg-brand-50 shadow-md" : "border-gray-100 bg-white hover:border-brand-200"}`}
+                      className={`p-5 rounded-xl border-2 text-center transition-all space-y-2 ${comicStyle === cs.id ? "border-brand-500 bg-brand-50 shadow-sm" : "border-gray-200 bg-white hover:border-brand-300"}`}
                     >
-                      <div className="text-2xl">{cs.emoji}</div>
-                      <div className="text-xs font-semibold text-brand-800">{cs.label}</div>
-                      <div className="text-xs text-gray-400 leading-snug">{cs.desc}</div>
+                      <div className="text-sm font-semibold text-brand-800">{cs.label}</div>
+                      <div className="text-xs text-gray-500 leading-snug">{cs.desc}</div>
                     </button>
                   ))}
                 </div>
@@ -288,7 +285,7 @@ export default function Step1Story() {
                       value={answers[key] || ""}
                       onChange={(e) => setAnswers({ ...answers, [key]: e.target.value })}
                       placeholder={placeholder}
-                      className="w-full p-3 rounded-xl border-2 border-brand-100 focus:border-brand-400 focus:outline-none text-gray-700 bg-white transition-all"
+                      className="w-full p-3 rounded-xl border-2 border-gray-200 focus:border-brand-500 focus:outline-none text-gray-700 bg-white transition-all"
                     />
                   </div>
                 ))}
@@ -307,17 +304,17 @@ export default function Step1Story() {
                 <p className="text-xs text-gray-400">Jeder Moment bekommt seine eigene Illustration.</p>
                 <div className="space-y-3">
                   {moments.map((moment, i) => (
-                    <motion.div key={moment.id} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} className="bg-brand-50 rounded-2xl p-4 space-y-2">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-bold text-brand-400 w-5">#{i + 1}</span>
+                    <motion.div key={moment.id} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} className="bg-white border border-gray-200 rounded-xl p-4 space-y-3">
+                      <div className="flex items-center gap-3">
+                        <span className="text-xs font-semibold text-gray-400 w-8">#{i + 1}</span>
                         <input
                           value={moment.title}
                           onChange={(e) => updateMoment(moment.id, "title", e.target.value)}
                           placeholder="Titel, z. B. Der erste Gelato"
-                          className="flex-1 p-2 rounded-xl border-2 border-brand-100 focus:border-brand-400 focus:outline-none text-sm text-gray-700 bg-white"
+                          className="flex-1 p-2.5 rounded-lg border-2 border-gray-200 focus:border-brand-500 focus:outline-none text-sm text-gray-700 bg-white"
                         />
                         {moments.length > 1 && (
-                          <button onClick={() => removeMoment(moment.id)} className="text-gray-300 hover:text-red-400 text-lg">×</button>
+                          <button onClick={() => removeMoment(moment.id)} className="text-gray-300 hover:text-red-500 text-xl">×</button>
                         )}
                       </div>
                       <textarea
@@ -325,16 +322,16 @@ export default function Step1Story() {
                         onChange={(e) => updateMoment(moment.id, "description", e.target.value)}
                         placeholder="Kurze Beschreibung – Stichpunkte reichen!"
                         rows={2}
-                        className="w-full p-2 rounded-xl border-2 border-brand-100 focus:border-brand-400 focus:outline-none text-sm text-gray-700 bg-white resize-none"
+                        className="w-full p-2.5 rounded-lg border-2 border-gray-200 focus:border-brand-500 focus:outline-none text-sm text-gray-700 bg-white resize-none"
                       />
                     </motion.div>
                   ))}
                 </div>
                 <button
                   onClick={addMoment}
-                  className="w-full py-3 rounded-2xl border-2 border-dashed border-brand-200 text-brand-500 text-sm font-medium hover:bg-brand-50 hover:border-brand-400 transition-all flex items-center justify-center gap-2"
+                  className="w-full py-3 rounded-xl border-2 border-dashed border-gray-300 text-gray-500 text-sm font-medium hover:bg-gray-50 hover:border-brand-400 hover:text-brand-600 transition-all flex items-center justify-center gap-2"
                 >
-                  <span className="text-xl">+</span> Weiteren Moment hinzufügen
+                  <span className="text-lg">+</span> Weiteren Moment hinzufügen
                 </button>
               </motion.div>
             )}
@@ -343,22 +340,22 @@ export default function Step1Story() {
           {/* 5. Dialoge & Wichtige Sätze */}
           <AnimatePresence>
             {category && (
-              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4 border-t border-brand-100 pt-6">
+              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4 border-t border-gray-200 pt-6">
                 <label className="text-sm font-semibold text-brand-700">
-                  5. Dialoge <span className="font-normal text-gray-400">(optional)</span>
+                  6. Dialoge <span className="font-normal text-gray-400">(optional)</span>
                 </label>
-                <div className="flex gap-3 bg-brand-50 p-1 rounded-2xl">
+                <div className="flex gap-3 bg-white border border-gray-200 p-1.5 rounded-xl shadow-sm">
                   <button
                     onClick={() => setDialogMode("auto")}
-                    className={`flex-1 py-2 rounded-xl text-sm font-medium transition-all ${dialogMode === "auto" ? "bg-white shadow text-brand-700" : "text-gray-500"}`}
+                    className={`flex-1 py-2.5 rounded-lg text-sm font-medium transition-all ${dialogMode === "auto" ? "bg-brand-600 text-white shadow-sm" : "text-gray-600 hover:text-brand-700"}`}
                   >
-                    ✨ Automatisch vorschlagen
+                    Automatisch vorschlagen
                   </button>
                   <button
                     onClick={() => setDialogMode("custom")}
-                    className={`flex-1 py-2 rounded-xl text-sm font-medium transition-all ${dialogMode === "custom" ? "bg-white shadow text-brand-700" : "text-gray-500"}`}
+                    className={`flex-1 py-2.5 rounded-lg text-sm font-medium transition-all ${dialogMode === "custom" ? "bg-brand-600 text-white shadow-sm" : "text-gray-600 hover:text-brand-700"}`}
                   >
-                    ✍️ Eigene Dialoge
+                    Eigene Dialoge
                   </button>
                 </div>
                 <p className="text-xs text-gray-400">
@@ -371,32 +368,32 @@ export default function Step1Story() {
                   {dialogMode === "custom" && (
                     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-3">
                       {customDialogs.map((d, i) => (
-                        <motion.div key={d.id} initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} className="bg-brand-50 rounded-2xl p-4 space-y-2">
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs font-bold text-brand-400 w-5">#{i + 1}</span>
+                        <motion.div key={d.id} initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} className="bg-white border border-gray-200 rounded-xl p-4 space-y-3">
+                          <div className="flex items-center gap-3">
+                            <span className="text-xs font-semibold text-gray-400 w-8">#{i + 1}</span>
                             <input
                               value={d.speaker}
                               onChange={(e) => updateDialog(d.id, "speaker", e.target.value)}
                               placeholder="Sprecher, z. B. Max"
-                              className="w-36 p-2 rounded-xl border-2 border-brand-100 focus:border-brand-400 focus:outline-none text-sm text-gray-700 bg-white"
+                              className="w-36 p-2.5 rounded-lg border-2 border-gray-200 focus:border-brand-500 focus:outline-none text-sm text-gray-700 bg-white"
                             />
                             {customDialogs.length > 1 && (
-                              <button onClick={() => removeDialog(d.id)} className="ml-auto text-gray-300 hover:text-red-400 text-xl">×</button>
+                              <button onClick={() => removeDialog(d.id)} className="ml-auto text-gray-300 hover:text-red-500 text-xl">×</button>
                             )}
                           </div>
                           <input
                             value={d.text}
                             onChange={(e) => updateDialog(d.id, "text", e.target.value)}
                             placeholder="Dialog, z. B. Warte, kennst du mich?"
-                            className="w-full p-2 rounded-xl border-2 border-brand-100 focus:border-brand-400 focus:outline-none text-sm text-gray-700 bg-white"
+                            className="w-full p-2.5 rounded-lg border-2 border-gray-200 focus:border-brand-500 focus:outline-none text-sm text-gray-700 bg-white"
                           />
                         </motion.div>
                       ))}
                       <button
                         onClick={addDialog}
-                        className="w-full py-3 rounded-2xl border-2 border-dashed border-brand-200 text-brand-500 text-sm font-medium hover:bg-brand-50 hover:border-brand-400 transition-all flex items-center justify-center gap-2"
+                        className="w-full py-3 rounded-xl border-2 border-dashed border-gray-300 text-gray-500 text-sm font-medium hover:bg-gray-50 hover:border-brand-400 hover:text-brand-600 transition-all flex items-center justify-center gap-2"
                       >
-                        <span className="text-xl">+</span> Dialog hinzufügen
+                        <span className="text-lg">+</span> Dialog hinzufügen
                       </button>
                     </motion.div>
                   )}
@@ -411,7 +408,7 @@ export default function Step1Story() {
                     onChange={(e) => setMustHaveSentences(e.target.value)}
                     placeholder="Gibt es Sätze die unbedingt vorkommen sollen? z. B. 'Ich liebe dich mehr als Pizza'"
                     rows={2}
-                    className="w-full p-3 rounded-xl border-2 border-brand-100 focus:border-brand-400 focus:outline-none text-gray-700 bg-white resize-none transition-all"
+                    className="w-full p-3 rounded-xl border-2 border-gray-200 focus:border-brand-500 focus:outline-none text-gray-700 bg-white resize-none transition-all"
                   />
                 </div>
               </motion.div>
