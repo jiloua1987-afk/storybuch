@@ -6,7 +6,7 @@
 ### Backend (Railway)
 - ✅ **Multi-Person Photo Matching** - Jedes Foto separat analysiert (Sally + Jil)
 - ✅ **Syntax-Fehler behoben** - Backend startet ohne Crash
-- ✅ **Age-Based Character Rendering** - Junge/mittlere/aktuelle Szenen erkannt
+- ✅ **Age-Based Character Rendering mit Cover** - Junge Szenen nutzen Cover + Age Modifier (2. Mai 20:30)
 - ✅ **Crowd Scene Handling** - Hochzeit mit Gästen behält Charakterkonsistenz
 - ✅ **Supabase Integration** - `photo_url` Spalte + Unique Constraint
 - ✅ **Quality Score System** - Auto-Retry bei Manga-Stil (Consistency Validation)
@@ -18,7 +18,7 @@
 - ✅ **Outfit-Kontext** - Automatische Kleidungs-Erkennung (Beach/Airport/etc.)
 - ✅ **OpenAI Tier 2** - 50 IPM statt 5 IPM (schnellere Generation)
 
-**Hinweis:** Multi-Person System ist deployed, nur noch testen!
+**Wichtig:** Age Modifier nutzt jetzt Cover als Referenz → behält Gesichtszüge, macht nur jünger!
 
 ### Frontend (Vercel)
 - ✅ **Einheitliches Format** - Alle Seiten 2:3 (1024×1536)
@@ -199,5 +199,6 @@ Nach jedem Deployment:
 
 ---
 
-**Letztes Update:** 2. Mai 2026, 20:00 Uhr  
-**Nächster Schritt:** Multi-Photo System testen
+**Letztes Update:** 2. Mai 2026, 20:30 Uhr  
+**Letzter Deploy:** Age Modifier mit Cover-Referenz (fa5a984)  
+**Nächster Schritt:** Multi-Photo System testen, dann Age Modifier testen
