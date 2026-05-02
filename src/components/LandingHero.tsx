@@ -50,10 +50,10 @@ export default function LandingHero({ onStart }: { onStart: () => void }) {
 
       {/* ── HERO ── */}
       <section className="max-w-3xl mx-auto px-6 pt-24 pb-28 text-center space-y-7">
-        <h1 className="font-display text-4xl md:text-[56px] font-semibold text-[#1A1410] leading-tight">
+        <h1 className="font-display text-4xl md:text-[56px] font-semibold text-gray-900 leading-tight">
           Erlebe deine schönsten Momente als Comic
         </h1>
-        <p className="text-[18px] text-[#8B7355] leading-relaxed max-w-[540px] mx-auto">
+        <p className="text-[18px] text-gray-600 leading-relaxed max-w-[540px] mx-auto">
           Urlaub, Liebe, Familie – wir verwandeln deine echten Erinnerungen in einen illustrierten Comic mit Dialogen, gedruckt und direkt zu dir nach Hause.
         </p>
         <div className="flex flex-col sm:flex-row gap-3 justify-center">
@@ -70,11 +70,11 @@ export default function LandingHero({ onStart }: { onStart: () => void }) {
       <section className="bg-[#F5EDE0] py-24">
         <div ref={previewRef} className="fade-up max-w-5xl mx-auto px-6 space-y-10">
           <div className="text-center space-y-3">
-            <div className="w-12 h-0.5 bg-[#C9963A] mx-auto mb-5" />
-            <h2 className="font-display text-3xl md:text-4xl font-medium text-[#1A1410]">
+            <div className="w-12 h-0.5 bg-brand-500 mx-auto mb-5" />
+            <h2 className="font-display text-3xl md:text-4xl font-medium text-gray-900">
               So sieht dein Comic aus
             </h2>
-            <p className="text-[#8B7355] text-lg">
+            <p className="text-gray-600 text-lg">
               Echte Illustrationen, echte Dialoge – jede Erinnerung wird ein Panel.
             </p>
           </div>
@@ -88,11 +88,11 @@ export default function LandingHero({ onStart }: { onStart: () => void }) {
       <section className="bg-[#FDF8F2] py-24">
         <div ref={stepsRef} className="fade-up max-w-5xl mx-auto px-6 space-y-12">
           <div className="text-center space-y-3">
-            <div className="w-12 h-0.5 bg-[#C9963A] mx-auto mb-5" />
-            <h2 className="font-display text-3xl md:text-4xl font-medium text-[#1A1410]">
+            <div className="w-12 h-0.5 bg-brand-500 mx-auto mb-5" />
+            <h2 className="font-display text-3xl md:text-4xl font-medium text-gray-900">
               So einfach geht's
             </h2>
-            <p className="text-[#8B7355] text-lg">
+            <p className="text-gray-600 text-lg">
               Keine langen Texte, keine Zeichenkenntnisse – ein paar Stichpunkte genügen.
             </p>
           </div>
@@ -100,13 +100,13 @@ export default function LandingHero({ onStart }: { onStart: () => void }) {
             {STEPS.map((s) => (
               <div
                 key={s.n}
-                className="bg-white rounded-xl p-8 space-y-4 border border-[#E8D9C0] hover:-translate-y-1 hover:shadow-sm transition-all duration-250"
+                className="bg-white rounded-xl p-8 space-y-4 border border-brand-200 hover:-translate-y-1 hover:shadow-sm transition-all duration-250"
               >
-                <div className="w-9 h-9 rounded-full border border-[#E8D9C0] flex items-center justify-center">
-                  <span className="font-display text-[#C9963A] font-medium text-[16px]">{s.n}</span>
+                <div className="w-9 h-9 rounded-full border border-brand-200 flex items-center justify-center">
+                  <span className="font-display text-brand-500 font-medium text-[16px]">{s.n}</span>
                 </div>
-                <h3 className="font-display text-[19px] font-medium text-[#1A1410]">{s.title}</h3>
-                <p className="text-[#8B7355] text-[15px] leading-relaxed">{s.body}</p>
+                <h3 className="font-display text-[19px] font-medium text-gray-900">{s.title}</h3>
+                <p className="text-gray-600 text-[15px] leading-relaxed">{s.body}</p>
               </div>
             ))}
           </div>
@@ -118,9 +118,9 @@ export default function LandingHero({ onStart }: { onStart: () => void }) {
         <div ref={benefitRef} className="fade-up max-w-5xl mx-auto px-6">
           <div className="grid md:grid-cols-3 gap-10">
             {BENEFITS.map((b) => (
-              <div key={b.title} className="space-y-3 border-t-2 border-[#C9963A] pt-6">
-                <h3 className="font-display text-[18px] font-medium text-[#1A1410]">{b.title}</h3>
-                <p className="text-[#8B7355] text-[15px] leading-relaxed">{b.body}</p>
+              <div key={b.title} className="space-y-3 border-t border-brand-500 pt-6">
+                <h3 className="font-display text-[18px] font-medium text-gray-900">{b.title}</h3>
+                <p className="text-gray-600 text-[15px] leading-relaxed">{b.body}</p>
               </div>
             ))}
           </div>
@@ -131,8 +131,8 @@ export default function LandingHero({ onStart }: { onStart: () => void }) {
       <section className="bg-[#FDF8F2] py-24">
         <div ref={testiRef} className="fade-up max-w-5xl mx-auto px-6 space-y-12">
           <div className="text-center space-y-3">
-            <p className="text-[#C9963A] text-sm font-medium">Über 30.000 glückliche Kunden</p>
-            <h2 className="font-display text-3xl md:text-4xl font-medium text-[#1A1410]">
+            <p className="text-brand-500 text-sm font-medium">Über 30.000 glückliche Kunden</p>
+            <h2 className="font-display text-3xl md:text-4xl font-medium text-gray-900">
               Was unsere Kunden sagen
             </h2>
           </div>
@@ -140,18 +140,18 @@ export default function LandingHero({ onStart }: { onStart: () => void }) {
             {TESTIMONIALS.map((t) => (
               <div
                 key={t.name}
-                className="bg-white rounded-xl p-8 space-y-4 border border-[#E8D9C0] hover:-translate-y-1 hover:shadow-sm transition-all duration-250 relative"
+                className="bg-white rounded-xl p-8 space-y-4 border border-brand-200 hover:-translate-y-1 hover:shadow-sm transition-all duration-250 relative"
               >
-                <span className="absolute top-4 left-6 font-display text-[72px] text-[#C9963A] opacity-20 leading-none select-none" aria-hidden="true">"</span>
+                <span className="absolute top-4 left-6 font-display text-[72px] text-brand-500 opacity-20 leading-none select-none" aria-hidden="true">"</span>
                 <div className="flex gap-0.5 mb-1">
                   {[1,2,3,4,5].map((i) => (
-                    <span key={i} className="text-[#C9963A] text-[14px]">★</span>
+                    <span key={i} className="text-brand-500 text-[14px]">★</span>
                   ))}
                 </div>
-                <p className="font-display italic text-[#1A1410] text-[16px] leading-relaxed mt-6">
+                <p className="font-display italic text-gray-900 text-[16px] leading-relaxed mt-6">
                   "{t.quote}"
                 </p>
-                <p className="text-[13px] text-[#8B7355] mt-4">
+                <p className="text-[13px] text-gray-600 mt-4">
                   — {t.name} · {t.occasion}
                 </p>
               </div>
@@ -179,10 +179,10 @@ export default function LandingHero({ onStart }: { onStart: () => void }) {
       {/* ── CTA ── */}
       <section className="bg-[#F5EDE0] py-24">
         <div ref={ctaRef} className="fade-up max-w-5xl mx-auto px-6 text-center space-y-6">
-          <h2 className="font-display text-3xl md:text-4xl font-medium text-[#1A1410]">
+          <h2 className="font-display text-3xl md:text-4xl font-medium text-gray-900">
             Bereit für deinen persönlichen Comic?
           </h2>
-          <p className="text-[#8B7355] text-lg">
+          <p className="text-gray-600 text-lg">
             Dauert nur wenige Minuten – Stichpunkte reichen.
           </p>
           <button
