@@ -10,16 +10,16 @@ const config: Config = {
     extend: {
       colors: {
         brand: {
-          50:  "#FAF5FF",  // Sehr helles Lila
-          100: "#F3E8FF",  // Helles Lila
-          200: "#E9D5FF",  // Lila-Pastell
-          300: "#D8B4FE",  // Mittleres Lila
-          400: "#C084FC",  // Lila
-          500: "#A855F7",  // Kräftiges Lila
-          600: "#9333EA",  // Dunkles Lila
-          700: "#7E22CE",  // Sehr dunkles Lila
-          800: "#6B21A8",  // Dunkel-Lila
-          900: "#581C87",  // Sehr dunkel
+          50:  "#FFF7ED",  // Sehr helles Orange
+          100: "#FFEDD5",  // Helles Orange
+          200: "#FED7AA",  // Orange-Pastell
+          300: "#FDBA74",  // Mittleres Orange
+          400: "#FB923C",  // Orange
+          500: "#F97316",  // Kräftiges Orange
+          600: "#EA580C",  // Dunkles Orange
+          700: "#C2410C",  // Sehr dunkles Orange
+          800: "#9A3412",  // Dunkel-Orange
+          900: "#7C2D12",  // Sehr dunkel
         },
         warm: {
           50:  "#FDF8F2",
