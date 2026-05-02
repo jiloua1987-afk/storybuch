@@ -200,21 +200,23 @@ Think cinematically: wide shot → close-up → reaction shot → detail shot.
 
 CRITICAL VARIETY RULES:
 - Every panel = NEW camera angle + NEW story beat
-- NEVER repeat the same composition (e.g. NOT "Thomas carries cake" in 3 panels)
-- Show PROGRESSION through the moment
+- NEVER repeat the same ACTION in multiple panels
+- If Panel 1 shows "character does X" → NO other panel may show "character does X"
 
-GOOD EXAMPLE (varied):
+GOOD EXAMPLE (varied actions):
 Panel 1: Wide shot - Thomas enters with tall cake, family watches
-Panel 2: Close-up - Cake wobbles, Thomas' worried face
-Panel 3: Reaction - Felix laughing, Sophie filming
-Panel 4: Detail - Oma's surprised expression
+Panel 2: Close-up - Thomas' worried face, sweat on forehead
+Panel 3: Reaction - Felix laughing, pointing at cake
+Panel 4: Detail - Oma's surprised expression, hands on cheeks
 
-BAD EXAMPLE (repetitive):
+BAD EXAMPLE (repeated action):
 Panel 1: Thomas carries cake
-Panel 2: Thomas still carries cake
-Panel 3: Thomas carries cake, it wobbles
-Panel 4: Thomas with cake
-→ All panels show same action, just slightly different
+Panel 2: Thomas' face while carrying cake  
+Panel 3: Thomas still carrying cake, wobbling
+Panel 4: Thomas with cake from different angle
+→ All panels show SAME ACTION (carrying cake), just different angles
+
+RULE: Each panel must show a DIFFERENT action or moment, not just a different angle of the same action.
 
 AVOID repetition: if panel 1 shows "family behind tree", panel 2 must NOT show "family behind tree" again.
 Show PROGRESSION: beginning → middle → end, or cause → action → reaction.
@@ -316,17 +318,36 @@ Base your answer ONLY on ages and count of people visible. Do NOT identify anyon
                   refImageContent,
                   { type: "text", text: `Describe ONLY what you can ACTUALLY SEE on the person who is approximately ${char.age} years old in this photo.
 
-CRITICAL RULES — BE EXTREMELY ACCURATE:
-- Hair: Describe EXACT color you see (gray, brown, black, blonde). Describe EXACT length (very short, short, shoulder-length, long).
-- If hair looks gray/graying → say "gray hair" or "graying hair", NOT blonde or brown
-- If hair is short → say "short hair", NOT long hair
-- Skin tone: light, medium, tan, dark
-- Body type: slim, average, sturdy
-- If you CANNOT see a feature clearly → DO NOT mention it
-- Do NOT invent, assume, or guess ANY details
-- Do NOT identify anyone
+ULTRA-CRITICAL RULES — BE EXTREMELY ACCURATE:
 
-DOUBLE-CHECK your description matches what you ACTUALLY see in the photo.
+HAIR COLOR — Look very carefully:
+- Gray/silver/white hair → MUST say "gray hair", "silver hair", or "white hair"
+- If hair looks light but person is 50+ years old → it's probably GRAY, not blonde
+- Dark hair → say "dark brown" or "black"
+- Light brown → say "light brown"
+- Blonde (only if clearly golden/yellow AND person is young) → say "blonde"
+- NEVER confuse gray hair with blonde hair!
+
+HAIR LENGTH — Measure carefully:
+- Very short (above ears) → say "very short hair"
+- Short (covers ears) → say "short hair"  
+- Shoulder-length → say "shoulder-length hair"
+- Long (past shoulders) → say "long hair"
+- NEVER say "long" if hair is short!
+
+AGE INDICATORS:
+- Person 50+ years old with light hair → almost always GRAY, not blonde
+- Receding hairline → mention it
+- Wrinkles, age lines → mention them
+
+DOUBLE-CHECK EVERYTHING:
+1. Look at hair color again — is it truly blonde or is it gray?
+2. Look at hair length again — is it truly long or is it short?
+3. Does your description match a person of age ${char.age}?
+
+If you CANNOT see a feature clearly → DO NOT mention it.
+Do NOT invent, assume, or guess ANY details.
+Do NOT identify anyone.
 
 Format: "${char.name}: [age] years old, [exact visible features]"
 English, max 50 words.` },
