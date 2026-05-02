@@ -153,6 +153,16 @@ For each write a DETAILED visual description (40-50 words):
 - Skin tone, eye color
 - Distinctive features: beard, glasses, hijab, wrinkles — write "always wears/has [feature]"
 - Body type
+
+CRITICAL — HEIGHT AND SIZE FOR CHILDREN:
+- Children under 5: "toddler, approximately 85-95cm tall" — always visibly much smaller than older children and adults
+- Children 5-8: "young child, approximately 110-120cm tall" — clearly shorter than teenagers and adults
+- Children 9-13: "child, approximately 130-145cm tall" — noticeably shorter than adults
+- Teenagers 14-17: "teenager, approximately 160-170cm tall" — close to adult height
+- ALWAYS add relative size: "visibly smaller than [older sibling/parent name]"
+- Example: "Luca: 3-year-old boy, toddler, approximately 90cm tall, visibly much smaller than his 8-year-old sister Maria and half the height of adults"
+- Size ratios MUST be maintained in every panel — a 3-year-old must never appear as tall as an 8-year-old
+
 Respond ONLY with JSON: {"characters":[{"name":"Name","age":30,"visual_anchor":"DETAILED English description..."}]}`
       }, {
         role: "user", content: storyCtx,
@@ -474,6 +484,12 @@ Comic page — ${panelCount} panels in ${layoutDesc}. Bold black borders between
 
 CHARACTERS — draw identically across all panels:
 ${charAnchors}
+
+CRITICAL SIZE RULES — enforce in every panel:
+- Children must be drawn at their correct height relative to adults
+- A 3-year-old is approximately half the height of an adult — always visibly much smaller
+- Never draw a young child as tall as an older child or adult
+- Size ratios from character descriptions MUST be respected
 
 CLOTHING — characters wear ${outfit} OVERRIDE any clothing visible in the reference photo.
 
