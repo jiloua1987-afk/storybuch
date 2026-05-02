@@ -4,21 +4,22 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useBookStore, ComicStyle, DialogMode, CustomDialog } from "@/store/bookStore";
 import Button from "@/components/ui/Button";
 import toast from "react-hot-toast";
+import { categoryIcons, styleIcons } from "@/components/icons/CategoryIcons";
 
 const CATEGORIES = [
-  { id: "liebe",     icon: "💕", label: "Liebesgeschichte", tone: "romantisch"  },
-  { id: "familie",   icon: "👨‍👩‍👧‍👦", label: "Familie",          tone: "kindgerecht" },
-  { id: "urlaub",    icon: "✈️", label: "Urlaub / Reise",   tone: "humorvoll"   },
-  { id: "feier",     icon: "🎉", label: "Feier / Event",    tone: "humorvoll"   },
-  { id: "biografie", icon: "📖", label: "Biografie",        tone: "biografisch" },
-  { id: "freunde",   icon: "🤝", label: "Freundschaft",     tone: "humorvoll"   },
-  { id: "sonstiges", icon: "✨", label: "Sonstiges",        tone: "episch"      },
+  { id: "liebe",     icon: "liebe", label: "Liebesgeschichte", tone: "romantisch"  },
+  { id: "familie",   icon: "familie", label: "Familie",          tone: "kindgerecht" },
+  { id: "urlaub",    icon: "urlaub", label: "Urlaub / Reise",   tone: "humorvoll"   },
+  { id: "feier",     icon: "feier", label: "Feier / Event",    tone: "humorvoll"   },
+  { id: "biografie", icon: "biografie", label: "Biografie",        tone: "biografisch" },
+  { id: "freunde",   icon: "freunde", label: "Freundschaft",     tone: "humorvoll"   },
+  { id: "sonstiges", icon: "sonstiges", label: "Sonstiges",        tone: "episch"      },
 ];
 
-const COMIC_STYLES: { id: ComicStyle; icon: string; label: string; desc: string }[] = [
-  { id: "action",    icon: "⚡", label: "Action",    desc: "Dynamisch, übertrieben, energiegeladen" },
-  { id: "emotional", icon: "💛", label: "Emotional", desc: "Ruhig, warm, erzählerisch" },
-  { id: "humor",     icon: "😄", label: "Humor",     desc: "Lustig, überzeichnet, spielerisch" },
+const COMIC_STYLES: { id: ComicStyle; icon: ComicStyle; label: string; desc: string }[] = [
+  { id: "action",    icon: "action", label: "Action",    desc: "Dynamisch, übertrieben, energiegeladen" },
+  { id: "emotional", icon: "emotional", label: "Emotional", desc: "Ruhig, warm, erzählerisch" },
+  { id: "humor",     icon: "humor", label: "Humor",     desc: "Lustig, überzeichnet, spielerisch" },
 ];
 
 const GUIDED_QUESTIONS: Record<string, { key: string; label: string; placeholder: string }[]> = {
@@ -185,23 +186,26 @@ export default function Step1Story() {
           <div className="space-y-3">
             <label className="text-sm font-semibold text-gray-700">Comic-Stil</label>
             <div className="grid grid-cols-3 gap-3">
-              {COMIC_STYLES.map((cs) => (
-                <button
-                  key={cs.id}
-                  onClick={() => setComicStyle(cs.id)}
-                  className={`p-5 rounded-xl border-2 text-center transition-all shadow-sm hover:shadow-md space-y-2 ${
-                    comicStyle === cs.id 
-                      ? "border-brand-500 bg-brand-50 shadow-lg shadow-brand-100" 
-                      : "border-gray-200 bg-white hover:border-brand-300 hover:bg-brand-50"
-                  }`}
-                >
-                  <div className={`text-3xl ${comicStyle === cs.id ? 'scale-110' : ''} transition-transform`}>
-                    {cs.icon}
-                  </div>
-                  <div className="text-sm font-semibold text-gray-800">{cs.label}</div>
-                  <div className="text-xs text-gray-500 leading-snug">{cs.desc}</div>
-                </button>
-              ))}
+              {COMIC_STYLES.map((cs) => {
+                const IconComponent = styleIcons[cs.icon];
+                return (
+                  <button
+                    key={cs.id}
+                    onClick={() => setComicStyle(cs.id)}
+                    className={`p-5 rounded-xl border-2 text-center transition-all shadow-sm hover:shadow-md space-y-2 ${
+                      comicStyle === cs.id 
+                        ? "border-brand-500 bg-brand-50 shadow-lg shadow-brand-100" 
+                        : "border-gray-200 bg-white hover:border-brand-300 hover:bg-brand-50"
+                    }`}
+                  >
+                    <div className={`mx-auto ${comicStyle === cs.id ? 'text-brand-600 scale-110' : 'text-brand-500'} transition-all`}>
+                      <IconComponent className="w-10 h-10 mx-auto" />
+                    </div>
+                    <div className="text-sm font-semibold text-gray-800">{cs.label}</div>
+                    <div className="text-xs text-gray-500 leading-snug">{cs.desc}</div>
+                  </button>
+                );
+              })}
             </div>
           </div>
 
@@ -227,22 +231,25 @@ export default function Step1Story() {
           <div className="space-y-3">
             <label className="text-sm font-semibold text-gray-700">1. Um was für eine Geschichte handelt es sich?</label>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              {CATEGORIES.map((cat) => (
-                <button
-                  key={cat.id}
-                  onClick={() => { setCategory(cat.id); setAnswers({}); }}
-                  className={`p-5 rounded-xl border-2 text-center transition-all shadow-sm hover:shadow-md ${
-                    category === cat.id 
-                      ? "border-brand-500 bg-brand-50 shadow-lg shadow-brand-100" 
-                      : "border-gray-200 bg-white hover:border-brand-300 hover:bg-brand-50"
-                  }`}
-                >
-                  <div className={`text-3xl mb-2 ${category === cat.id ? 'scale-110' : ''} transition-transform`}>
-                    {cat.icon}
-                  </div>
-                  <div className="text-sm font-medium text-gray-800">{cat.label}</div>
-                </button>
-              ))}
+              {CATEGORIES.map((cat) => {
+                const IconComponent = categoryIcons[cat.icon as keyof typeof categoryIcons];
+                return (
+                  <button
+                    key={cat.id}
+                    onClick={() => { setCategory(cat.id); setAnswers({}); }}
+                    className={`p-5 rounded-xl border-2 text-center transition-all shadow-sm hover:shadow-md ${
+                      category === cat.id 
+                        ? "border-brand-500 bg-brand-50 shadow-lg shadow-brand-100" 
+                        : "border-gray-200 bg-white hover:border-brand-300 hover:bg-brand-50"
+                    }`}
+                  >
+                    <div className={`mx-auto mb-2 ${category === cat.id ? 'text-brand-600 scale-110' : 'text-brand-500'} transition-all`}>
+                      <IconComponent className="w-12 h-12 mx-auto" />
+                    </div>
+                    <div className="text-sm font-medium text-gray-800">{cat.label}</div>
+                  </button>
+                );
+              })}
             </div>
           </div>
 
@@ -252,23 +259,26 @@ export default function Step1Story() {
               <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-3">
                 <label className="text-sm font-semibold text-gray-700">2. Welchen Comic-Stil soll deine Geschichte haben?</label>
                 <div className="grid grid-cols-3 gap-3">
-                  {COMIC_STYLES.map((cs) => (
-                    <button
-                      key={cs.id}
-                      onClick={() => setComicStyle(cs.id)}
-                      className={`p-5 rounded-xl border-2 text-center transition-all shadow-sm hover:shadow-md space-y-2 ${
-                        comicStyle === cs.id 
-                          ? "border-brand-500 bg-brand-50 shadow-lg shadow-brand-100" 
-                          : "border-gray-200 bg-white hover:border-brand-300 hover:bg-brand-50"
-                      }`}
-                    >
-                      <div className={`text-3xl ${comicStyle === cs.id ? 'scale-110' : ''} transition-transform`}>
-                        {cs.icon}
-                      </div>
-                      <div className="text-sm font-semibold text-gray-800">{cs.label}</div>
-                      <div className="text-xs text-gray-500 leading-snug">{cs.desc}</div>
-                    </button>
-                  ))}
+                  {COMIC_STYLES.map((cs) => {
+                    const IconComponent = styleIcons[cs.icon];
+                    return (
+                      <button
+                        key={cs.id}
+                        onClick={() => setComicStyle(cs.id)}
+                        className={`p-5 rounded-xl border-2 text-center transition-all shadow-sm hover:shadow-md space-y-2 ${
+                          comicStyle === cs.id 
+                            ? "border-brand-500 bg-brand-50 shadow-lg shadow-brand-100" 
+                            : "border-gray-200 bg-white hover:border-brand-300 hover:bg-brand-50"
+                        }`}
+                      >
+                        <div className={`mx-auto ${comicStyle === cs.id ? 'text-brand-600 scale-110' : 'text-brand-500'} transition-all`}>
+                          <IconComponent className="w-10 h-10 mx-auto" />
+                        </div>
+                        <div className="text-sm font-semibold text-gray-800">{cs.label}</div>
+                        <div className="text-xs text-gray-500 leading-snug">{cs.desc}</div>
+                      </button>
+                    );
+                  })}
                 </div>
               </motion.div>
             )}
