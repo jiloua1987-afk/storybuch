@@ -35,7 +35,14 @@
 
 ### 2. Age Modifier testen ⚡
 **Aufwand:** 30 Minuten  
+**Status:** ✅ Code deployed (2. Mai 2026, 20:30 Uhr)  
 **Dateien:** Keine Änderungen nötig, nur testen  
+
+**Was implementiert wurde:**
+- Problem: Junge Szenen ohne Referenzfoto → System erfindet neue Gesichter
+- Lösung: Cover + Age Modifier → behält Gesichtszüge, macht nur jünger
+- Neue refSource: "cover-age-young", "cover-age-middle", "cover-age-current"
+- Deployed: 2. Mai 2026, 20:30 Uhr
 
 **Test-Szenario:**
 1. Foto hochladen (60-jähriger Mann)
@@ -46,10 +53,18 @@
 3. Comic generieren
 
 **Erfolgs-Kriterien:**
-- ✅ "Erstes Kennenlernen": Age context: young, kein Referenzfoto
-- ✅ "Hochzeit": Age context: middle, kein Referenzfoto
-- ✅ "Heute": Age context: current, mit Referenzfoto
-- ✅ Charaktere sehen in verschiedenen Altern aus
+- ✅ "Erstes Kennenlernen": Age context: young, Cover + Age Modifier verwendet
+- ✅ "Hochzeit": Age context: middle, Cover + Age Modifier verwendet
+- ✅ "Heute": Age context: current, Cover als Referenz verwendet
+- ✅ Junge Charaktere sehen aus wie ältere Version (gleiche Gesichtszüge, nur jünger)
+
+**Erwartete Logs:**
+```
+Generating page "Das erste Kennenlernen"
+  → Age context: young (useReference: false)
+  → Historical scene (young), using cover with age modifier
+  → This keeps facial features consistent while making characters younger
+```
 
 ---
 
