@@ -342,6 +342,12 @@ Respond ONLY with JSON: {"pages":[{"id":"page1","pageNumber":1,"title":"Title in
     // Step 2: Only enrich characters that are in the photo — others get story-based visual_anchor
     if ((referenceImageUrls.length > 0 || referenceImages.length > 0) && characters.length > 0) {
       console.log(`Analyzing ${referenceImageUrls.length || referenceImages.length} photo(s) — detecting which characters are visible...`);
+      
+      // DEBUG: Log what we received from frontend
+      if (referenceImageUrls.length > 0) {
+        console.log(`  → DEBUG: referenceImageUrls =`, JSON.stringify(referenceImageUrls.map(r => ({ label: r.label, url: r.url?.substring(0, 50) + '...' })), null, 2));
+      }
+      console.log(`  → DEBUG: characters from GPT =`, JSON.stringify(characters.map(c => ({ name: c.name, age: c.age })), null, 2));
 
       // ── MULTI-PHOTO MODE: Analyze each photo separately ────────────────────
       if (referenceImageUrls.length > 1) {
