@@ -40,13 +40,13 @@ export default function Preise() {
 
         {/* Hero */}
         <section className="max-w-5xl mx-auto px-6 pt-20 pb-16 text-center space-y-4">
-          <div className="inline-block bg-purple-50 text-purple-700 text-xs font-medium px-3 py-1.5 rounded-full border border-purple-100">
+          <div className="inline-block bg-brand-50 text-brand-700 text-xs font-medium px-3 py-1.5 rounded-full border border-brand-200">
             Faire Preise
           </div>
-          <h1 className="font-display text-4xl md:text-5xl font-semibold text-[#1f1a2e]">
+          <h1 className="font-display text-4xl md:text-5xl font-semibold text-gray-900">
             Ein Comic. Eine Erinnerung. Für immer.
           </h1>
-          <p className="text-gray-500 text-lg max-w-xl mx-auto">
+          <p className="text-gray-600 text-lg max-w-xl mx-auto">
             Kein Abo, keine versteckten Kosten. Du zahlst einmalig – und bekommst ein Buch, das ein Leben lang hält.
           </p>
         </section>
@@ -58,38 +58,38 @@ export default function Preise() {
               {PLANS.map((plan) => (
                 <div
                   key={plan.name}
-                  className={`rounded-2xl p-8 space-y-6 border ${plan.highlight ? "border-purple-300 shadow-lg shadow-purple-50" : "border-gray-100"}`}
+                  className={`rounded-2xl p-8 space-y-6 border ${plan.highlight ? "border-brand-400 shadow-lg shadow-brand-100" : "border-gray-200"}`}
                 >
                   {plan.highlight && (
-                    <div className="inline-block bg-purple-600 text-white text-xs font-medium px-3 py-1 rounded-full">
+                    <div className="inline-block bg-brand-600 text-white text-xs font-medium px-3 py-1 rounded-full">
                       Beliebteste Wahl
                     </div>
                   )}
-                  <h2 className="font-display text-2xl font-semibold text-[#1f1a2e]">{plan.name}</h2>
+                  <h2 className="font-display text-2xl font-semibold text-gray-900">{plan.name}</h2>
                   <div className="space-y-3">
                     {plan.prices.map((p) => (
-                      <div key={p.quality} className="flex items-center justify-between bg-purple-50 rounded-xl px-4 py-3">
+                      <div key={p.quality} className="flex items-center justify-between bg-brand-50 rounded-xl px-4 py-3">
                         <div>
-                          <p className="font-medium text-[#1f1a2e] text-sm">{p.quality}</p>
-                          <p className="text-xs text-gray-400">{p.desc}</p>
+                          <p className="font-medium text-gray-900 text-sm">{p.quality}</p>
+                          <p className="text-xs text-gray-500">{p.desc}</p>
                         </div>
-                        <p className="text-xl font-semibold text-purple-600">{p.price}</p>
+                        <p className="text-xl font-semibold text-brand-600">{p.price}</p>
                       </div>
                     ))}
                   </div>
                   <ul className="space-y-2">
                     {plan.features.map((f) => (
-                      <li key={f} className="flex items-center gap-2 text-sm text-gray-500">
-                        <span className="w-4 h-4 rounded-full bg-purple-100 flex items-center justify-center flex-shrink-0">
+                      <li key={f} className="flex items-center gap-2 text-sm text-gray-600">
+                        <span className="w-4 h-4 rounded-full bg-brand-100 flex items-center justify-center flex-shrink-0">
                           <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
-                            <path d="M1 4l2 2 4-4" stroke="#9333ea" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                            <path d="M1 4l2 2 4-4" stroke="#7D6B56" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
                           </svg>
                         </span>
                         {f}
                       </li>
                     ))}
                   </ul>
-                  <a href="/" className={`block text-center py-3 rounded-xl font-medium transition-colors ${plan.highlight ? "bg-purple-600 text-white hover:bg-purple-700" : "bg-purple-50 text-purple-700 hover:bg-purple-100"}`}>
+                  <a href="/" className={`block text-center py-3 rounded-xl font-medium transition-colors ${plan.highlight ? "bg-brand-600 text-white hover:bg-brand-700" : "bg-brand-50 text-brand-700 hover:bg-brand-100"}`}>
                     Jetzt Comic erstellen
                   </a>
                 </div>
@@ -102,17 +102,17 @@ export default function Preise() {
         </section>
 
         {/* Inklusive */}
-        <section className="bg-purple-50 py-20">
+        <section className="bg-brand-50 py-20">
           <div className="max-w-5xl mx-auto px-6 space-y-10">
             <div className="text-center space-y-3">
-              <h2 className="font-display text-3xl font-semibold text-[#1f1a2e]">In jedem Buch inklusive</h2>
-              <p className="text-gray-500">Egal welche Option du wählst – das bekommst du immer.</p>
+              <h2 className="font-display text-3xl font-semibold text-gray-900">In jedem Buch inklusive</h2>
+              <p className="text-gray-600">Egal welche Option du wählst – das bekommst du immer.</p>
             </div>
             <div className="grid md:grid-cols-3 gap-5">
               {INCLUDED.map((item) => (
-                <div key={item.title} className="bg-white rounded-xl p-5 border border-purple-100 space-y-1">
-                  <p className="font-medium text-[#1f1a2e] text-sm">{item.title}</p>
-                  <p className="text-xs text-gray-400">{item.desc}</p>
+                <div key={item.title} className="bg-white rounded-xl p-5 border border-brand-200 space-y-1">
+                  <p className="font-medium text-gray-900 text-sm">{item.title}</p>
+                  <p className="text-xs text-gray-500">{item.desc}</p>
                 </div>
               ))}
             </div>
@@ -126,25 +126,25 @@ export default function Preise() {
               <Image src="/image_einzel.png" alt="MyComicStory Beispiel" fill className="object-cover object-top" />
             </div>
             <div className="space-y-6">
-              <h2 className="font-display text-3xl font-semibold text-[#1f1a2e]">
+              <h2 className="font-display text-3xl font-semibold text-gray-900">
                 Das persönlichste Geschenk, das du machen kannst.
               </h2>
-              <p className="text-gray-500 leading-relaxed">
+              <p className="text-gray-600 leading-relaxed">
                 Kein Gutschein, kein Standardgeschenk. Ein Buch, das nur für diese eine Person existiert – mit echten Erinnerungen, echten Momenten, liebevoll illustriert.
               </p>
-              <ul className="space-y-2 text-sm text-gray-500">
+              <ul className="space-y-2 text-sm text-gray-600">
                 {["Vorschau vor der Bestellung", "Alles bearbeitbar – Texte, Bilder, Reihenfolge", "Stichpunkte reichen – kein Schreibtalent nötig", "30.000+ zufriedene Kunden"].map((f) => (
                   <li key={f} className="flex items-center gap-2">
-                    <span className="w-4 h-4 rounded-full bg-purple-100 flex items-center justify-center flex-shrink-0">
+                    <span className="w-4 h-4 rounded-full bg-brand-100 flex items-center justify-center flex-shrink-0">
                       <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
-                        <path d="M1 4l2 2 4-4" stroke="#9333ea" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                        <path d="M1 4l2 2 4-4" stroke="#7D6B56" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
                       </svg>
                     </span>
                     {f}
                   </li>
                 ))}
               </ul>
-              <a href="/" className="inline-block bg-purple-600 text-white px-8 py-3.5 rounded-xl font-medium hover:bg-purple-700 transition-colors">
+              <a href="/" className="inline-block bg-brand-600 text-white px-8 py-3.5 rounded-xl font-medium hover:bg-brand-700 transition-colors">
                 Jetzt Comic erstellen
               </a>
             </div>

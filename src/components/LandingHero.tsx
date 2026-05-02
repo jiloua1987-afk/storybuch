@@ -50,17 +50,11 @@ export default function LandingHero({ onStart }: { onStart: () => void }) {
 
       {/* ── HERO ── */}
       <section className="max-w-3xl mx-auto px-6 pt-24 pb-28 text-center space-y-7">
-        <div className="inline-flex items-center px-4 py-1.5 rounded-full border border-[#E8D9C0] text-[13px] text-[#8B7355]">
-          Über 30.000 Bücher gedruckt
-        </div>
         <h1 className="font-display text-4xl md:text-[56px] font-semibold text-[#1A1410] leading-tight">
-          Erlebe deine schönsten Momente <em>als Comic.</em>
+          Erlebe deine schönsten Momente als Comic
         </h1>
         <p className="text-[18px] text-[#8B7355] leading-relaxed max-w-[540px] mx-auto">
           Urlaub, Liebe, Familie – wir verwandeln deine echten Erinnerungen in einen illustrierten Comic mit Dialogen, gedruckt und direkt zu dir nach Hause.
-        </p>
-        <p className="text-sm text-[#C9963A] font-medium">
-          Stichpunkte reichen – wir kümmern uns um den Rest.
         </p>
         <div className="flex flex-col sm:flex-row gap-3 justify-center">
           <button

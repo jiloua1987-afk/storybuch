@@ -33,16 +33,16 @@ export default function UeberUns() {
         {/* Hero */}
         <section className="max-w-5xl mx-auto px-6 pt-20 pb-24 grid md:grid-cols-2 gap-14 items-center">
           <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="space-y-6">
-            <div className="inline-block bg-purple-50 text-purple-700 text-xs font-medium px-3 py-1.5 rounded-full border border-purple-100">
+            <div className="inline-block bg-brand-50 text-brand-700 text-xs font-medium px-3 py-1.5 rounded-full border border-brand-200">
               Über MyComicStory
             </div>
-            <h1 className="font-display text-4xl md:text-5xl font-semibold text-[#1f1a2e] leading-tight">
+            <h1 className="font-display text-4xl md:text-5xl font-semibold text-gray-900 leading-tight">
               Wir glauben, dass jede Geschichte es verdient, erzählt zu werden.
             </h1>
-            <p className="text-gray-500 text-lg leading-relaxed">
+            <p className="text-gray-600 text-lg leading-relaxed">
               MyComicStory wurde mit einer einfachen Idee gegründet: Jeder Mensch hat Geschichten, die es wert sind, bewahrt zu werden. Urlaubserinnerungen, Liebesgeschichten, Familienmomente – sie verschwinden viel zu schnell im Alltag.
             </p>
-            <p className="text-gray-500 leading-relaxed">
+            <p className="text-gray-600 leading-relaxed">
               Wir machen es einfach, diese Momente in einen wunderschönen, illustrierten Comic zu verwandeln. Kein Schreibtalent nötig. Keine Designkenntnisse. Nur deine Erinnerungen.
             </p>
           </motion.div>
@@ -55,8 +55,8 @@ export default function UeberUns() {
         <section className="bg-white py-24">
           <div className="max-w-5xl mx-auto px-6 space-y-12">
             <div className="text-center space-y-3">
-              <h2 className="font-display text-3xl md:text-4xl font-semibold text-[#1f1a2e]">Warum MyComicStory?</h2>
-              <p className="text-gray-500 text-lg">Weil Erinnerungen mehr verdienen als einen Ordner auf dem Handy.</p>
+              <h2 className="font-display text-3xl md:text-4xl font-semibold text-gray-900">Warum MyComicStory?</h2>
+              <p className="text-gray-600 text-lg">Weil Erinnerungen mehr verdienen als einen Ordner auf dem Handy.</p>
             </div>
             <div className="grid md:grid-cols-3 gap-8">
               {REASONS.map((r, i) => (
@@ -66,10 +66,10 @@ export default function UeberUns() {
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
                   transition={{ delay: i * 0.08 }}
-                  className="space-y-3 border-t-2 border-purple-200 pt-5"
+                  className="space-y-3 border-t border-brand-300 pt-5"
                 >
-                  <h3 className="font-display text-lg font-semibold text-[#1f1a2e]">{r.title}</h3>
-                  <p className="text-gray-500 text-sm leading-relaxed">{r.desc}</p>
+                  <h3 className="font-display text-lg font-semibold text-gray-900">{r.title}</h3>
+                  <p className="text-gray-600 text-sm leading-relaxed">{r.desc}</p>
                 </motion.div>
               ))}
             </div>
@@ -77,16 +77,16 @@ export default function UeberUns() {
         </section>
 
         {/* Anlässe */}
-        <section className="bg-purple-50 py-24">
+        <section className="bg-brand-50 py-24">
           <div className="max-w-5xl mx-auto px-6 space-y-10">
             <div className="text-center space-y-3">
-              <h2 className="font-display text-3xl md:text-4xl font-semibold text-[#1f1a2e]">Für jeden Anlass</h2>
-              <p className="text-gray-500 text-lg">Das persönlichste Geschenk – egal zu welchem Anlass.</p>
+              <h2 className="font-display text-3xl md:text-4xl font-semibold text-gray-900">Für jeden Anlass</h2>
+              <p className="text-gray-600 text-lg">Das persönlichste Geschenk – egal zu welchem Anlass.</p>
             </div>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               {OCCASIONS.map((o) => (
-                <div key={o.label} className="bg-white rounded-xl px-4 py-5 text-center border border-purple-100 hover:-translate-y-1 transition-transform duration-200">
-                  <p className="text-sm font-medium text-[#1f1a2e]">{o.label}</p>
+                <div key={o.label} className="bg-white rounded-xl px-4 py-5 text-center border border-brand-200 hover:-translate-y-1 hover:shadow-sm transition-all duration-200">
+                  <p className="text-sm font-medium text-gray-900">{o.label}</p>
                 </div>
               ))}
             </div>
