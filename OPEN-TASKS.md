@@ -53,90 +53,65 @@
 
 ---
 
-### 3. Supabase Unique Constraint hinzufügen 🔧
+### 3. ✅ Supabase Unique Constraint hinzugefügen
+**Status:** ✅ ERLEDIGT  
 **Aufwand:** 5 Minuten  
-**Datei:** Supabase SQL Editor  
 
-**Problem:** `saveCharacterRefs` schlägt fehl weil Unique Constraint fehlt
+~~**Problem:** `saveCharacterRefs` schlägt fehl weil Unique Constraint fehlt~~
 
-**Fix:**
+**Fix wurde ausgeführt:**
 ```sql
 ALTER TABLE character_ref_image
 ADD CONSTRAINT character_ref_image_project_character_unique
 UNIQUE (project_id, character_name);
 ```
 
-**Verifizierung:**
-```sql
-SELECT constraint_name, constraint_type
-FROM information_schema.table_constraints 
-WHERE table_name = 'character_ref_image' 
-AND constraint_type = 'UNIQUE';
-```
-
 ---
 
 ## 🟡 Wichtig (nach Tests)
 
-### 4. Luca-Größenanker implementieren 👶
+### 4. ✅ Luca-Größenanker implementieren
+**Status:** ✅ ERLEDIGT  
 **Aufwand:** 30 Minuten  
-**Datei:** `backend-railway/src/routes/comic.js`  
 
-**Problem:** 3-jähriger Luca wirkt manchmal zu groß
+~~**Problem:** 3-jähriger Luca wirkt manchmal zu groß~~
 
-**Fix:** Im Character-Extraktion-Prompt ergänzen:
-```javascript
-// Zeile ~150, im charPromise System-Prompt:
-content: `Extract ALL characters from the story...
-
-CRITICAL — HEIGHT AND SIZE FOR CHILDREN:
-- Children under 5: "toddler, approximately 85-95cm tall" — always visibly much smaller than older children and adults
-- Children 5-8: "young child, approximately 110-120cm tall" — clearly shorter than teenagers and adults
-- Children 9-13: "child, approximately 130-145cm tall" — noticeably shorter than adults
-- Teenagers 14-17: "teenager, approximately 160-170cm tall" — close to adult height
-- ALWAYS add relative size: "visibly smaller than [older sibling/parent name]"
-- Example: "Luca: 3-year-old boy, toddler, approximately 90cm tall, visibly much smaller than his 8-year-old sister Maria and half the height of adults"
-- Size ratios MUST be maintained in every panel — a 3-year-old must never appear as tall as an 8-year-old
-
-Respond ONLY with JSON...`
-```
-
-**Test:** Comic mit 3-jährigem Kind generieren, Größenverhältnisse prüfen
+**Fix wurde implementiert:** Explizite Höhenangaben in Character-Extraktion-Prompt
 
 ---
 
-### 5. Outfit-State in Supabase 👔
+### 5. ✅ Outfit-State in Supabase
+**Status:** ✅ ERLEDIGT  
 **Aufwand:** 2-3 Tage  
-**Dateien:** Supabase Schema + `backend-railway/src/routes/comic.js`  
 
-**Problem:** Charaktere tragen manchmal gleiche Kleidung in verschiedenen Kontexten
+~~**Problem:** Charaktere tragen manchmal gleiche Kleidung in verschiedenen Kontexten~~
 
-**Lösung:**
-```sql
-CREATE TABLE outfit_state (
-  project_id TEXT NOT NULL,
-  character_name TEXT NOT NULL,
-  page_number INT NOT NULL,
-  context TEXT,           -- 'beach', 'home', 'airport', 'garden'
-  outfit_description TEXT, -- "blue swim shorts, white t-shirt"
-  PRIMARY KEY (project_id, character_name, page_number)
-);
-```
-
-**Backend-Integration:**
-```javascript
-// Vor jeder Seite: Outfit aus letzter Seite laden
-const lastOutfit = await getLastOutfit(projectId, charName);
-if (lastOutfit?.context === currentContext) {
-  prompt += `${charName} wears: ${lastOutfit.outfit_description}. Keep this exact outfit.`;
-}
-```
+**Implementiert:** Outfit-Kontext-Erkennung mit `getOutfit()` Funktion
 
 ---
 
 ## 🟢 Nice-to-Have (später)
 
-### 6. Multi-Age Photo System implementieren 📸
+### 6. ✅ OpenAI Tier 2 upgraden
+**Status:** ✅ ERLEDIGT  
+**Aufwand:** 5 Minuten  
+
+**Benefit:**
+- 5 IPM → 50 IPM
+- 12 Minuten → 2-3 Minuten Generierungszeit
+- Style-Master-Panel wird möglich
+
+---
+
+### 7. ✅ "Neu illustrieren" mit Freitextfeld
+**Status:** ✅ ERLEDIGT  
+**Aufwand:** 3-4 Stunden  
+
+**Implementiert:** Textarea unter jeder Seite für konkrete Änderungswünsche
+
+---
+
+### 8. Multi-Age Photo System implementieren 📸
 **Aufwand:** 1-2 Wochen  
 **Spezifikation:** `MULTI-AGE-PHOTO-SYSTEM-SPEC.md`  
 **Status:** Nur Spezifikation, noch nicht implementiert
@@ -160,7 +135,7 @@ if (lastOutfit?.context === currentContext) {
 
 ---
 
-### 7. UI/UX Redesign 🎨
+### 9. UI/UX Redesign 🎨
 **Aufwand:** 1-2 Tage  
 **Dateien:** `Step1-6.tsx`, `page.tsx`, `ueber-uns/page.tsx`  
 
@@ -175,20 +150,7 @@ if (lastOutfit?.context === currentContext) {
 
 ---
 
-### 8. OpenAI Tier 2 upgraden ⚡
-**Aufwand:** 5 Minuten  
-**Kosten:** $50+ laden  
-
-**Benefit:**
-- 5 IPM → 50 IPM
-- 12 Minuten → 2-3 Minuten Generierungszeit
-- Style-Master-Panel wird möglich
-
-**Wann:** Sobald erste zahlende Kunden da sind
-
----
-
-### 9. PDF-Export + Druckspezifikation 📄
+### 10. PDF-Export + Druckspezifikation 📄
 **Aufwand:** 1 Tag  
 **Status:** Warten auf Format-Entscheidung  
 
@@ -208,8 +170,8 @@ if (lastOutfit?.context === currentContext) {
 
 Diese Features sind dokumentiert aber noch nicht geplant:
 
-- **Consistency Validation** - GPT-4.1 Vision vergleicht Seiten mit Cover
-- **Reference Stack** - Beste vorherige Seite als Referenz
+- ~~**Consistency Validation**~~ ✅ ERLEDIGT - Quality Score System implementiert
+- ~~**Reference Stack**~~ ✅ ERLEDIGT - Cover als Referenz für alle Seiten
 - **Face Embeddings** - Mathematische Gesichts-Konsistenz
 - **SDXL + ControlNet** - Alternative zu OpenAI
 - **Image Worker** - Asynchrone Job-Queue
@@ -222,12 +184,17 @@ Diese Features sind dokumentiert aber noch nicht geplant:
 - ✅ Age-Based Character Rendering
 - ✅ Syntax-Fehler behoben (Backend startet)
 - ✅ Crowd Scene Handling
-- ✅ Quality Score + Auto-Retry
+- ✅ Quality Score + Auto-Retry (Consistency Validation)
 - ✅ "Neu illustrieren" mit Freitextfeld
 - ✅ Seite löschen Feature
 - ✅ Visual Polish (Bronze Design)
 - ✅ Anti-Manga Prompts verstärkt
 - ✅ Opa/Oma Fix (erscheinen nicht in falschen Szenen)
+- ✅ Supabase Unique Constraint
+- ✅ Luca-Größenanker (Kinder-Höhenangaben)
+- ✅ Outfit-State (getOutfit Funktion)
+- ✅ OpenAI Tier 2 Upgrade
+- ✅ Reference Stack (Cover als Referenz)
 
 ---
 

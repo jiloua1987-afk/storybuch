@@ -8,11 +8,15 @@
 - ✅ **Syntax-Fehler behoben** - Backend startet ohne Crash
 - ✅ **Age-Based Character Rendering** - Junge/mittlere/aktuelle Szenen erkannt
 - ✅ **Crowd Scene Handling** - Hochzeit mit Gästen behält Charakterkonsistenz
-- ✅ **Supabase Integration** - `photo_url` Spalte hinzugefügt
-- ✅ **Quality Score System** - Auto-Retry bei Manga-Stil
+- ✅ **Supabase Integration** - `photo_url` Spalte + Unique Constraint
+- ✅ **Quality Score System** - Auto-Retry bei Manga-Stil (Consistency Validation)
+- ✅ **Reference Stack** - Cover als Referenz für alle Seiten
 - ✅ **Anti-Manga Prompts** - Verstärkte Bande Dessinée Stil-Enforcement
 - ✅ **Momente als Pflicht-Seiten** - 1 GPT-Call pro Moment
 - ✅ **Opa/Oma Fix** - Erscheinen nicht mehr in falschen Szenen
+- ✅ **Luca-Größenanker** - Explizite Höhenangaben für Kinder
+- ✅ **Outfit-Kontext** - Automatische Kleidungs-Erkennung (Beach/Airport/etc.)
+- ✅ **OpenAI Tier 2** - 50 IPM statt 5 IPM (schnellere Generation)
 
 **Hinweis:** Multi-Person System ist deployed, nur noch testen!
 
@@ -70,27 +74,29 @@ Generating page "Das erste Kennenlernen"
 
 ### 🟡 Wichtig (nach Tests)
 
-#### 3. Supabase Unique Constraint
-**Status:** Fehlt noch  
-**Aufwand:** 5 Min  
-**Fix:**
-```sql
-ALTER TABLE character_ref_image
-ADD CONSTRAINT character_ref_image_project_character_unique
-UNIQUE (project_id, character_name);
-```
+#### 3. ✅ Supabase Unique Constraint - ERLEDIGT
+~~**Problem:** Constraint fehlte~~  
+**Status:** ✅ Hinzugefügt und funktioniert
 
-#### 4. Luca-Größenanker
-**Status:** Offen  
-**Aufwand:** 30 Min  
-**Problem:** 3-jähriger Luca wirkt manchmal zu groß  
-**Fix:** Explizite Höhenangaben in visual_anchor
+#### 4. ✅ Luca-Größenanker - ERLEDIGT
+~~**Problem:** 3-jähriger wirkt zu groß~~  
+**Status:** ✅ Explizite Höhenangaben implementiert
+
+#### 5. ✅ Outfit-State - ERLEDIGT
+~~**Problem:** Gleiche Kleidung in verschiedenen Kontexten~~  
+**Status:** ✅ `getOutfit()` Funktion implementiert
 
 ---
 
 ### 🟢 Nice-to-Have (später)
 
-#### 5. Multi-Age Photo System (SPEC vorhanden)
+#### 6. ✅ OpenAI Tier 2 - ERLEDIGT
+**Status:** ✅ Upgrade durchgeführt (50 IPM)
+
+#### 7. ✅ "Neu illustrieren" - ERLEDIGT
+**Status:** ✅ Freitextfeld implementiert
+
+#### 8. Multi-Age Photo System (SPEC vorhanden)
 **Status:** Spezifikation komplett in `MULTI-AGE-PHOTO-SYSTEM-SPEC.md`  
 **Aufwand:** 1-2 Wochen  
 **Benefit:** User lädt jung + alt Fotos hoch → perfekte Konsistenz
