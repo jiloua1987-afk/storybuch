@@ -471,6 +471,7 @@ router.post("/page", async (req, res) => {
     const {
       page, characters = [], comicStyle = "emotional",
       referenceImages = [], referenceImageUrls = [], coverImageUrl = "",
+      reillustrationNote = "", // ← Freitext-Anweisung vom User
     } = req.body;
 
     const projectId = req.body.projectId || page.id?.split("-")[0] || null;
@@ -543,7 +544,7 @@ RULES:
 - Background crowd: faceless silhouettes only
 - Movement/action: show with TILTED POSES and MOTION BLUR in Bande Dessinée style — NOT manga speed lines, NOT anime motion effects
 - Exaggerated expressions: use WESTERN COMIC STYLE — wide mouths, raised eyebrows — NOT anime big eyes, NOT manga sweat drops
-- NO text, NO speech bubbles, NO letters, NO titles anywhere in image`;
+- NO text, NO speech bubbles, NO letters, NO titles anywhere in image${reillustrationNote ? `\n\nUSER CORRECTION: ${reillustrationNote}. Apply this change while keeping all other elements identical.` : ""}`;
 
     // Reference strategy:
     // - If ALL characters on this page are in the user photo → use cover as reference (consistent style)
@@ -652,7 +653,7 @@ RULES:
 - Sharp detailed faces — eyes, nose, mouth clearly visible
 - Movement/action: show with TILTED POSES and MOTION BLUR in Bande Dessinée style — NOT manga speed lines
 - Exaggerated expressions: use WESTERN COMIC STYLE — NOT anime big eyes, NOT manga sweat drops
-- NO text, NO speech bubbles, NO letters, NO titles anywhere in image`;
+- NO text, NO speech bubbles, NO letters, NO titles anywhere in image${reillustrationNote ? `\n\nUSER CORRECTION: ${reillustrationNote}. Apply this change while keeping all other elements identical.` : ""}`;
 
       try {
         const result2 = await generateImage(`${COMIC_STYLE} ${mood}\n\n${safePrompt}`, null);
@@ -660,6 +661,81 @@ RULES:
       } catch (e2) {
         console.error(`  → Sanitized retry also failed:`, e2.message);
         // rawUrl stays as whatever was returned (may be empty)
+      }
+    }
+
+    // ── Quality Score Check ─────────────────────────────────────────────────
+    // Check if generated image matches Bande Dessinée style
+    // If wrong style detected → retry once with stronger anti-manga prompt
+    let qualityScore = 100; // Default: assume good
+    let styleCheckPassed = true;
+
+    if (rawUrl) {
+      try {
+        const styleCheck = await openai.chat.completions.create({
+          model: "gpt-4.1",
+          messages: [{ role: "user", content: [
+            { type: "image_url", image_url: { url: rawUrl, detail: "low" } },
+            { type: "text", text: `Is this image in European Bande Dessinée / Franco-Belgian comic book style?
+(Bold ink outlines, flat cel-shaded colors, like Blacksad, Tintin, Bastien Vivès)
+
+Or does it look like:
+- Manga / anime (big eyes, speed lines, Japanese style)
+- Photorealistic / photograph
+- Watercolor / soft painting
+- CGI render
+
+Answer with ONE word only: "ok" (if Bande Dessinée) or "wrong" (if not)` }
+          ]}],
+          max_tokens: 5,
+          temperature: 0.1,
+        });
+
+        const response = (styleCheck.choices[0].message.content || "").toLowerCase().trim();
+        styleCheckPassed = response.includes("ok");
+
+        if (!styleCheckPassed) {
+          console.log(`  → Quality check FAILED (style: ${response}), retrying with stronger prompt`);
+          qualityScore = 30; // Low score for failed check
+
+          // Retry with ultra-strong anti-manga prompt
+          const strongerPrompt = `${COMIC_STYLE}
+
+ULTRA-CRITICAL STYLE ENFORCEMENT:
+This image MUST be European Bande Dessinée / Franco-Belgian comic book style.
+Think: Blacksad, Tintin, Bastien Vivès, Spirou, Lucky Luke.
+
+MANDATORY FEATURES:
+- Bold black ink outlines on EVERY figure and object
+- Flat cel-shaded color areas (NOT gradients, NOT soft shading)
+- Western comic book anatomy and proportions
+- Expressive stylized faces (NOT photorealistic, NOT anime)
+
+ABSOLUTE PROHIBITIONS:
+- NOT manga (no speed lines, no big anime eyes, no Japanese style)
+- NOT anime (no sparkles, no sweat drops, no chibi)
+- NOT photorealistic (no photo-like skin, no realistic lighting)
+- NOT watercolor (no soft edges, no paint texture)
+
+${mood}
+
+${prompt}`;
+
+          try {
+            const retry = await generateImage(strongerPrompt, reference);
+            rawUrl = retry.url;
+            qualityScore = 70; // Better score after retry
+            console.log(`  → Retry completed with stronger prompt`);
+          } catch (retryErr) {
+            console.error(`  → Retry failed:`, retryErr.message);
+            // Keep original image
+          }
+        } else {
+          console.log(`  → Quality check PASSED`);
+        }
+      } catch (checkErr) {
+        console.warn(`  → Quality check error:`, checkErr.message);
+        // Continue without check
       }
     }
 
@@ -687,14 +763,15 @@ RULES:
 
     console.log(`✓ Page "${page.title}" done`);
 
-    // Save to memory
+    // Save to memory with quality score
     const pageCharacters = page.panels.flatMap(p => p.speaker ? [p.speaker] : []).filter(Boolean);
     await savePage(
       projectId || page.id?.split("-")[0] || "unknown",
       page.pageNumber || 1,
       finalUrl,
       pageCharacters,
-      refSource
+      refSource,
+      qualityScore
     );
 
     res.json({ imageUrl: finalUrl, panels: page.panels, panelPositions });

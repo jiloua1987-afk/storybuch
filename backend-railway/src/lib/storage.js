@@ -77,7 +77,7 @@ async function getCharacterRefs(projectId) {
 }
 
 // ── Save generated page with quality score ────────────────────────────────────
-async function savePage(projectId, pageNumber, imageUrl, charactersPresent, refSource) {
+async function savePage(projectId, pageNumber, imageUrl, charactersPresent, refSource, qualityScore = 0) {
   try {
     const { error } = await supabase
       .from("last_page_image")
@@ -87,7 +87,7 @@ async function savePage(projectId, pageNumber, imageUrl, charactersPresent, refS
         image_url: imageUrl,
         characters_present: charactersPresent || [],
         ref_source: refSource || "unknown",
-        quality_score: 0, // updated later if quality check runs
+        quality_score: qualityScore,
       }, { onConflict: "project_id,page_number" });
 
     if (error) throw error;

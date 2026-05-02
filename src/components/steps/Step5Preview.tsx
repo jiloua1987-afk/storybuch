@@ -86,6 +86,7 @@ export default function Step5Preview() {
   const [direction, setDirection] = useState(1);
   const [regenerating, setRegenerating] = useState<string | null>(null);
   const [regenCount, setRegenCount] = useState<Record<string, number>>({});
+  const [regenNotes, setRegenNotes] = useState<Record<string, string>>({}); // Freitext-Anweisungen
   const MAX_REGEN = 1; // max 1x neu illustrieren pro Seite
   const [editingTitle, setEditingTitle] = useState(false);
   const [editingEnding, setEditingEnding] = useState(false);
@@ -109,7 +110,7 @@ export default function Step5Preview() {
 
   const RAILWAY_URL = process.env.NEXT_PUBLIC_RAILWAY_URL || "";
 
-  async function regenPage(pageId: string, pageData: any) {
+  async function regenPage(pageId: string, pageData: any, reillustrationNote?: string) {
     const fullUrl = RAILWAY_URL ? `${RAILWAY_URL}/api/comic/page` : "/api/comic/page";
     const res = await fetch(fullUrl, {
       method: "POST",
@@ -126,6 +127,7 @@ export default function Step5Preview() {
         category: project?.guidedAnswers?.category || "familie",
         referenceImages: project?.referenceImages || [],
         coverImageUrl: project?.coverImageUrl || "",
+        reillustrationNote, // ← Freitext-Anweisung
       }),
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -141,13 +143,15 @@ export default function Step5Preview() {
     if (!pageData) return;
     setRegenerating(pageId);
     try {
-      const result = await regenPage(pageId, pageData);
+      const note = regenNotes[pageId] || ""; // Freitext-Anweisung
+      const result = await regenPage(pageId, pageData, note);
       const newImageUrl = result.imageUrl || pageData.imageUrl;
       updateChapter(pageId, {
         imageUrl: newImageUrl,
         panelPositions: result.panelPositions || pageData.panelPositions,
       });
       setRegenCount(prev => ({ ...prev, [pageId]: (prev[pageId] || 0) + 1 }));
+      setRegenNotes(prev => ({ ...prev, [pageId]: "" })); // Reset note after use
       toast.success("Seite neu illustriert!");
     } catch (e) {
       toast.error("Fehler beim Neu-Illustrieren");
@@ -269,14 +273,24 @@ export default function Step5Preview() {
                     />
                   </>
                 )}
-                <div className="px-6 py-3 flex items-center justify-end border-t border-gray-100">
-                  <button
-                    onClick={() => handleRegen(page.id)}
+                <div className="px-6 py-3 border-t border-gray-100 space-y-2">
+                  <textarea
+                    value={regenNotes[page.id] || ""}
+                    onChange={(e) => setRegenNotes(prev => ({ ...prev, [page.id]: e.target.value }))}
+                    placeholder="Was soll anders sein? z.B. 'Opa mehr im Vordergrund' (optional)"
+                    className="w-full text-xs border border-[#E8D9C0] rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#C9963A]/30 resize-none"
+                    rows={2}
                     disabled={!!regenerating || (regenCount[page.id] || 0) >= MAX_REGEN}
-                    className="text-xs text-[#C9963A] hover:text-[#A67A28] border border-[#E8D9C0] px-3 py-1.5 rounded-lg hover:bg-[#F5EDE0] transition-all disabled:opacity-40"
-                  >
-                    {(regenCount[page.id] || 0) >= MAX_REGEN ? "Bereits neu illustriert" : "Neu illustrieren"}
-                  </button>
+                  />
+                  <div className="flex items-center justify-end">
+                    <button
+                      onClick={() => handleRegen(page.id)}
+                      disabled={!!regenerating || (regenCount[page.id] || 0) >= MAX_REGEN}
+                      className="text-xs text-[#C9963A] hover:text-[#A67A28] border border-[#E8D9C0] px-3 py-1.5 rounded-lg hover:bg-[#F5EDE0] transition-all disabled:opacity-40"
+                    >
+                      {(regenCount[page.id] || 0) >= MAX_REGEN ? "Bereits neu illustriert" : "Neu illustrieren"}
+                    </button>
+                  </div>
                 </div>
               </div>
             ) : null}
