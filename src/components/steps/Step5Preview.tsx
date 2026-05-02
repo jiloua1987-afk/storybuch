@@ -87,13 +87,16 @@ export default function Step5Preview() {
   const [regenerating, setRegenerating] = useState<string | null>(null);
   const [regenCount, setRegenCount] = useState<Record<string, number>>({});
   const [regenNotes, setRegenNotes] = useState<Record<string, string>>({}); // Freitext-Anweisungen
+  const [deletedPages, setDeletedPages] = useState<Set<string>>(new Set()); // Gelöschte Seiten
   const MAX_REGEN = 1; // max 1x neu illustrieren pro Seite
   const [editingTitle, setEditingTitle] = useState(false);
   const [editingEnding, setEditingEnding] = useState(false);
 
   if (!project) return null;
 
-  const comicPages = project.chapters.filter((c) => c.id !== "ending");
+  const comicPages = project.chapters
+    .filter((c) => c.id !== "ending")
+    .filter((c) => !deletedPages.has(c.id)); // Gelöschte Seiten ausblenden
   const total = comicPages.length;
   const hasEnding = !!project.endingData?.endingText;
   const maxPage = hasEnding ? total : total - 1;
@@ -126,7 +129,9 @@ export default function Step5Preview() {
         comicStyle: project?.comicStyle || "emotional",
         category: project?.guidedAnswers?.category || "familie",
         referenceImages: project?.referenceImages || [],
+        referenceImageUrls: project?.referenceImageUrls || [], // ← Supabase URLs
         coverImageUrl: project?.coverImageUrl || "",
+        projectId: project?.id || "", // ← WICHTIG: Gleiche projectId verwenden
         reillustrationNote, // ← Freitext-Anweisung
       }),
     });
@@ -184,6 +189,14 @@ export default function Step5Preview() {
           </h2>
         )}
         <p className="text-gray-400 text-sm">{pageLabel}</p>
+        {deletedPages.size > 0 && (
+          <button
+            onClick={() => setDeletedPages(new Set())}
+            className="text-xs text-[#C9963A] hover:text-[#A67A28] underline mt-1"
+          >
+            {deletedPages.size} Seite{deletedPages.size > 1 ? 'n' : ''} gelöscht — Alle wiederherstellen
+          </button>
+        )}
       </div>
 
       <div className="relative">
@@ -282,7 +295,21 @@ export default function Step5Preview() {
                     rows={2}
                     disabled={!!regenerating || (regenCount[page.id] || 0) >= MAX_REGEN}
                   />
-                  <div className="flex items-center justify-end">
+                  <div className="flex items-center justify-between">
+                    <button
+                      onClick={() => {
+                        if (confirm(`Seite "${page.title}" wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.`)) {
+                          setDeletedPages(prev => new Set([...prev, page.id]));
+                          // Gehe zur vorherigen Seite wenn aktuelle gelöscht wird
+                          if (currentPage > 0) setCurrentPage(currentPage - 1);
+                          else if (comicPages.length > 1) setCurrentPage(0);
+                          else setCurrentPage(-1); // Zurück zum Cover
+                        }
+                      }}
+                      className="text-xs text-red-600 hover:text-red-700 border border-red-200 px-3 py-1.5 rounded-lg hover:bg-red-50 transition-all"
+                    >
+                      🗑️ Seite löschen
+                    </button>
                     <button
                       onClick={() => handleRegen(page.id)}
                       disabled={!!regenerating || (regenCount[page.id] || 0) >= MAX_REGEN}
