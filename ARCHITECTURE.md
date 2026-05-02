@@ -1,5 +1,5 @@
 # MyComicStory — Architecture & Status Summary
-*Stand: 1. Mai 2026 (Abend)*
+*Stand: 2. Mai 2026*
 
 ## Overview
 
@@ -61,10 +61,15 @@ STRICT PROHIBITION: NOT manga. NOT anime. NOT photorealistic.
 Every page IDENTICAL in style."
 
 + MOOD_MOD (per comicStyle: action / emotional / humor)
+  - humor: "NO anime sweat drops, NO manga speed lines, NO chibi style" (verstärkt 2. Mai)
 + visual_anchors (per Charakter, aus Foto analysiert oder aus Story generiert)
+  - Kinder: explizite Höhenangaben "approximately 90cm tall, visibly much smaller than..." (2. Mai)
 + outfit context (aus page.location auf Englisch erkannt)
 + panel descriptions (aus Story-Momenten, 1 GPT-Call pro Moment)
 + "ONLY SHOW CHARACTERS PRESENT IN THIS SCENE" (Fix 1. Mai)
++ Movement/Action RULES (2. Mai):
+  - "show with TILTED POSES and MOTION BLUR in Bande Dessinée style"
+  - "NOT manga speed lines, NOT anime motion effects"
 ```
 
 ---
@@ -107,7 +112,11 @@ All subsequent pages use the cover as reference → consistent style across page
 - **Seiten mit Foto-Charakteren**: Cover als Referenz → guter Comic-Stil
 - **Opa/Oma-Seiten**: User-Foto als Stil-Referenz (`user-photo-style`) → manchmal aquarellverwaschen
 - **Safety-Block-Seiten** (z.B. Fußball/Jubel): Fallback auf `generate-only` → manchmal Manga-Stil
-- **Fix deployed (1. Mai):** `COMIC_STYLE` mit `STRICT PROHIBITION: NOT manga. NOT anime.` + Bande Dessinée Referenz
+- ✅ **Fix deployed (1. Mai):** `COMIC_STYLE` mit `STRICT PROHIBITION: NOT manga. NOT anime.` + Bande Dessinée Referenz
+- ✅ **Fix deployed (2. Mai):** Verstärkter Anti-Manga für humorvolle/dynamische Szenen:
+  - `MOOD_MOD.humor`: "NO anime sweat drops, NO manga speed lines, NO chibi style"
+  - Movement RULES: "TILTED POSES and MOTION BLUR in Bande Dessinée style"
+  - Gilt für normalen UND sanitized prompt
 - **Nächste Eskalation wenn nötig:** Style-Master-Panel (siehe BACKLOG.md)
 
 ### 2. Charakter-Konsistenz
