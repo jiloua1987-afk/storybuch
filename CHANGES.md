@@ -1,4 +1,166 @@
-# CHANGES — Session 2. Mai 2026
+# CHANGES — Session 2. Mai 2026 (Nachmittag)
+
+## Übersicht
+Quality Score + Auto-Retry, "Neu illustrieren" mit Freitextfeld, Seite löschen Feature, Photo-Analyse ULTRA-verstärkt, Panel-Action-Wiederholung verboten.
+
+---
+
+## ✅ DEPLOYED — Backend + Frontend (Railway + Vercel)
+
+### 1. Quality Score + Auto-Retry
+**Zweck:** Verhindert Manga-Ausreißer beim Kunden
+
+**Wie es funktioniert:**
+1. Nach jeder Seiten-Generierung: GPT-4.1 Vision prüft das Bild
+2. Frage: "Ist das Bande Dessinée Stil oder Manga/Anime/Photorealistisch?"
+3. Antwort: "ok" oder "wrong"
+4. Bei "wrong": Automatischer Retry mit ultra-starkem Anti-Manga-Prompt
+5. Quality Score wird in Supabase gespeichert (100 = passed, 70 = retry, 30 = failed)
+
+**Kosten:** +$0.025 pro Comic (5 Seiten × $0.005)
+
+**Dateien:**
+- `backend-railway/src/routes/comic.js` — Zeile 665-730
+- `backend-railway/src/lib/storage.js` — savePage mit qualityScore Parameter
+
+### 2. "Neu illustrieren" mit Freitextfeld
+**Zweck:** User kann konkrete Änderungswünsche angeben
+
+**Wie es funktioniert:**
+1. Textarea unter jeder Seite: "Was soll anders sein?"
+2. Optional — leer = zufällige Regenerierung
+3. Beispiel: "Opa mehr im Vordergrund"
+4. Backend hängt Note ans Ende des Prompts
+5. MAX_REGEN = 1 (nur 1x pro Seite)
+
+**Sicherheit:** `projectId` + `referenceImageUrls` werden mitgesendet → keine Auswirkung auf andere Seiten
+
+**Dateien:**
+- Frontend: `src/components/steps/Step5Preview.tsx` (Zeile 91-92, 280-287)
+- Backend: `backend-railway/src/routes/comic.js` (Zeile 473, 547, 657)
+
+### 3. Seite löschen Feature
+**Zweck:** User kann unerwünschte Seiten entfernen
+
+**Wie es funktioniert:**
+1. Button "🗑️ Seite löschen" unter jeder Seite
+2. Confirmation Dialog: "Wirklich löschen?"
+3. Gelöschte Seiten werden ausgeblendet (nicht aus Store entfernt)
+4. "X Seiten gelöscht — Alle wiederherstellen" Button
+5. Navigation: Springt zur vorherigen Seite nach Löschen
+
+**Dateien:**
+- `src/components/steps/Step5Preview.tsx` (Zeile 98-100, 280-300)
+
+### 4. Photo-Analyse ULTRA-verstärkt
+**Problem:** Thomas (54) wurde mit langen BLONDEN Haaren generiert statt kurzen GRAUEN Haaren wie im Original
+
+**Fix:**
+- Explizite Regel: "Person 50+ with light hair → almost always GRAY, not blonde"
+- "NEVER confuse gray hair with blonde hair!"
+- Alter-Check: "Does description match person of age X?"
+- "DOUBLE-CHECK your description matches what you see"
+
+**Dateien:**
+- `backend-railway/src/routes/comic.js` — Zeile 295-320
+
+### 5. Panel-Action-Wiederholung verboten
+**Problem:** Panel 1 und Panel 3 zeigen beide "Thomas trägt Torte" (nur anderer Winkel)
+
+**Fix:**
+- Explizite Regel: "If Panel 1 shows character does X → NO other panel may show character does X"
+- GOOD/BAD Beispiele mit konkretem Torte-Szenario:
+  - ❌ BAD: Panel 1 "Thomas carries cake", Panel 3 "Thomas carries cake from different angle"
+  - ✅ GOOD: Panel 1 "Thomas carries cake", Panel 2 "Cake wobbles", Panel 3 "Felix laughs"
+
+**Dateien:**
+- `backend-railway/src/routes/comic.js` — Zeile 195-220
+
+### 6. Safety-Block erweitert
+**Problem:** "Omas geheimes Fotoalbum" wurde komplett geblockt (Safety-System)
+
+**Fix:**
+- Sanitized prompt entfernt jetzt auch: "photo", "album", "secret", "memory", "hidden"
+- Gilt für Englisch und Deutsch
+
+**Dateien:**
+- `backend-railway/src/routes/comic.js` — Zeile 625-635
+
+### 7. Frontend Error-Logging verbessert
+**Problem:** Frontend zeigt nur "Seite X: Fehler" ohne Details
+
+**Fix:**
+- Zeigt jetzt konkrete Fehlermeldung `err.message`
+- Hilft beim Debugging
+
+**Dateien:**
+- `src/components/steps/Step4Generate.tsx` — Zeile 175-180
+
+---
+
+## ⚠️ WICHTIG: Supabase Constraint Fix
+
+**MUSS MANUELL AUSGEFÜHRT WERDEN!**
+
+**Problem:**
+```
+saveCharacterRefs error: there is no unique or exclusion constraint matching the ON CONFLICT specification
+```
+
+**Lösung:**
+SQL in Supabase Dashboard ausführen (siehe `SUPABASE-FIX.sql`):
+```sql
+ALTER TABLE character_ref_image
+ADD CONSTRAINT character_ref_image_project_character_unique
+UNIQUE (project_id, character_name);
+```
+
+**Ohne diesen Fix:** saveCharacterRefs schlägt bei jeder Generierung fehl!
+
+---
+
+## 💰 Kosten pro Comic
+
+**Neu (mit Quality Score):**
+- Struktur (GPT-4.1): $0.02
+- Cover (gpt-image-2): $0.20
+- Seiten (gpt-image-2): 5 × $0.20 = $1.00
+- Quality Checks (GPT-4.1 Vision): 5 × $0.005 = $0.025
+- Retries (worst case, 20%): ~1 × $0.20 = $0.20
+- **Gesamt: ~$1.45 pro Comic** (vorher: ~$1.22)
+
+---
+
+## 📁 Alle Commits (heute)
+
+```
+234e47c - Fix: Photo-Analyse ULTRA-verstärkt + Panel-Action-Wiederholung
+b73c813 - Docs: Ready to Deploy Checklist
+f1e273a - Fix: Neu illustrieren Sicherheit + Seite löschen Feature
+d912934 - Docs: Implementation Summary
+181333c - Feature: Quality Score + Auto-Retry + Neu illustrieren
+c02b657 - Docs: Update session-state mit Test-Ergebnissen
+30c0eff - Fix: Photo-Analyse präziser, Panel-Variation, Safety-Block
+```
+
+---
+
+## 🧪 Test-Plan (nach Supabase Fix)
+
+**Test-Szenario:** "Omas 80. Geburtstag" (gleiche Story wie vorher)
+
+**Zu prüfen:**
+1. ✅ Thomas hat GRAUE Haare statt blonde?
+2. ✅ Panels sind variabler (keine Action-Wiederholung)?
+3. ✅ Fotoalbum-Szene wird generiert?
+4. ✅ Quality Score verhindert Manga-Ausreißer?
+5. ✅ "Neu illustrieren" mit Freitextfeld funktioniert?
+6. ✅ Seite löschen funktioniert?
+7. ✅ Keine Supabase Constraint-Fehler in Logs?
+
+---
+
+# CHANGES — Session 2. Mai 2026 (Vormittag)
 
 ## Übersicht
 Verstärkter Anti-Manga-Prompt für humorvolle/dynamische Szenen. Fix für Stilbruch bei "Wackelige Torte" und ähnlichen Action-Momenten.
