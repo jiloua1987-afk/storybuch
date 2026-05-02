@@ -197,7 +197,25 @@ Do NOT always choose 4. Match the panel count to the scene complexity.
 
 Each panel MUST show a DIFFERENT angle/moment/action of the scene.
 Think cinematically: wide shot → close-up → reaction shot → detail shot.
-CRITICAL: Every panel must be VISUALLY DISTINCT — different camera angle, different character focus, different action.
+
+CRITICAL VARIETY RULES:
+- Every panel = NEW camera angle + NEW story beat
+- NEVER repeat the same composition (e.g. NOT "Thomas carries cake" in 3 panels)
+- Show PROGRESSION through the moment
+
+GOOD EXAMPLE (varied):
+Panel 1: Wide shot - Thomas enters with tall cake, family watches
+Panel 2: Close-up - Cake wobbles, Thomas' worried face
+Panel 3: Reaction - Felix laughing, Sophie filming
+Panel 4: Detail - Oma's surprised expression
+
+BAD EXAMPLE (repetitive):
+Panel 1: Thomas carries cake
+Panel 2: Thomas still carries cake
+Panel 3: Thomas carries cake, it wobbles
+Panel 4: Thomas with cake
+→ All panels show same action, just slightly different
+
 AVOID repetition: if panel 1 shows "family behind tree", panel 2 must NOT show "family behind tree" again.
 Show PROGRESSION: beginning → middle → end, or cause → action → reaction.
 
@@ -298,14 +316,19 @@ Base your answer ONLY on ages and count of people visible. Do NOT identify anyon
                   refImageContent,
                   { type: "text", text: `Describe ONLY what you can ACTUALLY SEE on the person who is approximately ${char.age} years old in this photo.
 
-CRITICAL RULES:
-- Describe ONLY visible features: hair color/length/style, skin tone, approximate eye color, body type
-- If you CANNOT see a feature clearly (glasses, beard, mustache, jewelry) → DO NOT mention it
-- If facial features are not clearly visible → describe only hair, skin tone, body type
-- Do NOT invent or assume details that are not clearly visible
+CRITICAL RULES — BE EXTREMELY ACCURATE:
+- Hair: Describe EXACT color you see (gray, brown, black, blonde). Describe EXACT length (very short, short, shoulder-length, long).
+- If hair looks gray/graying → say "gray hair" or "graying hair", NOT blonde or brown
+- If hair is short → say "short hair", NOT long hair
+- Skin tone: light, medium, tan, dark
+- Body type: slim, average, sturdy
+- If you CANNOT see a feature clearly → DO NOT mention it
+- Do NOT invent, assume, or guess ANY details
 - Do NOT identify anyone
 
-Format: "${char.name}: [age] years old, [visible features only]"
+DOUBLE-CHECK your description matches what you ACTUALLY see in the photo.
+
+Format: "${char.name}: [age] years old, [exact visible features]"
 English, max 50 words.` },
                 ]}],
                 max_tokens: 120,
@@ -599,8 +622,12 @@ RULES:
       console.log(`  → Safety block, retrying with sanitized prompt + generate-only`);
       const sanitizedPanelDescs = page.panels
         .map(p => `Panel ${p.nummer}: ${(p.szene || "")
+          // Remove action/violence words
           .replace(/\b(shout|scream|yell|cry|hit|kick|fight|punch|grab|push|fall|hurt|pain|tears|crying|loud|aggressive)\b/gi, "")
           .replace(/\b(ruft|schreit|weint|schlägt|tritt|kämpft|fällt|laut|aggressiv)\b/gi, "")
+          // Remove potentially sensitive words with children
+          .replace(/\b(photo|photos|album|picture|pictures|image|images|memory|memories|secret|secrets|hidden)\b/gi, "")
+          .replace(/\b(foto|fotos|album|bild|bilder|erinnerung|erinnerungen|geheim|geheime|versteckt)\b/gi, "")
           .trim()}`)
         .join("\n");
 

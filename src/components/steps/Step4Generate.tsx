@@ -160,9 +160,16 @@ export default function Step4Generate() {
               panelPositions: pageData.panelPositions || null,
             };
             addLog(`Seite ${i + 1} fertig`, true);
-          } catch {
-            chapters[i] = { id: page.id || `page-${i}`, title: page.title, content: "", imageUrl: "", imagePrompt: "" };
-            addLog(`Seite ${i + 1}: Fehler`, true);
+          } catch (err: any) {
+            console.error(`Page ${i + 1} generation failed:`, err);
+            chapters[i] = { 
+              id: page.id || `page-${i}`, 
+              title: page.title, 
+              content: "", 
+              imageUrl: "", 
+              imagePrompt: "" 
+            };
+            addLog(`Seite ${i + 1}: Fehler (${err.message || 'Unbekannt'})`, true);
           }
 
           setProgress(30 + (chapters.filter(Boolean).length / pages.length) * progressPerPage);
