@@ -822,10 +822,21 @@ RULES:
     let refSource = "none";
 
     // ── STRATEGY 0: Age-based reference decision ──────────────────────────────
-    // For young/middle-age scenes, don't use reference photo
-    // This allows gpt-image-2 to draw younger versions from text description
-    if (!ageContext.useReference) {
-      console.log(`  → Historical scene (${ageContext.ageContext}), skipping reference photo`);
+    // For young/middle-age scenes with cover available, use cover + age modifier
+    // This keeps facial features consistent while making characters younger
+    if (!ageContext.useReference && coverImageUrl) {
+      try {
+        reference = await fetchBuffer(coverImageUrl);
+        refSource = `cover-age-${ageContext.ageContext}`;
+        console.log(`  → Historical scene (${ageContext.ageContext}), using cover with age modifier`);
+        console.log(`  → This keeps facial features consistent while making characters younger`);
+      } catch (e) {
+        console.warn("  → Cover fetch failed, falling back to generate-only:", e.message);
+        refSource = "generate-only-age-modified";
+      }
+    } else if (!ageContext.useReference) {
+      // No cover available - generate from text only (may invent faces)
+      console.log(`  → Historical scene (${ageContext.ageContext}), no cover available - generate-only`);
       refSource = "generate-only-age-modified";
     } else {
       // ── STRATEGY 1: Cover (best for consistency) ──────────────────────────────
@@ -889,7 +900,18 @@ RULES:
       }
     }
 
-    const refNote = refSource === "cover" || refSource === "cover-with-crowd"
+    const refNote = refSource.startsWith("cover-age-")
+      ? `${COMIC_STYLE}\nThis cover shows the characters at their current age. ${ageContext.modifier}
+CRITICAL: Keep the SAME facial features, bone structure, eye shape, and overall face proportions as shown in the cover.
+Only change: make skin smoother, hair darker/fuller, remove wrinkles, more youthful energy in poses.
+Draw the main characters (${finalCharacters.map(c => c.name).join(", ")}) with their recognizable faces from the cover, just younger.
+Match the art style and color palette of the cover exactly.\n\n`
+      : refSource === "cover-multi-photo" || refSource === "cover-multi-photo-crowd"
+      ? `${COMIC_STYLE}\nThis cover was generated from ${referenceImageUrls.length} photos and shows ALL characters.
+Use the EXACT same art style, character designs and color palette as this cover.
+Draw the main characters (${finalCharacters.map(c => c.name).join(", ")}) EXACTLY as they appear in this cover.
+${refSource.includes("crowd") ? "Add background guests/crowd as faceless silhouettes or simple figures.\n" : ""}\n`
+      : refSource === "cover" || refSource === "cover-with-crowd"
       ? `${COMIC_STYLE}\nUse the EXACT same art style, character designs and color palette as this cover image.\nDraw the main characters (${finalCharacters.map(c => c.name).join(", ")}) EXACTLY as they appear in this cover.\n${hasManyPeople ? "Add background guests/crowd as faceless silhouettes or simple figures.\n" : ""}\n`
       : refSource === "user-photo"
       ? `${COMIC_STYLE}\nThe people in this photo are the main characters. Draw them in the comic style above. NOT photorealistic. IMPORTANT: IGNORE the clothing from the photo — use the clothing described in the prompt instead.\n\n`
