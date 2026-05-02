@@ -1,6 +1,6 @@
 # Session State — MyComicStory
-*Zuletzt aktualisiert: 1. Mai 2026*
-*Git Tag: stable-v1-mai2026 (commit de71af4)*
+*Zuletzt aktualisiert: 2. Mai 2026*
+*Git Tag: stable-v2-mai2026*
 
 ---
 
@@ -30,14 +30,19 @@ Web-App die personalisierte Comic-Bücher aus Familienfotos und Geschichten gene
 - ✅ Outfit-Kontext: Beach/Airport/Garden/Home/Sport erkannt
 - ✅ visual_anchors aus Supabase bei Regenerierung
 - ✅ Sprechblasen: hinzufügen, löschen, ziehen, skalieren, Sprecher editieren
+- ✅ Größenanker: Kinder bekommen explizite Höhenangaben (z.B. "90cm tall, visibly much smaller than...")
+- ✅ Anti-Manga verstärkt: Humorvolle/dynamische Szenen (z.B. "Wackelige Torte") bleiben im Bande Dessinée Stil
 
 ---
 
 ## Bekannte offene Probleme
 
 1. **Fußball-Seite (Safety-Block):** images.edit() + images.generate() beide geblockt bei Jubel-Szenen mit Kindern. Sanitized-Prompt-Fallback generiert ein Bild, aber Charaktere weniger erkennbar.
-2. **Supabase Unique-Constraint:** `saveCharacterRefs` schlägt fehl wegen fehlendem Constraint. Fix: `ALTER TABLE character_ref_image ADD CONSTRAINT ... UNIQUE (project_id, character_name)`
-3. **Stil-Konsistenz:** Gelegentlich leichte Manga/Ghibli-Drift bei warmen Abendszenen. Besser als vorher aber nicht 100% deterministisch.
+2. ~~**Supabase Unique-Constraint:**~~ ✅ FIXED (2. Mai) — `saveCharacterRefs` nutzt jetzt `upsert` mit `onConflict`
+3. ~~**Stil-Konsistenz:**~~ ✅ IMPROVED (2. Mai) — Verstärkter Anti-Manga-Prompt für humorvolle/dynamische Szenen (z.B. "Wackelige Torte")
+   - `MOOD_MOD.humor` jetzt explizit: "NO anime sweat drops, NO manga speed lines, NO chibi style"
+   - Neue RULES: "Movement/action: show with TILTED POSES and MOTION BLUR in Bande Dessinée style"
+   - Gilt für normalen UND sanitized prompt
 
 ---
 

@@ -22,7 +22,7 @@ const COMIC_STYLE = [
 const MOOD_MOD = {
   action:    "Dynamic poses, motion lines, high contrast colors.",
   emotional: "Warm golden tones, intimate close-ups, soft dramatic shadows.",
-  humor:     "Exaggerated expressions, bright vivid colors, playful energy.",
+  humor:     "Exaggerated expressions in WESTERN COMIC STYLE — wide smiles, raised eyebrows, open mouths. Bright vivid colors, playful energy. NO anime sweat drops, NO manga speed lines, NO chibi style, NO big sparkly eyes.",
 };
 
 // ── Outfit context from English location string ───────────────────────────────
@@ -502,6 +502,8 @@ RULES:
 - Show CORRECT emotions per scene (sad=tears, funny=laughter, reunion=joy)
 - Sharp detailed faces — eyes, nose, mouth clearly visible, front or 3/4 view
 - Background crowd: faceless silhouettes only
+- Movement/action: show with TILTED POSES and MOTION BLUR in Bande Dessinée style — NOT manga speed lines, NOT anime motion effects
+- Exaggerated expressions: use WESTERN COMIC STYLE — wide mouths, raised eyebrows — NOT anime big eyes, NOT manga sweat drops
 - NO text, NO speech bubbles, NO letters, NO titles anywhere in image`;
 
     // Reference strategy:
@@ -603,6 +605,8 @@ RULES:
 - Each character appears ONLY ONCE per panel
 - Expressive faces showing correct emotions for the scene
 - Sharp detailed faces — eyes, nose, mouth clearly visible
+- Movement/action: show with TILTED POSES and MOTION BLUR in Bande Dessinée style — NOT manga speed lines
+- Exaggerated expressions: use WESTERN COMIC STYLE — NOT anime big eyes, NOT manga sweat drops
 - NO text, NO speech bubbles, NO letters, NO titles anywhere in image`;
 
       try {

@@ -1,3 +1,50 @@
+# CHANGES — Session 2. Mai 2026
+
+## Übersicht
+Verstärkter Anti-Manga-Prompt für humorvolle/dynamische Szenen. Fix für Stilbruch bei "Wackelige Torte" und ähnlichen Action-Momenten.
+
+---
+
+## Problem: Stilbruch bei humorvollen Action-Szenen
+
+**Symptom:**
+Bei dynamischen/humorvollen Szenen (z.B. "Thomas trägt wackelnde 5-stöckige Torte, Felix lacht sich den Bauch vor Lachen") driftet gpt-image-2 trotz STRICT PROHIBITION zu Manga-Stil.
+
+**Root Cause:**
+- Übertriebene Emotionen ("Bauch vor Lachen") = typisch für Manga/Anime
+- Bewegung/Action ("schwankt", "wackelt") = Speed Lines (Manga-typisch)
+- Humor = große Augen, Schweißtropfen (Anime-Tropes)
+
+**Fix:**
+1. `MOOD_MOD.humor` verstärkt mit expliziten Verboten:
+   - "NO anime sweat drops, NO manga speed lines, NO chibi style, NO big sparkly eyes"
+   - "Exaggerated expressions in WESTERN COMIC STYLE — wide smiles, raised eyebrows, open mouths"
+
+2. Neue RULES für alle Seiten-Prompts (normal + sanitized):
+   - "Movement/action: show with TILTED POSES and MOTION BLUR in Bande Dessinée style — NOT manga speed lines, NOT anime motion effects"
+   - "Exaggerated expressions: use WESTERN COMIC STYLE — wide mouths, raised eyebrows — NOT anime big eyes, NOT manga sweat drops"
+
+**Dateien:**
+- `backend-railway/src/routes/comic.js` — `MOOD_MOD` Konstante (Zeile 22-26)
+- `backend-railway/src/routes/comic.js` — Seiten-Prompt RULES (Zeile 505-512)
+- `backend-railway/src/routes/comic.js` — Sanitized-Prompt RULES (Zeile 605-612)
+
+---
+
+## Test-Szenario: Omas 80. Geburtstag
+
+**Kritische Szene:** Moment #3 "Die Torte"
+- Thomas trägt 5-stöckige Torte, schwankt
+- Felix hält sich den Bauch vor Lachen
+- Sophie filmt mit Handy
+
+**Erwartetes Ergebnis:**
+- Bande Dessinée Stil mit Bewegung durch geneigte Posen und Motion Blur
+- Übertriebene Gesichtsausdrücke im Western Comic Stil (breiter Mund, hochgezogene Augenbrauen)
+- KEINE Manga Speed Lines, KEINE Anime Schweißtropfen, KEINE großen glänzenden Augen
+
+---
+
 # CHANGES — Session 1. Mai 2026 (Abend)
 
 ## Übersicht
