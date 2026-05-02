@@ -38,16 +38,24 @@ async function saveImage(b64OrUrl, folder, filename) {
 }
 
 // ── Save character references after cover generation ──────────────────────────
-async function saveCharacterRefs(projectId, characters, coverUrl) {
+async function saveCharacterRefs(projectId, characters, coverUrl, referenceImageUrls = []) {
   try {
-    const rows = characters.map(c => ({
-      project_id: projectId,
-      character_name: c.name,
-      character_age: c.age || null,
-      visual_anchor: c.visual_anchor || null,
-      cover_url: coverUrl,
-      in_photo: c.inPhoto === true,
-    }));
+    const rows = characters.map(c => {
+      // Match character to their specific photo by label
+      const matchedPhoto = referenceImageUrls.find(ref => 
+        ref.label.toLowerCase() === c.name.toLowerCase()
+      );
+      
+      return {
+        project_id: projectId,
+        character_name: c.name,
+        character_age: c.age || null,
+        visual_anchor: c.visual_anchor || null,
+        cover_url: coverUrl,
+        in_photo: c.inPhoto === true,
+        photo_url: matchedPhoto?.url || null, // ← NEW: Store individual photo URL
+      };
+    });
 
     const { error } = await supabase
       .from("character_ref_image")

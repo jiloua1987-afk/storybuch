@@ -282,41 +282,31 @@ Respond ONLY with JSON: {"pages":[{"id":"page1","pageNumber":1,"title":"Title in
     // Step 1: Detect WHO is actually visible in the photo
     // Step 2: Only enrich characters that are in the photo — others get story-based visual_anchor
     if ((referenceImageUrls.length > 0 || referenceImages.length > 0) && characters.length > 0) {
-      console.log(`Analyzing photo — detecting which characters are visible...`);
+      console.log(`Analyzing ${referenceImageUrls.length || referenceImages.length} photo(s) — detecting which characters are visible...`);
 
-      // Use URL if available, otherwise base64
-      const refImageContent = primaryRefUrl
-        ? { type: "image_url", image_url: { url: primaryRefUrl, detail: "high" } }
-        : { type: "image_url", image_url: { url: `data:image/jpeg;base64,${primaryRefBase64}`, detail: "high" } };
-
-      try {
-        const detectionRes = await openai.chat.completions.create({
-          model: "gpt-4.1",
-          messages: [{ role: "user", content: [
-            refImageContent,
-            { type: "text", text: `This photo contains some of these characters: ${characters.map(c => `${c.name} (${c.age} years old)`).join(", ")}.
-How many people are visible in this photo? Which of the listed characters are most likely shown based on their age?
-Return JSON only: {"visible_count": 4, "likely_characters": ["Mama", "Papa", "Luca", "Maria"]}
-Base your answer ONLY on ages and count of people visible. Do NOT identify anyone.` },
-          ]}],
-          response_format: { type: "json_object" },
-          max_tokens: 100,
-        });
-
-        const detection = JSON.parse(detectionRes.choices[0].message.content || "{}");
-        const likelyInPhoto = new Set((detection.likely_characters || []).map((n) => n.toLowerCase()));
-        console.log(`  → Detected in photo: ${[...likelyInPhoto].join(", ")}`);
-
+      // ── MULTI-PHOTO MODE: Analyze each photo separately ────────────────────
+      if (referenceImageUrls.length > 1) {
+        console.log(`  → Multi-photo mode: analyzing each photo individually`);
+        
         characters = await Promise.all(characters.map(async (char) => {
-          const inPhoto = likelyInPhoto.has(char.name.toLowerCase());
-
-          if (inPhoto) {
+          // Find photo matching this character's name
+          const matchedPhoto = referenceImageUrls.find(ref => 
+            ref.label.toLowerCase() === char.name.toLowerCase()
+          );
+          
+          if (matchedPhoto) {
+            console.log(`  → Analyzing ${matchedPhoto.label}'s photo...`);
             try {
+              const refImageContent = { 
+                type: "image_url", 
+                image_url: { url: matchedPhoto.url, detail: "high" } 
+              };
+              
               const r = await openai.chat.completions.create({
                 model: "gpt-4.1",
                 messages: [{ role: "user", content: [
                   refImageContent,
-                  { type: "text", text: `Describe ONLY what you can ACTUALLY SEE on the person who is approximately ${char.age} years old in this photo.
+                  { type: "text", text: `Describe ONLY what you can ACTUALLY SEE on the person in this photo (age approximately ${char.age} years old).
 
 ULTRA-CRITICAL RULES — BE EXTREMELY ACCURATE:
 
@@ -354,14 +344,14 @@ English, max 50 words.` },
                 ]}],
                 max_tokens: 120,
               });
-              console.log(`  → ${char.name}: described from photo`);
+              console.log(`  → ${char.name}: described from their photo`);
               return { ...char, visual_anchor: r.choices[0].message.content || char.visual_anchor, inPhoto: true };
             } catch (e) {
               console.error(`Photo description error for ${char.name}:`, e.message);
-              return { ...char, inPhoto: true };
+              return { ...char, inPhoto: false };
             }
           } else {
-            // Character NOT in photo → generate visual_anchor from story description
+            // No photo for this character → generate from story
             try {
               const r = await openai.chat.completions.create({
                 model: "gpt-4.1",
@@ -377,7 +367,112 @@ Respond with ONLY the description, starting with the character name.`,
                 }],
                 max_tokens: 120,
               });
-              console.log(`  → ${char.name}: generated from story (not in photo)`);
+              console.log(`  → ${char.name}: generated from story (no photo provided)`);
+              return { ...char, visual_anchor: r.choices[0].message.content || char.visual_anchor, inPhoto: false };
+            } catch (e) {
+              console.error(`Story generation error for ${char.name}:`, e.message);
+              return char;
+            }
+          }
+        }));
+        
+        console.log(`✓ Multi-photo analysis complete`);
+      } else {
+        // ── SINGLE PHOTO MODE: Original logic ──────────────────────────────────
+        // Use URL if available, otherwise base64
+        const refImageContent = primaryRefUrl
+          ? { type: "image_url", image_url: { url: primaryRefUrl, detail: "high" } }
+          : { type: "image_url", image_url: { url: `data:image/jpeg;base64,${primaryRefBase64}`, detail: "high" } };
+
+        try {
+          const detectionRes = await openai.chat.completions.create({
+            model: "gpt-4.1",
+            messages: [{ role: "user", content: [
+              refImageContent,
+              { type: "text", text: `This photo contains some of these characters: ${characters.map(c => `${c.name} (${c.age} years old)`).join(", ")}.
+How many people are visible in this photo? Which of the listed characters are most likely shown based on their age?
+Return JSON only: {"visible_count": 4, "likely_characters": ["Mama", "Papa", "Luca", "Maria"]}
+Base your answer ONLY on ages and count of people visible. Do NOT identify anyone.` },
+            ]}],
+            response_format: { type: "json_object" },
+            max_tokens: 100,
+          });
+
+          const detection = JSON.parse(detectionRes.choices[0].message.content || "{}");
+          const likelyInPhoto = new Set((detection.likely_characters || []).map((n) => n.toLowerCase()));
+          console.log(`  → Detected in photo: ${[...likelyInPhoto].join(", ")}`);
+
+          characters = await Promise.all(characters.map(async (char) => {
+            const inPhoto = likelyInPhoto.has(char.name.toLowerCase());
+
+            if (inPhoto) {
+              try {
+                const r = await openai.chat.completions.create({
+                  model: "gpt-4.1",
+                  messages: [{ role: "user", content: [
+                    refImageContent,
+                    { type: "text", text: `Describe ONLY what you can ACTUALLY SEE on the person who is approximately ${char.age} years old in this photo.
+
+ULTRA-CRITICAL RULES — BE EXTREMELY ACCURATE:
+
+HAIR COLOR — Look very carefully:
+- Gray/silver/white hair → MUST say "gray hair", "silver hair", or "white hair"
+- If hair looks light but person is 50+ years old → it's probably GRAY, not blonde
+- Dark hair → say "dark brown" or "black"
+- Light brown → say "light brown"
+- Blonde (only if clearly golden/yellow AND person is young) → say "blonde"
+- NEVER confuse gray hair with blonde hair!
+
+HAIR LENGTH — Measure carefully:
+- Very short (above ears) → say "very short hair"
+- Short (covers ears) → say "short hair"  
+- Shoulder-length → say "shoulder-length hair"
+- Long (past shoulders) → say "long hair"
+- NEVER say "long" if hair is short!
+
+AGE INDICATORS:
+- Person 50+ years old with light hair → almost always GRAY, not blonde
+- Receding hairline → mention it
+- Wrinkles, age lines → mention them
+
+DOUBLE-CHECK EVERYTHING:
+1. Look at hair color again — is it truly blonde or is it gray?
+2. Look at hair length again — is it truly long or is it short?
+3. Does your description match a person of age ${char.age}?
+
+If you CANNOT see a feature clearly → DO NOT mention it.
+Do NOT invent, assume, or guess ANY details.
+Do NOT identify anyone.
+
+Format: "${char.name}: [age] years old, [exact visible features]"
+English, max 50 words.` },
+                  ]}],
+                  max_tokens: 120,
+                });
+                console.log(`  → ${char.name}: described from photo`);
+                return { ...char, visual_anchor: r.choices[0].message.content || char.visual_anchor, inPhoto: true };
+              } catch (e) {
+                console.error(`Photo description error for ${char.name}:`, e.message);
+                return { ...char, inPhoto: true };
+              }
+            } else {
+              // Character NOT in photo → generate visual_anchor from story description
+              try {
+                const r = await openai.chat.completions.create({
+                  model: "gpt-4.1",
+                  messages: [{
+                    role: "system",
+                    content: `Create a detailed visual description for a comic book character based on their name, age, and story context. 
+Write 40-50 words covering: exact age appearance, hair color/style, skin tone, eye color, distinctive features, body type.
+This character is NOT in any reference photo — invent a realistic appearance consistent with their age and cultural background.
+Respond with ONLY the description, starting with the character name.`,
+                  }, {
+                    role: "user",
+                    content: `Character: ${char.name}, age ${char.age}. Story context: ${storyCtx}`,
+                  }],
+                  max_tokens: 120,
+                });
+                console.log(`  → ${char.name}: generated from story (not in photo)`);
               return { ...char, visual_anchor: r.choices[0].message.content || char.visual_anchor, inPhoto: false };
             } catch (e) {
               console.error(`Story description error for ${char.name}:`, e.message);
@@ -409,10 +504,6 @@ router.post("/cover", async (req, res) => {
   try {
     const { characters = [], location = "", referenceImages = [], referenceImageUrls = [] } = req.body;
 
-    // Primary reference URL (Supabase) > Base64 fallback
-    const primaryRefUrl = referenceImageUrls[0]?.url || null;
-    const primaryRefBase64 = referenceImages[0] || null;
-
     const charDesc = characters.map(c => `${c.name}: ${c.visual_anchor}`).join("\n");
     const charNames = characters.map(c => c.name).join(", ");
 
@@ -428,12 +519,80 @@ ${charDesc}
 Composition: dynamic group shot, characters prominently in foreground, vivid illustrated background showing the story world. Some looking at viewer, some interacting with each other.
 NO text, NO title, NO letters anywhere in the image.`;
 
-    // Use user photo for cover — via URL (Supabase) or base64 fallback
+    // ── MULTI-PHOTO STRATEGY ──────────────────────────────────────────────────
+    // If multiple photos uploaded, use first photo as base, then describe others
+    const hasMultiplePhotos = referenceImageUrls.length > 1 || referenceImages.length > 1;
+    
+    if (hasMultiplePhotos) {
+      console.log(`  → Multi-photo mode: ${referenceImageUrls.length} photos`);
+      
+      // Build detailed prompt mentioning ALL photos
+      const photoDescriptions = referenceImageUrls.map((ref, i) => 
+        `Photo ${i + 1} shows ${ref.label}: use this as reference for ${ref.label}'s appearance`
+      ).join(". ");
+      
+      const multiPhotoPrompt = `${COMIC_STYLE}
+
+REDRAW everyone as hand-drawn comic book characters. This must look like a page from a printed comic book, NOT a photograph.
+Bold ink outlines on every person. Flat cel-shaded colors. Expressive cartoon faces.
+
+CRITICAL: You have ${referenceImageUrls.length} reference photos uploaded:
+${photoDescriptions}
+
+Draw ALL characters: ${charNames}.
+Character descriptions: ${charDesc}
+
+For each character, use their specific uploaded photo as reference for facial features, hair, skin tone, and overall appearance.
+Setting: ${location || "a beautiful Mediterranean setting"}.
+Composition: dynamic group shot, characters in foreground, vivid illustrated background.
+NO text, NO title, NO letters anywhere in the image.`;
+
+      // Use first photo as base image for images.edit()
+      const primaryRefUrl = referenceImageUrls[0]?.url || null;
+      const primaryRefBase64 = referenceImages[0] || null;
+      
+      if (primaryRefUrl || primaryRefBase64) {
+        try {
+          let refFile;
+          if (primaryRefUrl) {
+            const buf = await fetchBuffer(primaryRefUrl);
+            const blob = new Blob([buf], { type: "image/jpeg" });
+            refFile = new File([blob], "reference.jpg", { type: "image/jpeg" });
+          } else {
+            refFile = toFile(primaryRefBase64);
+          }
+          
+          const res2 = await openai.images.edit({
+            model: "gpt-image-2",
+            image: refFile,
+            prompt: multiPhotoPrompt,
+            size: "1024x1536",
+            quality: "high",
+          });
+          
+          const item = (res2.data || [])[0];
+          const url = item?.url || (item?.b64_json ? `data:image/png;base64,${item.b64_json}` : null);
+          if (url) {
+            const coverUrl = await saveImage(url, "covers", `cover-${Date.now()}`);
+            const projectId = req.body.projectId || `proj-${Date.now()}`;
+            await saveCharacterRefs(projectId, characters, coverUrl || url, referenceImageUrls);
+            console.log("✓ Cover done (multi-photo mode)");
+            return res.json({ coverImageUrl: coverUrl || url, projectId });
+          }
+        } catch (e) {
+          console.warn("  → Cover with multi-photo failed:", e.message);
+        }
+      }
+    }
+
+    // ── SINGLE PHOTO STRATEGY (original logic) ────────────────────────────────
+    const primaryRefUrl = referenceImageUrls[0]?.url || null;
+    const primaryRefBase64 = referenceImages[0] || null;
+
     if (primaryRefUrl || primaryRefBase64) {
       try {
         let refFile;
         if (primaryRefUrl) {
-          // Fetch from Supabase URL
           const buf = await fetchBuffer(primaryRefUrl);
           const blob = new Blob([buf], { type: "image/jpeg" });
           refFile = new File([blob], "reference.jpg", { type: "image/jpeg" });
@@ -461,7 +620,7 @@ NO text, NO title, NO letters anywhere in the image.`,
         if (url) {
           const coverUrl = await saveImage(url, "covers", `cover-${Date.now()}`);
           const projectId = req.body.projectId || `proj-${Date.now()}`;
-          await saveCharacterRefs(projectId, characters, coverUrl || url);
+          await saveCharacterRefs(projectId, characters, coverUrl || url, referenceImageUrls);
           console.log("✓ Cover done (with user photo)");
           return res.json({ coverImageUrl: coverUrl || url, projectId });
         }
@@ -474,7 +633,7 @@ NO text, NO title, NO letters anywhere in the image.`,
     const { url: rawUrl } = await generateImage(prompt, null);
     const coverUrl = await saveImage(rawUrl, "covers", `cover-${Date.now()}`);
     const projectId = req.body.projectId || `proj-${Date.now()}`;
-    await saveCharacterRefs(projectId, characters, coverUrl || rawUrl);
+    await saveCharacterRefs(projectId, characters, coverUrl || rawUrl, referenceImageUrls);
     console.log("✓ Cover done (generate only)");
     res.json({ coverImageUrl: coverUrl || rawUrl, projectId });
   } catch (err) {
@@ -567,10 +726,13 @@ RULES:
 - Exaggerated expressions: use WESTERN COMIC STYLE — wide mouths, raised eyebrows — NOT anime big eyes, NOT manga sweat drops
 - NO text, NO speech bubbles, NO letters, NO titles anywhere in image${reillustrationNote ? `\n\nUSER CORRECTION: ${reillustrationNote}. Apply this change while keeping all other elements identical.` : ""}`;
 
-    // Reference strategy:
-    // - If ALL characters on this page are in the user photo → use cover as reference (consistent style)
-    // - If ANY character is NOT in the photo (e.g. Opa, Oma) → use images.generate() with visual_anchors only
-    //   Reason: images.edit() with cover/photo maps faces from the reference → Opa/Oma get replaced by Papa/Mama
+    // ── REFERENCE STRATEGY ────────────────────────────────────────────────────
+    // Priority:
+    // 1. Cover (if all characters in photo) → best consistency
+    // 2. Multi-photo mode (if multiple character photos) → use cover + character descriptions
+    // 3. Single photo → use as style reference
+    // 4. Generate only → no reference
+    
     const pageCharNames = page.panels
       .flatMap(p => [p.speaker])
       .filter(Boolean)
@@ -582,11 +744,43 @@ RULES:
        panelDescriptions.toLowerCase().includes(c.name.toLowerCase()))
     );
 
+    // Check if this is a scene with many people (guests, crowd, etc.)
+    const hasManyPeople = panelDescriptions.toLowerCase().includes("gäste") ||
+                          panelDescriptions.toLowerCase().includes("guests") ||
+                          panelDescriptions.toLowerCase().includes("crowd") ||
+                          panelDescriptions.toLowerCase().includes("people") ||
+                          panelDescriptions.toLowerCase().includes("viele");
+
     let reference = null;
     let refSource = "none";
 
-    if (hasCharNotInPhoto) {
-      // Use user photo as STYLE reference only — for consistent art style
+    // ── STRATEGY 1: Cover (best for consistency) ──────────────────────────────
+    if (coverImageUrl && !hasCharNotInPhoto) {
+      try {
+        reference = await fetchBuffer(coverImageUrl);
+        refSource = "cover";
+        console.log(`  → Using cover as reference (all characters in photo)`);
+      } catch (e) {
+        console.warn("  → Cover fetch failed:", e.message);
+      }
+    }
+
+    // ── STRATEGY 2: Multi-photo mode (for scenes with many people) ────────────
+    // CRITICAL: Even if scene has "many guests", main characters must stay consistent
+    // Use cover as base reference to maintain character appearance
+    if (!reference && hasManyPeople && coverImageUrl) {
+      try {
+        reference = await fetchBuffer(coverImageUrl);
+        refSource = "cover-with-crowd";
+        console.log(`  → Scene has many people, using cover to maintain character consistency`);
+      } catch (e) {
+        console.warn("  → Cover fetch for crowd scene failed:", e.message);
+      }
+    }
+
+    // ── STRATEGY 3: Character not in photo → use photo as style reference ─────
+    if (!reference && hasCharNotInPhoto) {
+      // Use user photo as STYLE reference only
       // The prompt explicitly describes all characters including those not in photo
       if (primaryRefUrl) {
         try {
@@ -602,16 +796,10 @@ RULES:
       }
       if (!reference) refSource = "generate-only";
       console.log(`  → Page has non-photo characters, ref: ${refSource}`);
-    } else if (coverImageUrl) {
-      try {
-        reference = await fetchBuffer(coverImageUrl);
-        refSource = "cover";
-      } catch (e) {
-        console.warn("  → Cover fetch failed:", e.message);
-      }
     }
-    if (!reference && !hasCharNotInPhoto) {
-      // Use URL if available, otherwise base64
+
+    // ── STRATEGY 4: Fallback to user photo ────────────────────────────────────
+    if (!reference) {
       if (primaryRefUrl) {
         try {
           reference = await fetchBuffer(primaryRefUrl);
@@ -626,8 +814,8 @@ RULES:
       }
     }
 
-    const refNote = refSource === "cover"
-      ? `${COMIC_STYLE}\nUse the EXACT same art style, character designs and color palette as this cover image.\n\n`
+    const refNote = refSource === "cover" || refSource === "cover-with-crowd"
+      ? `${COMIC_STYLE}\nUse the EXACT same art style, character designs and color palette as this cover image.\nDraw the main characters (${finalCharacters.map(c => c.name).join(", ")}) EXACTLY as they appear in this cover.\n${hasManyPeople ? "Add background guests/crowd as faceless silhouettes or simple figures.\n" : ""}\n`
       : refSource === "user-photo"
       ? `${COMIC_STYLE}\nThe people in this photo are the main characters. Draw them in the comic style above. NOT photorealistic. IMPORTANT: IGNORE the clothing from the photo — use the clothing described in the prompt instead.\n\n`
       : refSource === "user-photo-style"
