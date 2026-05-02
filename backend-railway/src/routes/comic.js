@@ -43,6 +43,65 @@ function getOutfit(location = "") {
   return "casual everyday clothes appropriate for the scene and warm weather.";
 }
 
+// ── Age modifier detection for biographical stories ───────────────────────────
+// Returns: { modifier: string, useReference: boolean }
+function getAgeContext(pageTitle = "", panelDescriptions = "") {
+  const text = `${pageTitle} ${panelDescriptions}`.toLowerCase();
+  
+  // Historical/Young keywords (German + English)
+  const youngKeywords = [
+    "first met", "kennenlernen", "erste treffen", "jugend", "youth", "young",
+    "schule", "school", "university", "universität", "studium", "student",
+    "erste liebe", "first love", "teenager", "zwanzig", "twenties"
+  ];
+  
+  // Middle-age keywords
+  const middleKeywords = [
+    "wedding", "hochzeit", "heirat", "marriage", "verlobung", "engagement",
+    "karriere", "career", "dreißig", "vierzig", "thirties", "forties"
+  ];
+  
+  // Current/Old age keywords
+  const currentKeywords = [
+    "heute", "today", "now", "jetzt", "aktuell", "current",
+    "rentner", "retired", "enkel", "grandchild", "opa", "oma", "grandpa", "grandma"
+  ];
+  
+  // Check for young scene
+  if (youngKeywords.some(k => text.includes(k))) {
+    return {
+      modifier: "Draw characters 20-30 years younger than their current age. Youthful appearance, smooth skin, darker hair (no gray), energetic posture.",
+      useReference: false, // Don't use photo for young scenes
+      ageContext: "young"
+    };
+  }
+  
+  // Check for middle-age scene
+  if (middleKeywords.some(k => text.includes(k))) {
+    return {
+      modifier: "Draw characters 10-15 years younger than their current age. Mature but youthful, minimal gray hair, fewer wrinkles.",
+      useReference: false, // Don't use photo for middle-age scenes
+      ageContext: "middle"
+    };
+  }
+  
+  // Check for current age scene
+  if (currentKeywords.some(k => text.includes(k))) {
+    return {
+      modifier: "Draw characters at their current age as shown in the reference.",
+      useReference: true, // Use photo for current age
+      ageContext: "current"
+    };
+  }
+  
+  // Default: assume current age
+  return {
+    modifier: "",
+    useReference: true,
+    ageContext: "current"
+  };
+}
+
 // ── Build image buffer from base64 ───────────────────────────────────────────
 function toFile(base64, name = "reference.jpg") {
   const buf = Buffer.from(base64, "base64");
@@ -696,6 +755,11 @@ router.post("/page", async (req, res) => {
       .map(p => `Panel ${p.nummer}: ${p.szene}`)
       .join("\n");
 
+    // ── AGE CONTEXT DETECTION ─────────────────────────────────────────────────
+    // Detect if this is a historical/young scene or current age scene
+    const ageContext = getAgeContext(page.title, panelDescriptions);
+    console.log(`  → Age context: ${ageContext.ageContext} (useReference: ${ageContext.useReference})`);
+
     const prompt = `${COMIC_STYLE} ${mood}
 
 Comic page — ${panelCount} panels in ${layoutDesc}. Bold black borders between panels.
@@ -703,6 +767,7 @@ Comic page — ${panelCount} panels in ${layoutDesc}. Bold black borders between
 CHARACTERS — draw identically across all panels:
 ${charAnchors}
 
+${ageContext.modifier ? `AGE MODIFIER: ${ageContext.modifier}\n` : ""}
 CRITICAL: Draw characters EXACTLY as described above. Do NOT add features not mentioned (glasses, beard, mustache, jewelry, tattoos).
 If a feature is not in the description, the character does NOT have it.
 
@@ -729,10 +794,11 @@ RULES:
 
     // ── REFERENCE STRATEGY ────────────────────────────────────────────────────
     // Priority:
-    // 1. Cover (if all characters in photo) → best consistency
-    // 2. Multi-photo mode (if multiple character photos) → use cover + character descriptions
-    // 3. Single photo → use as style reference
-    // 4. Generate only → no reference
+    // 1. Age context: If young/middle scene → NO reference (text-only)
+    // 2. Cover (if all characters in photo) → best consistency
+    // 3. Multi-photo mode (if multiple character photos) → use cover + character descriptions
+    // 4. Single photo → use as style reference
+    // 5. Generate only → no reference
     
     const pageCharNames = page.panels
       .flatMap(p => [p.speaker])
@@ -755,63 +821,71 @@ RULES:
     let reference = null;
     let refSource = "none";
 
-    // ── STRATEGY 1: Cover (best for consistency) ──────────────────────────────
-    if (coverImageUrl && !hasCharNotInPhoto) {
-      try {
-        reference = await fetchBuffer(coverImageUrl);
-        refSource = "cover";
-        console.log(`  → Using cover as reference (all characters in photo)`);
-      } catch (e) {
-        console.warn("  → Cover fetch failed:", e.message);
-      }
-    }
-
-    // ── STRATEGY 2: Multi-photo mode (for scenes with many people) ────────────
-    // CRITICAL: Even if scene has "many guests", main characters must stay consistent
-    // Use cover as base reference to maintain character appearance
-    if (!reference && hasManyPeople && coverImageUrl) {
-      try {
-        reference = await fetchBuffer(coverImageUrl);
-        refSource = "cover-with-crowd";
-        console.log(`  → Scene has many people, using cover to maintain character consistency`);
-      } catch (e) {
-        console.warn("  → Cover fetch for crowd scene failed:", e.message);
-      }
-    }
-
-    // ── STRATEGY 3: Character not in photo → use photo as style reference ─────
-    if (!reference && hasCharNotInPhoto) {
-      // Use user photo as STYLE reference only
-      // The prompt explicitly describes all characters including those not in photo
-      if (primaryRefUrl) {
+    // ── STRATEGY 0: Age-based reference decision ──────────────────────────────
+    // For young/middle-age scenes, don't use reference photo
+    // This allows gpt-image-2 to draw younger versions from text description
+    if (!ageContext.useReference) {
+      console.log(`  → Historical scene (${ageContext.ageContext}), skipping reference photo`);
+      refSource = "generate-only-age-modified";
+    } else {
+      // ── STRATEGY 1: Cover (best for consistency) ──────────────────────────────
+      if (coverImageUrl && !hasCharNotInPhoto) {
         try {
-          reference = await fetchBuffer(primaryRefUrl);
+          reference = await fetchBuffer(coverImageUrl);
+          refSource = "cover";
+          console.log(`  → Using cover as reference (all characters in photo)`);
+        } catch (e) {
+          console.warn("  → Cover fetch failed:", e.message);
+        }
+      }
+
+      // ── STRATEGY 2: Multi-photo mode (for scenes with many people) ────────────
+      // CRITICAL: Even if scene has "many guests", main characters must stay consistent
+      // Use cover as base reference to maintain character appearance
+      if (!reference && hasManyPeople && coverImageUrl) {
+        try {
+          reference = await fetchBuffer(coverImageUrl);
+          refSource = "cover-with-crowd";
+          console.log(`  → Scene has many people, using cover to maintain character consistency`);
+        } catch (e) {
+          console.warn("  → Cover fetch for crowd scene failed:", e.message);
+        }
+      }
+
+      // ── STRATEGY 3: Character not in photo → use photo as style reference ─────
+      if (!reference && hasCharNotInPhoto) {
+        // Use user photo as STYLE reference only
+        // The prompt explicitly describes all characters including those not in photo
+        if (primaryRefUrl) {
+          try {
+            reference = await fetchBuffer(primaryRefUrl);
+            refSource = "user-photo-style";
+          } catch (e) {
+            console.warn("  → User photo fetch failed:", e.message);
+          }
+        }
+        if (!reference && primaryRefBase64) {
+          reference = primaryRefBase64;
           refSource = "user-photo-style";
-        } catch (e) {
-          console.warn("  → User photo fetch failed:", e.message);
         }
+        if (!reference) refSource = "generate-only";
+        console.log(`  → Page has non-photo characters, ref: ${refSource}`);
       }
-      if (!reference && primaryRefBase64) {
-        reference = primaryRefBase64;
-        refSource = "user-photo-style";
-      }
-      if (!reference) refSource = "generate-only";
-      console.log(`  → Page has non-photo characters, ref: ${refSource}`);
-    }
 
-    // ── STRATEGY 4: Fallback to user photo ────────────────────────────────────
-    if (!reference) {
-      if (primaryRefUrl) {
-        try {
-          reference = await fetchBuffer(primaryRefUrl);
-          refSource = "user-photo";
-        } catch (e) {
-          console.warn("  → User photo URL fetch failed:", e.message);
+      // ── STRATEGY 4: Fallback to user photo ────────────────────────────────────
+      if (!reference) {
+        if (primaryRefUrl) {
+          try {
+            reference = await fetchBuffer(primaryRefUrl);
+            refSource = "user-photo";
+          } catch (e) {
+            console.warn("  → User photo URL fetch failed:", e.message);
+          }
         }
-      }
-      if (!reference && primaryRefBase64) {
-        reference = primaryRefBase64;
-        refSource = "user-photo";
+        if (!reference && primaryRefBase64) {
+          reference = primaryRefBase64;
+          refSource = "user-photo";
+        }
       }
     }
 
