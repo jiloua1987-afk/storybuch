@@ -3,7 +3,31 @@
 
 ## 🔴 Kritisch (sofort)
 
-### 1. Multi-Person Photo System testen ⚡
+### 1. ⚠️ Multi-Photo System debuggen & fixen
+**Aufwand:** 1-2 Stunden  
+**Status:** Debug-Logging deployed, Test ausstehend  
+**Dateien:** `backend-railway/src/routes/comic.js`, `MULTI-PHOTO-DEBUG-PLAN.md`
+
+**Problem:**
+- Fotos werden nicht verwendet → jede Seite erfindet neue Gesichter
+- Character-Name-Matching schlägt fehl
+- Logs: `"Jil: generated from story (no photo provided)"`
+
+**Bereits implementiert:**
+- ✅ Fuzzy Matching (partial match)
+- ✅ Debug Logging (zeigt Labels vs. GPT-Namen)
+- ✅ Composite Image für Multi-Photo Cover
+
+**Nächster Schritt:**
+1. Test durchführen wenn Railway Deployment fertig
+2. Logs prüfen: `DEBUG: referenceImageUrls` und `DEBUG: characters from GPT`
+3. Wenn Matching fehlschlägt → Plan B: Namen aus Labels erzwingen
+
+**Details:** Siehe `MULTI-PHOTO-DEBUG-PLAN.md`
+
+---
+
+### 2. Multi-Person Photo System testen ⚡
 **Aufwand:** 30 Minuten  
 **Status:** ✅ Code deployed, nur noch testen  
 **Dateien:** Keine Änderungen nötig  
@@ -68,7 +92,34 @@ Generating page "Das erste Kennenlernen"
 
 ---
 
-### 3. ✅ Supabase Unique Constraint hinzugefügen
+## 🟡 Wichtig (morgen - nach Wizard-Umbau)
+
+### 4. Wizard-Umstrukturierung 🎨
+**Aufwand:** 4-6 Stunden  
+**Status:** Spezifikation komplett  
+**Dateien:** `WIZARD-REDESIGN-SPEC.md`
+
+**Ziele:**
+1. ✅ Wizard vereinfachen (weniger Felder)
+2. ✅ Multi-Photo Problem lösen (kein Name-Matching)
+3. ✅ **Familienbild UND Einzelfotos unterstützen**
+4. ✅ Logischer Flow: Figuren → Stil → Momente
+
+**Wichtig:**
+- **Familienbild-Modus MUSS weiterhin funktionieren** (hat bisher super geklappt!)
+- User kann wählen: Familienbild / Einzelfotos / Keine Fotos
+- Familienbild wird als "bewährt" markiert
+
+**Neue Struktur:**
+- Step 1: Figuren & Fotos (mit Foto-Modus-Auswahl)
+- Step 2: Stil & Kategorie (keine Fragen mehr)
+- Step 3: Momente (mit Vorschlägen)
+
+**Nach Implementierung:** Multi-Photo System testen
+
+---
+
+### 5. ✅ Supabase Unique Constraint hinzugefügen
 **Status:** ✅ ERLEDIGT  
 **Aufwand:** 5 Minuten  
 
