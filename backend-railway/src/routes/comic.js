@@ -601,7 +601,7 @@ ${sanitizedPanelDescs}
 RULES:
 - Each panel shows a DIFFERENT scene/angle/moment
 - Each character appears ONLY ONCE per panel
-- Expressive happy faces, joyful atmosphere
+- Expressive faces showing correct emotions for the scene
 - Sharp detailed faces — eyes, nose, mouth clearly visible
 - NO text, NO speech bubbles, NO letters, NO titles anywhere in image`;
 
