@@ -31,15 +31,15 @@ export default function StepIndicator({ currentStep }: { currentStep: number }) 
                 className={clsx(
                   "w-10 h-10 rounded-full flex items-center justify-center text-lg border-2 transition-all",
                   active
-                    ? "bg-[#1A1410] border-[#1A1410] text-white"
+                    ? "bg-brand-600 border-brand-600 text-white"
                     : done
-                    ? "bg-[#C9963A] border-[#C9963A] text-white"
-                    : "bg-white border-[#E8D9C0] text-[#B8A89A]"
+                    ? "bg-brand-500 border-brand-500 text-white"
+                    : "bg-white border-brand-200 text-brand-300"
                 )}
               >
                 {done ? "✓" : step.icon}
               </div>
-              <span className={clsx("text-xs font-medium hidden md:block", active ? "text-[#1A1410]" : "text-[#8B7355]")}>
+              <span className={clsx("text-xs font-medium hidden md:block", active ? "text-brand-700" : "text-brand-500")}>
                 {step.label}
               </span>
             </motion.div>
@@ -47,7 +47,7 @@ export default function StepIndicator({ currentStep }: { currentStep: number }) 
               <div
                 className={clsx(
                   "w-6 md:w-10 h-0.5 mx-1 transition-all",
-                  i < currentStep ? "bg-[#C9963A]" : "bg-[#E8D9C0]"
+                  i < currentStep ? "bg-brand-500" : "bg-brand-200"
                 )}
               />
             )}

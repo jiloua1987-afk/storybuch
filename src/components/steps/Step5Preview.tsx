@@ -173,7 +173,7 @@ export default function Step5Preview() {
         {editingTitle ? (
           <input
             autoFocus
-            className="font-display text-3xl font-semibold text-[#1f1a2e] text-center bg-transparent border-b-2 border-[#C9963A] outline-none w-full max-w-md mx-auto block"
+            className="font-display text-3xl font-semibold text-gray-900 text-center bg-transparent border-b-2 border-brand-500 outline-none w-full max-w-md mx-auto block"
             value={project.title}
             onChange={(e) => updateProject({ title: e.target.value })}
             onBlur={() => setEditingTitle(false)}
@@ -181,7 +181,7 @@ export default function Step5Preview() {
           />
         ) : (
           <h2
-            className="font-display text-3xl font-semibold text-[#1f1a2e] cursor-text hover:text-[#C9963A] transition-colors"
+            className="font-display text-3xl font-semibold text-gray-900 cursor-text hover:text-brand-500 transition-colors"
             title="Klicken zum Bearbeiten"
             onClick={() => setEditingTitle(true)}
           >
@@ -349,8 +349,8 @@ export default function Step5Preview() {
         <Button variant="secondary" onClick={goNext} disabled={currentPage === maxPage} size="sm">Nächste →</Button>
       </div>
 
-      <div className="bg-[#F5EDE0] rounded-2xl p-4 space-y-3">
-        <h3 className="text-sm font-semibold text-[#1f1a2e]">Alle Seiten</h3>
+      <div className="bg-brand-50 rounded-2xl p-4 space-y-3">
+        <h3 className="text-sm font-semibold text-gray-900">Alle Seiten</h3>
         <div className="grid grid-cols-5 gap-3">
           <button
             onClick={() => setCurrentPage(-1)}

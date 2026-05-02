@@ -33,9 +33,6 @@ export default function UeberUns() {
         {/* Hero */}
         <section className="max-w-5xl mx-auto px-6 pt-20 pb-24 grid md:grid-cols-2 gap-14 items-center">
           <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="space-y-6">
-            <div className="inline-block bg-brand-50 text-brand-700 text-xs font-medium px-3 py-1.5 rounded-full border border-brand-200">
-              Über MyComicStory
-            </div>
             <h1 className="font-display text-4xl md:text-5xl font-semibold text-gray-900 leading-tight">
               Wir glauben, dass jede Geschichte es verdient, erzählt zu werden.
             </h1>

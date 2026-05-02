@@ -295,10 +295,10 @@ export default function Step4Generate() {
     return (
       <div className="max-w-lg mx-auto text-center space-y-6 py-16">
         <div className="text-5xl">⚠️</div>
-        <h2 className="font-display text-2xl text-[#1f1a2e]">Fehler bei der Generierung</h2>
+        <h2 className="font-display text-2xl text-gray-900">Fehler bei der Generierung</h2>
         <p className="text-sm bg-red-50 border border-red-100 rounded-xl p-4 text-red-700">{error}</p>
         <button onClick={() => { setError(null); running.current = false; runGeneration(); }}
-          className="bg-[#1A1410] text-white px-6 py-3 rounded-xl hover:bg-[#2D2620] transition-colors">
+          className="bg-brand-600 text-white px-6 py-3 rounded-xl hover:bg-brand-700 transition-colors">
           Nochmal versuchen
         </button>
       </div>
@@ -309,8 +309,8 @@ export default function Step4Generate() {
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
       className="max-w-lg mx-auto text-center space-y-8 py-10">
       <div className="space-y-2">
-        <h2 className="font-display text-3xl font-semibold text-[#1f1a2e]">Dein Comic wird erstellt</h2>
-        <p className="text-gray-500 text-sm">Alle Seiten werden gleichzeitig illustriert – ca. 60–90 Sekunden.</p>
+        <h2 className="font-display text-3xl font-semibold text-gray-900">Dein Comic wird erstellt</h2>
+        <p className="text-gray-600 text-sm">Alle Seiten werden gleichzeitig illustriert – ca. 60–90 Sekunden.</p>
       </div>
 
       <motion.div animate={{ rotate: done ? 0 : [0, -3, 3, -3, 0] }}
@@ -324,7 +324,7 @@ export default function Step4Generate() {
         <AnimatePresence>
           {log.map((entry, i) => (
             <motion.div key={i} initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }}
-              className={`flex items-center gap-2 text-sm ${entry.done ? "text-gray-400" : "text-[#1A1410] font-medium"}`}>
+              className={`flex items-center gap-2 text-sm ${entry.done ? "text-gray-400" : "text-gray-900 font-medium"}`}>
               <span className="w-4 text-center flex-shrink-0">{entry.done ? "✓" : "·"}</span>
               <span>{entry.text}</span>
             </motion.div>
@@ -333,7 +333,7 @@ export default function Step4Generate() {
       </div>
 
       {done && (
-        <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-[#C9963A] font-medium">
+        <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-brand-500 font-medium">
           Weiterleitung zur Vorschau…
         </motion.p>
       )}

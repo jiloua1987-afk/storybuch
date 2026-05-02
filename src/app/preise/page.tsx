@@ -40,9 +40,6 @@ export default function Preise() {
 
         {/* Hero */}
         <section className="max-w-5xl mx-auto px-6 pt-20 pb-16 text-center space-y-4">
-          <div className="inline-block bg-brand-50 text-brand-700 text-xs font-medium px-3 py-1.5 rounded-full border border-brand-200">
-            Faire Preise
-          </div>
           <h1 className="font-display text-4xl md:text-5xl font-semibold text-gray-900">
             Ein Comic. Eine Erinnerung. Für immer.
           </h1>
