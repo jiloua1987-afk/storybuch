@@ -1,5 +1,5 @@
 # Session State — MyComicStory
-*Zuletzt aktualisiert: 2. Mai 2026*
+*Zuletzt aktualisiert: 2. Mai 2026 (Nachmittag)*
 *Git Tag: stable-v2-mai2026*
 
 ---
@@ -37,11 +37,24 @@ Web-App die personalisierte Comic-Bücher aus Familienfotos und Geschichten gene
 
 ## Bekannte offene Probleme
 
-1. **Fußball-Seite (Safety-Block):** images.edit() + images.generate() beide geblockt bei Jubel-Szenen mit Kindern. Sanitized-Prompt-Fallback generiert ein Bild, aber Charaktere weniger erkennbar.
-2. ~~**Supabase Unique-Constraint:**~~ ✅ FIXED (2. Mai) — `saveCharacterRefs` nutzt jetzt `upsert` mit `onConflict`
-3. ~~**Stil-Konsistenz:**~~ ✅ IMPROVED (2. Mai) — Verstärkter Anti-Manga-Prompt für humorvolle/dynamische Szenen
-4. ~~**Panel-Wiederholungen:**~~ ✅ FIXED (2. Mai) — Struktur-Prompt erzwingt jetzt visuelle Variation zwischen Panels
-5. ~~**Erfundene Details:**~~ ✅ FIXED (2. Mai) — Photo-Analyse und Seiten-Prompt verbieten jetzt erfundene Features (Brille, Schnurrbart etc.)
+1. **Supabase Unique-Constraint:** ⚠️ MUSS MANUELL GEFIXT WERDEN
+   - `saveCharacterRefs` schlägt fehl: "no unique or exclusion constraint matching ON CONFLICT"
+   - **Fix:** SQL in Supabase Dashboard ausführen:
+   ```sql
+   ALTER TABLE character_ref_image
+   ADD CONSTRAINT character_ref_image_project_character_unique
+   UNIQUE (project_id, character_name);
+   ```
+2. **Safety-Block bei sensiblen Szenen:** Cover + Fotoalbum-Szene werden geblockt
+   - Cover: Fallback auf generate-only funktioniert
+   - Fotoalbum: Beide Versuche geblockt → Seite fehlt komplett
+   - Sanitized prompt jetzt erweitert (entfernt "photo", "album", "secret")
+3. **Charakter-Konsistenz:** Schwiegersohn weit vom Original (blonde statt graue Haare)
+   - Photo-Analyse verstärkt mit expliziten Farb-Regeln
+   - Muss im nächsten Test geprüft werden
+4. **Panel-Variation:** Ähnliche Panels bei Torte/Abschiedstanz
+   - Prompt verstärkt mit GOOD/BAD Beispielen
+   - Muss im nächsten Test geprüft werden
 
 ---
 
