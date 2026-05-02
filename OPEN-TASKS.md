@@ -3,9 +3,15 @@
 
 ## 🔴 Kritisch (sofort)
 
-### 1. Multi-Photo System testen ⚡
+### 1. Multi-Person Photo System testen ⚡
 **Aufwand:** 30 Minuten  
-**Dateien:** Keine Änderungen nötig, nur testen  
+**Status:** ✅ Code deployed, nur noch testen  
+**Dateien:** Keine Änderungen nötig  
+
+**Was gelöst wurde:**
+- Problem: 2 Fotos hochgeladen (Sally + Jil), nur 1 verwendet
+- Lösung: Separate Analyse pro Foto, beide `photo_url` gespeichert
+- Deployed: 2. Mai 2026
 
 **Test-Szenario:**
 1. Sally-Foto hochladen (Label: "Sally")
@@ -22,6 +28,8 @@
 - ✅ Jil sieht aus wie im Foto (alle Seiten)
 - ✅ Hochzeitsszene: Sally & Jil konsistent, Gäste im Hintergrund
 - ✅ Keine "Detected in photo: (leer)" Fehler
+
+**Wenn Test erfolgreich:** Task als erledigt markieren ✅
 
 ---
 
@@ -131,9 +139,16 @@ if (lastOutfit?.context === currentContext) {
 ### 6. Multi-Age Photo System implementieren 📸
 **Aufwand:** 1-2 Wochen  
 **Spezifikation:** `MULTI-AGE-PHOTO-SYSTEM-SPEC.md`  
+**Status:** Nur Spezifikation, noch nicht implementiert
+
+**WICHTIG:** Das ist NICHT das Multi-Person System (das ist fertig)!
+
+**Unterschied:**
+- **Multi-Person** (✅ fertig): 2 Personen, je 1 Foto → Sally-Foto + Jil-Foto
+- **Multi-Age** (📋 spec): 1 Person, mehrere Fotos → Sally-jung + Sally-alt
 
 **Konzept:**
-- User lädt mehrere Fotos pro Charakter hoch (jung + alt)
+- User lädt mehrere Fotos PRO Charakter hoch (jung + alt)
 - System wählt automatisch passendes Foto für jede Szene
 - Perfekte Konsistenz über alle Altersgruppen
 

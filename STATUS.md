@@ -4,7 +4,7 @@
 ## ✅ Was funktioniert (DEPLOYED)
 
 ### Backend (Railway)
-- ✅ **Multi-Person Photo Matching** - Jedes Foto wird separat analysiert
+- ✅ **Multi-Person Photo Matching** - Jedes Foto separat analysiert (Sally + Jil)
 - ✅ **Syntax-Fehler behoben** - Backend startet ohne Crash
 - ✅ **Age-Based Character Rendering** - Junge/mittlere/aktuelle Szenen erkannt
 - ✅ **Crowd Scene Handling** - Hochzeit mit Gästen behält Charakterkonsistenz
@@ -13,6 +13,8 @@
 - ✅ **Anti-Manga Prompts** - Verstärkte Bande Dessinée Stil-Enforcement
 - ✅ **Momente als Pflicht-Seiten** - 1 GPT-Call pro Moment
 - ✅ **Opa/Oma Fix** - Erscheinen nicht mehr in falschen Szenen
+
+**Hinweis:** Multi-Person System ist deployed, nur noch testen!
 
 ### Frontend (Vercel)
 - ✅ **Einheitliches Format** - Alle Seiten 2:3 (1024×1536)
@@ -33,22 +35,21 @@
 
 ### 🔴 Kritisch (vor Launch)
 
-#### 1. Multi-Photo System testen
-**Status:** Code deployed, noch nicht getestet  
+#### 1. Multi-Person Photo System testen
+**Status:** ✅ Code deployed, nur noch testen  
 **Aufwand:** 30 Min  
+
+**Was gelöst wurde:**
+- Problem: 2 Fotos (Sally + Jil), nur 1 verwendet
+- Lösung: Separate Analyse pro Foto
+- Status: Deployed, funktioniert vermutlich
+
 **Test:**
 - 2 Fotos hochladen (Sally + Jil)
 - Liebesgeschichte mit Hochzeit generieren
 - Prüfen: Beide Charaktere erkannt? Konsistent über alle Seiten?
 
-**Erwartete Logs:**
-```
-Analyzing 2 photo(s)...
-  → Multi-photo mode: analyzing each photo individually
-  → Sally: described from their photo
-  → Jil: described from their photo
-✓ Multi-photo analysis complete
-```
+**Wenn Test erfolgreich:** Als erledigt markieren ✅
 
 #### 2. Age Modifier testen
 **Status:** Code deployed, noch nicht getestet  
