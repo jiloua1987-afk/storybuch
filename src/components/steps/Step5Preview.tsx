@@ -178,10 +178,16 @@ export default function Step5Preview() {
     try {
       const fullUrl = RAILWAY_URL ? `${RAILWAY_URL}/api/comic/export-pdf` : "/api/comic/export-pdf";
       
+      // Filter out deleted pages before export
+      const projectForExport = {
+        ...project,
+        chapters: project.chapters.filter(c => !deletedPages.has(c.id))
+      };
+      
       const res = await fetch(fullUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ project })
+        body: JSON.stringify({ project: projectForExport })
       });
       
       if (!res.ok) throw new Error(`HTTP ${res.status}`);

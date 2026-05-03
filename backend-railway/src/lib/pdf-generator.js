@@ -108,6 +108,63 @@ async function createComicPDF(project) {
           width: imgWidth, 
           height: imgHeight 
         });
+        
+        // ── Sprechblasen rendern ──────────────────────────────────────
+        if (page.panels && page.panels.length > 0) {
+          const panels = page.panels.filter(p => p.dialog && p.dialog.trim() && p.dialog.toLowerCase() !== 'null');
+          
+          panels.forEach((panel, idx) => {
+            // Position aus panelPositions oder Fallback
+            let bubbleX = imgX + 20;
+            let bubbleY = imgY + 20 + (idx * 80);
+            
+            if (page.panelPositions && page.panelPositions.length > 0) {
+              const pos = page.panelPositions.find(p => p.nummer === panel.nummer) || page.panelPositions[idx];
+              if (pos) {
+                // Konvertiere Prozent zu Pixel-Koordinaten
+                bubbleX = imgX + (pos.left / 100) * imgWidth;
+                bubbleY = imgY + (pos.top / 100) * imgHeight;
+              }
+            }
+            
+            // Text vorbereiten
+            const speaker = panel.speaker && panel.speaker !== 'narrator' && panel.speaker.toLowerCase() !== 'null' 
+              ? panel.speaker + ': ' 
+              : '';
+            const text = speaker + panel.dialog;
+            
+            // Bubble-Größe berechnen
+            const maxBubbleWidth = 140;
+            const padding = 8;
+            
+            // Text-Höhe messen
+            doc.fontSize(9).font('Helvetica');
+            const textHeight = doc.heightOfString(text, { width: maxBubbleWidth - (padding * 2) });
+            const bubbleWidth = Math.min(maxBubbleWidth, Math.max(80, text.length * 2.5));
+            const bubbleHeight = textHeight + (padding * 2) + 4;
+            
+            // Bubble-Hintergrund (weiß mit schwarzem Rand)
+            const isCaption = panel.bubble_type === 'caption';
+            const bgColor = isCaption ? '#1E0F32' : '#FFFEF8';
+            const textColor = isCaption ? '#FFFFFF' : '#1A1410';
+            
+            doc.save();
+            doc.roundedRect(bubbleX, bubbleY, bubbleWidth, bubbleHeight, 6)
+               .fillAndStroke(bgColor, '#1A1410');
+            
+            // Text in Bubble
+            doc.fontSize(9)
+               .font(speaker ? 'Helvetica-Bold' : 'Helvetica')
+               .fillColor(textColor)
+               .text(text, bubbleX + padding, bubbleY + padding, {
+                 width: bubbleWidth - (padding * 2),
+                 align: 'left',
+                 lineGap: 2
+               });
+            
+            doc.restore();
+          });
+        }
       }
       
       // Seitenzahl unten

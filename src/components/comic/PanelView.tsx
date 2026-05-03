@@ -23,6 +23,8 @@ interface PanelViewProps {
   panels?: PanelData[];
   panelPositions?: PanelPosition[] | null;
   pageNumber?: number;
+  pageId?: string; // NEW: To identify which page we're editing
+  onPositionsChange?: (positions: PanelPosition[]) => void; // NEW: Callback to save positions
 }
 
 // ── Handdrawn SVG bubble border ───────────────────────────────────────────────
@@ -243,7 +245,7 @@ function initBubbleSize(dialog: string, speaker: string): { w: number; h: number
 }
 
 // ── Main PanelView ────────────────────────────────────────────────────────────
-export default function PanelView({ imageUrl, title, panels = [], panelPositions, pageNumber }: PanelViewProps) {
+export default function PanelView({ imageUrl, title, panels = [], panelPositions, pageNumber, pageId, onPositionsChange }: PanelViewProps) {
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [editedDialogs, setEditedDialogs] = useState<Record<number, string>>({});
   const [hiddenBubbles, setHiddenBubbles] = useState<Set<number>>(new Set());
@@ -317,7 +319,26 @@ export default function PanelView({ imageUrl, title, panels = [], panelPositions
     }
   };
 
-  const handleMouseUp = () => setDragging(null);
+  const handleMouseUp = () => {
+    // Save positions to store when drag ends
+    if (dragging && dragging.type === "panel" && onPositionsChange) {
+      const updatedPositions: PanelPosition[] = dialogPanels.map((panel, bubbleIndex) => {
+        const i = panel.originalIndex;
+        const dragPos = dragPositions[i];
+        const resolved = resolvedPositions[bubbleIndex];
+        
+        return {
+          nummer: i + 1,
+          top: dragPos?.top ?? resolved?.top ?? 5,
+          left: dragPos?.left ?? resolved?.left ?? 2,
+          width: resolved?.w ?? 20,
+          height: resolved?.h ?? 10,
+        };
+      });
+      onPositionsChange(updatedPositions);
+    }
+    setDragging(null);
+  };
 
   // Click on image to add new bubble
   const handleImageClick = (e: React.MouseEvent) => {
