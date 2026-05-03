@@ -804,16 +804,17 @@ RULES:
       // CRITICAL: For individual photos, DON'T use cover as reference!
       // Reason: images.edit() is unreliable for face consistency
       // Solution: Use images.generate() with detailed visual_anchors from photos
-      const hasIndividualPhotos = finalCharacters.every(c => c.inPhoto === true) && 
-                                   finalCharacters.length > 1;
+      // Detection: Multiple photos (referenceImageUrls.length > 1) means individual photos mode
+      const hasIndividualPhotos = referenceImageUrls.length > 1;
       
       if (hasIndividualPhotos) {
         reference = null;
         refSource = "generate-only-individual-photos";
-        console.log(`  → Individual photos mode: using generate-only with visual anchors`);
+        console.log(`  → Individual photos mode (${referenceImageUrls.length} photos): using generate-only with visual anchors`);
         console.log(`  → Reason: images.edit() unreliable for face consistency`);
       }
       // ── STRATEGY 2: Cover (best for consistency) ──────────────────────────────
+      // Family photo mode: 1 photo with all characters
       else if (coverImageUrl && !hasCharNotInPhoto) {
         try {
           reference = await fetchBuffer(coverImageUrl);
