@@ -51,6 +51,7 @@ export default function Step1Basics() {
   // Family photo
   const [familyPhoto, setFamilyPhoto] = useState<File | null>(null);
   const [familyPhotoPreview, setFamilyPhotoPreview] = useState<string | null>(null);
+  const [familyCharacterNames, setFamilyCharacterNames] = useState("");  // NEW: Character names for family photo
   
   // Individual characters
   const [characters, setCharacters] = useState<Character[]>([
@@ -101,6 +102,10 @@ export default function Step1Basics() {
     // Validate photo mode
     if (photoMode === "family" && !familyPhoto && consent) {
       toast.error("Bitte lade ein Familienbild hoch oder wähle einen anderen Modus.");
+      return;
+    }
+    if (photoMode === "family" && familyPhoto && !familyCharacterNames.trim()) {
+      toast.error("Bitte gib die Namen der Personen im Foto ein (z.B. 'Marc, Hassan, Maria')");
       return;
     }
     if (photoMode === "individual") {
@@ -162,13 +167,33 @@ export default function Step1Basics() {
 
     const selectedCat = CATEGORIES.find(c => c.id === category);
     
+    // Prepare characters list
+    let charactersList: any[] = [];
+    if (photoMode === "family" && familyCharacterNames.trim()) {
+      // Parse character names from family photo input
+      const names = familyCharacterNames.split(",").map(n => n.trim()).filter(Boolean);
+      charactersList = names.map((name, i) => ({
+        id: `char-${i}`,
+        name,
+        role: "Hauptfigur",
+        imageUrl: familyPhotoPreview || undefined,
+      }));
+    } else if (photoMode === "individual") {
+      charactersList = characters.filter(c => c.name.trim()).map(c => ({
+        id: c.id,
+        name: c.name,
+        role: "Hauptfigur",
+        imageUrl: c.preview || undefined,
+      }));
+    }
+    
     setProject({
       id: `proj-${Date.now()}`,
       title: "",
       storyInput: "",
       guidedAnswers: {
         category: category || "sonstiges",
-        characters: characters.map(c => c.name).filter(Boolean).join(", "),
+        characters: charactersList.map(c => c.name).join(", "),
         location: "",
         timeframe: "",
         specialMoments: "",
@@ -176,12 +201,7 @@ export default function Step1Basics() {
       tone: selectedCat?.tone as any || "humorvoll",
       comicStyle,
       photoMode,
-      characters: characters.filter(c => c.name.trim()).map(c => ({
-        id: c.id,
-        name: c.name,
-        role: "Hauptfigur",
-        imageUrl: c.preview || undefined,
-      })),
+      characters: charactersList,
       referenceImages,
       referenceImageUrls,
       design: "kinderbuch",
@@ -349,14 +369,39 @@ export default function Step1Basics() {
               </div>
 
               {familyPhotoPreview && (
-                <div className="relative rounded-xl overflow-hidden aspect-video bg-gray-100">
-                  <Image src={familyPhotoPreview} alt="Familienbild" fill className="object-cover" />
-                  <button
-                    onClick={() => { setFamilyPhoto(null); setFamilyPhotoPreview(null); }}
-                    className="absolute top-2 right-2 bg-red-500 text-white text-sm px-3 py-1.5 rounded-lg hover:bg-red-600 transition-colors"
-                  >
-                    Entfernen
-                  </button>
+                <div className="space-y-3">
+                  <div className="relative rounded-xl overflow-hidden aspect-video bg-gray-100">
+                    <Image src={familyPhotoPreview} alt="Familienbild" fill className="object-cover" />
+                    <button
+                      onClick={() => { setFamilyPhoto(null); setFamilyPhotoPreview(null); }}
+                      className="absolute top-2 right-2 bg-red-500 text-white text-sm px-3 py-1.5 rounded-lg hover:bg-red-600 transition-colors"
+                    >
+                      Entfernen
+                    </button>
+                  </div>
+                  
+                  {/* Character names input */}
+                  <div className="bg-blue-50 border border-blue-200 rounded-xl p-5 space-y-3">
+                    <div className="flex items-start gap-2">
+                      <span className="text-2xl">👥</span>
+                      <div className="flex-1">
+                        <p className="text-sm font-semibold text-blue-900 mb-1">Wer ist auf dem Foto?</p>
+                        <p className="text-sm text-blue-800 mb-3">
+                          Gib die Namen aller Personen ein (mit Komma getrennt)
+                        </p>
+                        <input
+                          value={familyCharacterNames}
+                          onChange={(e) => setFamilyCharacterNames(e.target.value)}
+                          placeholder="z.B. Marc, Hassan, Maria"
+                          className="w-full p-3 rounded-lg border border-blue-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none text-gray-900 bg-white"
+                          required
+                        />
+                        <p className="text-xs text-blue-700 mt-2">
+                          ✓ Diese Namen helfen uns, die Personen im Comic konsistent darzustellen
+                        </p>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               )}
             </motion.div>
