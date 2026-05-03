@@ -3,8 +3,8 @@ import { motion } from "framer-motion";
 import { clsx } from "clsx";
 
 const STEPS = [
-  { label: "Geschichte", icon: "✍️" },
-  { label: "Bilder", icon: "📸" },
+  { label: "Basis", icon: "🎨" },
+  { label: "Inhalt", icon: "✍️" },
   { label: "Widmung", icon: "💌" },
   { label: "Generieren", icon: "✨" },
   { label: "Vorschau", icon: "📖" },
