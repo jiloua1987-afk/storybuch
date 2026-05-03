@@ -384,29 +384,32 @@ export default function Step1Basics() {
                   
                   <div className="space-y-2">
                     {!char.preview ? (
-                      <label className="block">
+                      <div>
                         <input
                           type="file"
                           accept="image/*"
                           disabled={!consent}
                           onChange={(e) => {
                             const file = e.target.files?.[0];
-                            if (file) updateCharacterPhoto(char.id, file);
+                            if (file) {
+                              console.log('📁 File selected:', file.name);
+                              updateCharacterPhoto(char.id, file);
+                            }
                           }}
                           className="hidden"
                           id={`photo-${char.id}`}
                         />
-                        <div
-                          onClick={() => consent && document.getElementById(`photo-${char.id}`)?.click()}
-                          className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-all ${
+                        <label
+                          htmlFor={`photo-${char.id}`}
+                          className={`block border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-all ${
                             consent ? "border-gray-300 hover:border-brand-400 hover:bg-brand-50/30" : "border-gray-200 bg-gray-50 opacity-50 cursor-not-allowed"
                           }`}
                         >
                           <div className="text-3xl mb-2">📷</div>
                           <p className="text-sm font-medium text-gray-700">Foto hochladen</p>
                           <p className="text-xs text-gray-500 mt-1">JPG, PNG, WEBP – max. 10 MB</p>
-                        </div>
-                      </label>
+                        </label>
+                      </div>
                     ) : (
                       <div className="relative rounded-lg overflow-hidden aspect-square bg-gray-100 border-2 border-brand-200">
                         <Image src={char.preview} alt={char.name || "Character"} fill className="object-cover" />
