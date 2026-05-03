@@ -165,7 +165,47 @@ UNIQUE (project_id, character_name);
 
 ## 🟢 Nice-to-Have (später)
 
-### 6. Orts-/Situationsfotos hinzufügen 📸
+### 6. PDF-Export für Testdrucke 📄
+**Aufwand:** ~5 Stunden  
+**Status:** Spezifikation fertig, Implementierung später  
+**Dateien:** `PDF-EXPORT-IMPLEMENTATION.md`, `A4-FORMAT-UND-LULU-ANALYSE.md`  
+**Priorität:** Mittel (für Qualitätsprüfung wichtig)
+
+**Ziel:**
+- Button "📄 Als PDF exportieren (Testdruck)" - NUR für dich sichtbar (`?debug=true`)
+- Exportiert: Cover + alle Seiten + Ending
+- Format: A4 mit Titel oben + Seitenzahl unten
+- Download als einzelne PDF-Datei
+
+**Nutzen:**
+- Qualität selbst prüfen (123 DPI ohne Upscaling)
+- Testdruck bei Flyeralarm/Cewe bestellen (€5-10)
+- Entscheidung: AI Upscaling nötig oder nicht?
+- Feedback zur Druckqualität sammeln
+
+**Implementierung:**
+1. PDFKit installieren (`npm install pdfkit`)
+2. PDF Generator implementieren (3h)
+3. API Endpoint erstellen (30min)
+4. Frontend Button mit Debug-Modus (30min)
+5. Testing (1h)
+
+**Kosten:**
+- Keine zusätzlichen API-Kosten
+- PDFKit ist Open Source
+
+**Geschäftsmodell-Entscheidung:**
+- **Jetzt:** Nur für dich zum Testen
+- **Später:** Entscheiden ob Kunden PDF bekommen
+  - Option A: Nur Druck (€49, einfach)
+  - Option B: PDF per Email nach Zahlung (€29 PDF / €49 Druck / €59 Bundle)
+  - Option C: Wasserzeichen-PDF als Vorschau
+
+**Details:** Siehe `PDF-EXPORT-IMPLEMENTATION.md`
+
+---
+
+### 7. Orts-/Situationsfotos hinzufügen 📸
 **Aufwand:** 2-3 Stunden  
 **Status:** Konzept erstellt, noch nicht implementiert  
 **Priorität:** Niedrig (nach Wizard-Umbau & Tests)
@@ -204,7 +244,7 @@ UNIQUE (project_id, character_name);
 
 ---
 
-### 7. ✅ OpenAI Tier 2 upgraden
+### 8. ✅ OpenAI Tier 2 upgraden
 **Status:** ✅ ERLEDIGT  
 **Aufwand:** 5 Minuten  
 
@@ -215,7 +255,7 @@ UNIQUE (project_id, character_name);
 
 ---
 
-### 8. ✅ "Neu illustrieren" mit Freitextfeld
+### 9. ✅ "Neu illustrieren" mit Freitextfeld
 **Status:** ✅ ERLEDIGT  
 **Aufwand:** 3-4 Stunden  
 
@@ -223,7 +263,7 @@ UNIQUE (project_id, character_name);
 
 ---
 
-### 9. Multi-Age Photo System implementieren 📸
+### 10. Multi-Age Photo System implementieren 📸
 **Aufwand:** 1-2 Wochen  
 **Spezifikation:** `MULTI-AGE-PHOTO-SYSTEM-SPEC.md`  
 **Status:** Nur Spezifikation, noch nicht implementiert
@@ -247,7 +287,7 @@ UNIQUE (project_id, character_name);
 
 ---
 
-### 10. UI/UX Redesign 🎨
+### 11. UI/UX Redesign 🎨
 **Aufwand:** 1-2 Tage  
 **Dateien:** `Step1-6.tsx`, `page.tsx`, `ueber-uns/page.tsx`  
 
@@ -262,19 +302,35 @@ UNIQUE (project_id, character_name);
 
 ---
 
-### 11. PDF-Export + Druckspezifikation 📄
-**Aufwand:** 1 Tag  
-**Status:** Warten auf Format-Entscheidung  
+### 12. Lulu-Integration + Druckspezifikation 🖨️
+**Aufwand:** 2-3 Tage  
+**Status:** Analyse fertig, Implementierung später  
+**Dateien:** `A4-FORMAT-UND-LULU-ANALYSE.md`
 
-**Optionen:**
-- A4 Querformat (21×29.7cm)
-- Quadratisch (20×20cm)
-- US Letter (8.5×11")
+**Aktueller Stand:**
+- ⚠️ Keine Lulu-Integration vorhanden
+- Checkout ist Demo-Modus (keine echte Bestellung)
+- gpt-image-2 liefert nur 1024×1536 px (max. 123 DPI auf A4)
 
-**Features:**
-- Hochauflösende Bilder (300 DPI)
-- Sprechblasen als Vektoren
-- Druckmarken und Beschnitt
+**Lösungsoptionen:**
+1. **Mit AI Upscaling:** 2048×3072 px → 246 DPI (sehr gut, +$0.05 pro Comic)
+2. **Ohne Upscaling:** 1024×1536 px → 123 DPI (grenzwertig, Testdruck nötig)
+3. **A5-Format:** 176 DPI ohne Upscaling (kleiner, aber bessere Qualität)
+
+**Lulu-Anforderungen:**
+- PDF/X-1a Format
+- 200+ DPI (mit Upscaling erreichbar)
+- CMYK Farbprofil
+- Seitenanzahl durch 4 teilbar
+
+**Implementierung:**
+1. Testdruck bestellen (ohne Upscaling) → Qualität prüfen
+2. Falls nötig: Replicate API für Upscaling integrieren
+3. PDF-Export mit CMYK
+4. Lulu API Integration
+5. Payment-Integration (Stripe)
+
+**Details:** Siehe `A4-FORMAT-UND-LULU-ANALYSE.md`
 
 ---
 
