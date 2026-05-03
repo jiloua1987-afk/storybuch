@@ -50,6 +50,14 @@ export default function Step4Generate() {
     if (DRY_RUN) return runDryGeneration();
 
     try {
+      // ── WICHTIG: Neue Project ID ZUERST generieren ──────────────────────────
+      // Muss VOR allen API-Calls passieren, damit keine alten Bilder aus
+      // Supabase geladen werden (character_refs, cover, pages)
+      const newProjectId = `proj-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      
+      // Chapters sofort leeren — verhindert dass alte Seiten durchscheinen
+      updateProject({ chapters: [], coverImageUrl: undefined, id: newProjectId });
+
       // ── Step 1: Story-Struktur + Ending parallel ────────────────────────────
       setStepLabel("Geschichte wird analysiert…");
       setProgress(5);
@@ -69,6 +77,7 @@ export default function Step4Generate() {
           numPages:             project?.numPages || 5,
           referenceImages:      project?.referenceImages || [],
           referenceImageUrls:   project?.referenceImageUrls || [],
+          projectId:            newProjectId,  // ← NEU: Project ID mitschicken
         }),
         post("/api/comic/ending", {
           storyInput:     project?.storyInput || "",
@@ -83,11 +92,6 @@ export default function Step4Generate() {
       if (!pages?.length) throw new Error("Keine Seiten generiert.");
       addLog(`${pages.length} Seiten geplant`, true);
       setProgress(15);
-
-      // ── Chapters sofort leeren — verhindert dass alte Seiten durchscheinen ──
-      // Neue projectId generieren — verhindert dass Supabase alte character_refs lädt
-      const newProjectId = `proj-${Date.now()}`;
-      updateProject({ chapters: [], coverImageUrl: undefined, id: newProjectId });
 
       // Ending sofort speichern wenn vorhanden
       if (endData?.endingText) {

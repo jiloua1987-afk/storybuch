@@ -171,6 +171,7 @@ router.post("/structure", async (req, res) => {
       storyInput, guidedAnswers = {}, tone, comicStyle, mustHaveSentences,
       language, category, numPages = 5, referenceImages = [], referenceImageUrls = [],
       photoMode = "none", characters: frontendCharacters = [],  // NEW: Characters from frontend
+      projectId,  // NEW: Project ID from frontend (for consistency, not used in structure)
     } = req.body;
 
     // Primary reference: Supabase URLs (no size limit) > Base64 fallback
@@ -650,9 +651,8 @@ router.post("/page", async (req, res) => {
       page, characters = [], comicStyle = "emotional",
       referenceImages = [], referenceImageUrls = [], coverImageUrl = "",
       reillustrationNote = "", // ← Freitext-Anweisung vom User
+      projectId,  // ← MUST come from frontend, no fallback to avoid loading wrong character_refs
     } = req.body;
-
-    const projectId = req.body.projectId || page.id?.split("-")[0] || null;
 
     // Enrich characters with visual_anchors from Supabase if missing
     // This ensures regeneration works even if Store lost the data
