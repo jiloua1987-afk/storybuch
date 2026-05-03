@@ -189,7 +189,15 @@ export default function Step2Content() {
           {suggestions.length > 0 && (
             <div className="space-y-3">
               <label className="text-sm font-semibold text-gray-700">
-                💡 Vorschläge für {category === "liebe" ? "Liebesgeschichte" : category}
+                💡 Vorschläge für {
+                  category === "liebe" ? "Liebesgeschichte" :
+                  category === "familie" ? "Familie" :
+                  category === "urlaub" ? "Urlaub" :
+                  category === "feier" ? "Feier" :
+                  category === "biografie" ? "Biografie" :
+                  category === "freunde" ? "Freundschaft" :
+                  "Sonstiges"
+                }
               </label>
               <div className="flex flex-wrap gap-2">
                 {suggestions.map((suggestion) => (

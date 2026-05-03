@@ -19,8 +19,8 @@ function useFadeUp() {
 }
 
 const STEPS = [
-  { n: "1", title: "Geschichte eingeben",   body: "Stichpunkte reichen. Wer, wo, wann – mehr brauchen wir nicht." },
-  { n: "2", title: "Dialoge vorschlagen",    body: "Wir schlagen passende Dialoge vor – du kannst sie anpassen oder übernehmen." },
+  { n: "1", title: "Kategorie, Stil & Bilder",   body: "Wähle deine Geschichte, den Stil und lade optional Fotos hoch." },
+  { n: "2", title: "Momente & Dialoge",    body: "Beschreibe die besonderen Momente – wir schlagen Dialoge vor." },
   { n: "3", title: "Comic wird erstellt",    body: "Panels, Illustrationen und Sprechblasen werden vollautomatisch erstellt." },
   { n: "4", title: "Bearbeiten & bestellen", body: "Alles anpassbar in der Vorschau. Erst dann bestellst du." },
 ];
