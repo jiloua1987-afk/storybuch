@@ -1422,4 +1422,42 @@ ${dedicationFrom ? `Info: sender is "${dedicationFrom}" — do NOT write this in
   }
 });
 
+// ─────────────────────────────────────────────────────────────────────────────
+// POST /api/comic/export-pdf
+// Erstellt PDF mit Cover + Seiten + Ending für Testdrucke
+// ─────────────────────────────────────────────────────────────────────────────
+const { createComicPDF } = require('../lib/pdf-generator');
+
+router.post("/export-pdf", async (req, res) => {
+  try {
+    const { project } = req.body;
+    
+    if (!project) {
+      return res.status(400).json({ error: "Project data required" });
+    }
+    
+    console.log(`Creating PDF for project: ${project.title}`);
+    
+    const pdfBuffer = await createComicPDF(project);
+    
+    // PDF als Download zurückgeben
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${sanitizeFilename(project.title)}.pdf"`);
+    res.setHeader('Content-Length', pdfBuffer.length);
+    res.send(pdfBuffer);
+    
+    console.log(`✓ PDF created: ${pdfBuffer.length} bytes`);
+  } catch (err) {
+    console.error("PDF export error:", err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+function sanitizeFilename(name) {
+  return name
+    .replace(/[^a-zA-Z0-9äöüÄÖÜß\s-]/g, '')
+    .replace(/\s+/g, '-')
+    .substring(0, 50);
+}
+
 module.exports = router;

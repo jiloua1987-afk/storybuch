@@ -165,43 +165,31 @@ UNIQUE (project_id, character_name);
 
 ## 🟢 Nice-to-Have (später)
 
-### 6. PDF-Export für Testdrucke 📄
-**Aufwand:** ~5 Stunden  
-**Status:** Spezifikation fertig, Implementierung später  
-**Dateien:** `PDF-EXPORT-IMPLEMENTATION.md`, `A4-FORMAT-UND-LULU-ANALYSE.md`  
-**Priorität:** Mittel (für Qualitätsprüfung wichtig)
+### 6. ✅ PDF-Export für Testdrucke 📄
+**Status:** ✅ IMPLEMENTIERT (3. Mai 2026, 21:30 Uhr)  
+**Aufwand:** ~5 Stunden (erledigt)  
+**Dateien:** `PDF-EXPORT-USAGE.md`, `backend-railway/src/lib/pdf-generator.js`
 
-**Ziel:**
+**Was implementiert wurde:**
 - Button "📄 Als PDF exportieren (Testdruck)" - NUR für dich sichtbar (`?debug=true`)
 - Exportiert: Cover + alle Seiten + Ending
 - Format: A4 mit Titel oben + Seitenzahl unten
 - Download als einzelne PDF-Datei
 
-**Nutzen:**
-- Qualität selbst prüfen (123 DPI ohne Upscaling)
-- Testdruck bei Flyeralarm/Cewe bestellen (€5-10)
-- Entscheidung: AI Upscaling nötig oder nicht?
-- Feedback zur Druckqualität sammeln
+**Verwendung:**
+1. `cd backend-railway && npm install` (PDFKit installieren)
+2. Backend neu starten
+3. App mit `?debug=true` öffnen
+4. Comic erstellen
+5. In Step5Preview: Gelbe Debug-Box mit PDF-Button
+6. PDF herunterladen und bei Flyeralarm/Cewe Testdruck bestellen
 
-**Implementierung:**
-1. PDFKit installieren (`npm install pdfkit`)
-2. PDF Generator implementieren (3h)
-3. API Endpoint erstellen (30min)
-4. Frontend Button mit Debug-Modus (30min)
-5. Testing (1h)
+**Nächster Schritt:**
+- Testdruck bestellen (€10-15)
+- Qualität prüfen
+- Entscheiden: AI Upscaling nötig oder nicht?
 
-**Kosten:**
-- Keine zusätzlichen API-Kosten
-- PDFKit ist Open Source
-
-**Geschäftsmodell-Entscheidung:**
-- **Jetzt:** Nur für dich zum Testen
-- **Später:** Entscheiden ob Kunden PDF bekommen
-  - Option A: Nur Druck (€49, einfach)
-  - Option B: PDF per Email nach Zahlung (€29 PDF / €49 Druck / €59 Bundle)
-  - Option C: Wasserzeichen-PDF als Vorschau
-
-**Details:** Siehe `PDF-EXPORT-IMPLEMENTATION.md`
+**Details:** Siehe `PDF-EXPORT-USAGE.md`
 
 ---
 
@@ -363,6 +351,7 @@ Diese Features sind dokumentiert aber noch nicht geplant:
 - ✅ Outfit-State (getOutfit Funktion)
 - ✅ OpenAI Tier 2 Upgrade
 - ✅ Reference Stack (Cover als Referenz)
+- ✅ PDF-Export für Testdrucke (Debug-Modus)
 
 ---
 

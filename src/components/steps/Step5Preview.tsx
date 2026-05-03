@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useBookStore } from "@/store/bookStore";
 import Button from "@/components/ui/Button";
@@ -91,6 +91,16 @@ export default function Step5Preview() {
   const MAX_REGEN = 1; // max 1x neu illustrieren pro Seite
   const [editingTitle, setEditingTitle] = useState(false);
   const [editingEnding, setEditingEnding] = useState(false);
+  const [showDebugTools, setShowDebugTools] = useState(false);
+  const [exportingPDF, setExportingPDF] = useState(false);
+
+  const RAILWAY_URL = process.env.NEXT_PUBLIC_RAILWAY_URL || "";
+
+  // Debug-Modus aktivieren mit ?debug=true in URL
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    setShowDebugTools(params.get('debug') === 'true');
+  }, []);
 
   if (!project) return null;
 
@@ -110,8 +120,6 @@ export default function Step5Preview() {
   const goPrev = () => {
     if (currentPage > -1) { setDirection(-1); setCurrentPage((p) => p - 1); }
   };
-
-  const RAILWAY_URL = process.env.NEXT_PUBLIC_RAILWAY_URL || "";
 
   async function regenPage(pageId: string, pageData: any, reillustrationNote?: string) {
     const fullUrl = RAILWAY_URL ? `${RAILWAY_URL}/api/comic/page` : "/api/comic/page";
@@ -162,6 +170,39 @@ export default function Step5Preview() {
       toast.error("Fehler beim Neu-Illustrieren");
     } finally {
       setRegenerating(null);
+    }
+  };
+
+  const handleExportPDF = async () => {
+    setExportingPDF(true);
+    try {
+      const fullUrl = RAILWAY_URL ? `${RAILWAY_URL}/api/comic/export-pdf` : "/api/comic/export-pdf";
+      
+      const res = await fetch(fullUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ project })
+      });
+      
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      
+      // PDF als Blob herunterladen
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${project.title}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+      
+      toast.success("PDF erfolgreich exportiert! 📄");
+    } catch (e) {
+      console.error("PDF export error:", e);
+      toast.error("PDF-Export fehlgeschlagen");
+    } finally {
+      setExportingPDF(false);
     }
   };
 
@@ -404,6 +445,33 @@ export default function Step5Preview() {
         <Button variant="secondary" onClick={() => setStep(2)}>← Zurück</Button>
         <Button onClick={() => setStep(5)} fullWidth size="lg">Jetzt bestellen</Button>
       </div>
+
+      {/* PDF Export Button - NUR IM DEBUG-MODUS SICHTBAR */}
+      {showDebugTools && (
+        <div className="border-2 border-yellow-300 bg-yellow-50 rounded-2xl p-4 space-y-2">
+          <p className="text-xs text-yellow-700 font-semibold">🔧 DEBUG-TOOLS (nur für dich sichtbar)</p>
+          <button
+            onClick={handleExportPDF}
+            disabled={exportingPDF}
+            className="w-full py-3 rounded-xl border-2 border-yellow-400 bg-white text-yellow-700 text-sm hover:bg-yellow-100 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+          >
+            {exportingPDF ? (
+              <>
+                <div className="animate-spin">⏳</div>
+                <span>PDF wird erstellt...</span>
+              </>
+            ) : (
+              <>
+                <span>📄</span>
+                <span>PDF exportieren (Testdruck)</span>
+              </>
+            )}
+          </button>
+          <p className="text-xs text-yellow-600">
+            Für Qualitätsprüfung & Testdrucke. Nicht für Kunden sichtbar.
+          </p>
+        </div>
+      )}
     </motion.div>
   );
 }
