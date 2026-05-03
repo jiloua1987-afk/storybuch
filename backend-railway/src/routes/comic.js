@@ -446,16 +446,48 @@ Respond ONLY with JSON: {"pages":[{"id":"page1","pageNumber":1,"title":"Title in
 // ─────────────────────────────────────────────────────────────────────────────
 router.post("/cover", async (req, res) => {
   try {
-    const { characters = [], location = "", referenceImages = [], referenceImageUrls = [] } = req.body;
+    const { characters = [], location = "", storyInput = "", guidedAnswers = {}, referenceImages = [], referenceImageUrls = [] } = req.body;
 
     const charDesc = characters.map(c => `${c.name}: ${c.visual_anchor}`).join("\n");
     const charNames = characters.map(c => c.name).join(", ");
+
+    // Extract location from story context
+    let coverLocation = location || "";
+    if (!coverLocation && (storyInput || guidedAnswers.location)) {
+      // Try to extract location from story
+      const storyText = `${storyInput} ${guidedAnswers.location || ""} ${guidedAnswers.specialMoments || ""}`.toLowerCase();
+      
+      // German cities
+      if (storyText.includes("frankfurt")) coverLocation = "Frankfurt cityscape with modern skyscrapers and Main river";
+      else if (storyText.includes("berlin")) coverLocation = "Berlin cityscape with Brandenburg Gate";
+      else if (storyText.includes("münchen") || storyText.includes("munich")) coverLocation = "Munich with Alps in background";
+      else if (storyText.includes("hamburg")) coverLocation = "Hamburg harbor with Elbe river";
+      else if (storyText.includes("köln") || storyText.includes("cologne")) coverLocation = "Cologne with cathedral";
+      
+      // Other locations
+      else if (storyText.includes("paris")) coverLocation = "Paris with Eiffel Tower";
+      else if (storyText.includes("london")) coverLocation = "London with Big Ben";
+      else if (storyText.includes("new york")) coverLocation = "New York City skyline";
+      else if (storyText.includes("rom") || storyText.includes("rome")) coverLocation = "Rome with Colosseum";
+      
+      // Generic locations
+      else if (storyText.includes("strand") || storyText.includes("beach") || storyText.includes("meer") || storyText.includes("sea")) 
+        coverLocation = "beautiful beach with ocean";
+      else if (storyText.includes("berg") || storyText.includes("mountain") || storyText.includes("alpen") || storyText.includes("alps")) 
+        coverLocation = "mountain landscape";
+      else if (storyText.includes("wald") || storyText.includes("forest")) 
+        coverLocation = "forest setting";
+      else if (storyText.includes("park") || storyText.includes("garten") || storyText.includes("garden")) 
+        coverLocation = "park with trees and flowers";
+      else 
+        coverLocation = "beautiful Mediterranean setting";
+    }
 
     const prompt = `${COMIC_STYLE}
 
 Comic book COVER illustration.
 ALL of these characters MUST be visible: ${charNames}.
-Show them together in ${location || "a beautiful Mediterranean setting"}.
+Show them together in ${coverLocation}.
 
 Characters (draw each one accurately):
 ${charDesc}
@@ -666,6 +698,13 @@ router.post("/page", async (req, res) => {
     const prompt = `${COMIC_STYLE} ${mood}
 
 Comic page — ${panelCount} panels in ${layoutDesc}. Bold black borders between panels.
+
+CRITICAL PANEL RULES:
+- Each panel is a SEPARATE CONTAINED SPACE with thick black borders
+- Characters and objects MUST stay COMPLETELY INSIDE their panel borders
+- NO body parts (hands, feet, heads) may cross into adjacent panels
+- NO objects may extend beyond panel boundaries
+- Think of each panel as a separate photograph — nothing bleeds between them
 
 CHARACTERS — draw identically across all panels:
 ${charAnchors}

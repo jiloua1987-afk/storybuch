@@ -115,6 +115,8 @@ export default function Step4Generate() {
           characters,
           category:             project?.guidedAnswers?.category || "familie",
           location:             project?.guidedAnswers?.ort || project?.guidedAnswers?.location || "",
+          storyInput:           project?.storyInput || "",
+          guidedAnswers:        project?.guidedAnswers || {},
           referenceImages:      project?.referenceImages || [],
           referenceImageUrls:   project?.referenceImageUrls || [],
           projectId:            newProjectId,
