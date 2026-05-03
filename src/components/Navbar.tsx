@@ -16,9 +16,9 @@ export default function Navbar() {
           <Image 
             src="/Logo 1.png" 
             alt="MyComicStory Logo" 
-            width={120} 
-            height={120}
-            className="w-28 h-28"
+            width={200} 
+            height={200}
+            className="w-48 h-48"
           />
         </button>
         <div className="flex items-center gap-6 text-[14px] text-[#8B7355]">
