@@ -453,7 +453,7 @@ router.post("/cover", async (req, res) => {
 
     // Extract location from story context
     let coverLocation = location || "";
-    if (!coverLocation && (storyInput || guidedAnswers.location)) {
+    if (!coverLocation && (storyInput || guidedAnswers.location || guidedAnswers.specialMoments)) {
       // Try to extract location from story
       const storyText = `${storyInput} ${guidedAnswers.location || ""} ${guidedAnswers.specialMoments || ""}`.toLowerCase();
       
@@ -480,8 +480,11 @@ router.post("/cover", async (req, res) => {
       else if (storyText.includes("park") || storyText.includes("garten") || storyText.includes("garden")) 
         coverLocation = "park with trees and flowers";
       else 
-        coverLocation = "beautiful Mediterranean setting";
+        coverLocation = "beautiful park with trees and flowers";
     }
+    
+    // Final fallback if still empty
+    if (!coverLocation) coverLocation = "beautiful park with trees and flowers";
 
     const prompt = `${COMIC_STYLE}
 
