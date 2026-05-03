@@ -124,7 +124,10 @@ export default function Step2Content() {
       title,
       storyInput: contentMode === "freetext" ? storyInput : "",
       guidedAnswers: {
-        ...project?.guidedAnswers,
+        category: project?.guidedAnswers?.category || "sonstiges",
+        characters: project?.guidedAnswers?.characters || "",
+        location: project?.guidedAnswers?.location || "",
+        timeframe: project?.guidedAnswers?.timeframe || "",
         specialMoments: contentMode === "moments" ? momentsText : "",
       },
       dialogMode,
