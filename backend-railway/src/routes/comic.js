@@ -806,8 +806,12 @@ CRITICAL SIZE RULES — enforce in every panel:
 
 CLOTHING — characters wear ${outfit} OVERRIDE any clothing visible in the reference photo.
 
-PANELS:
-${panelDescriptions}
+${reillustrationNote ? `USER REQUESTED SCENE CHANGE:
+${reillustrationNote}
+
+Create 3 panels showing this new scene with the same characters.
+Each panel must show a different moment/angle of this scene.` : `PANELS:
+${panelDescriptions}`}
 
 RULES:
 - Each panel shows a DIFFERENT scene/angle/moment
@@ -817,7 +821,7 @@ RULES:
 - Background crowd: faceless silhouettes only
 - Movement/action: show with TILTED POSES and MOTION BLUR in Bande Dessinée style — NOT manga speed lines, NOT anime motion effects
 - Exaggerated expressions: use WESTERN COMIC STYLE — wide mouths, raised eyebrows — NOT anime big eyes, NOT manga sweat drops
-- NO text, NO speech bubbles, NO letters, NO titles anywhere in image${reillustrationNote ? `\n\nUSER CORRECTION: ${reillustrationNote}. Apply this change while keeping all other elements identical.` : ""}`);
+- NO text, NO speech bubbles, NO letters, NO titles anywhere in image`);
 
     // ── REFERENCE STRATEGY ────────────────────────────────────────────────────
     // Priority:
