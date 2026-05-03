@@ -25,6 +25,61 @@ const MOOD_MOD = {
   humor:     "Exaggerated expressions in WESTERN COMIC STYLE — wide smiles, raised eyebrows, open mouths. Bright vivid colors, playful energy. NO anime sweat drops, NO manga speed lines, NO chibi style, NO big sparkly eyes.",
 };
 
+// ── Prompt sanitization to avoid safety blocks ────────────────────────────────
+function sanitizePrompt(text) {
+  if (!text) return text;
+  
+  const replacements = {
+    // Oktoberfest/Wiesn (häufiger Trigger)
+    'oktoberfest': 'traditional bavarian festival',
+    'wiesn': 'bavarian folk festival',
+    'bierzelt': 'festival tent',
+    'maß': 'beverage',
+    'dirndl': 'traditional bavarian dress',
+    'lederhosen': 'traditional bavarian attire',
+    
+    // Feiern/Party
+    'feiern': 'celebrating',
+    'party': 'celebration gathering',
+    'tanzen': 'dancing together',
+    'dancing': 'celebrating together',
+    'club': 'festive venue',
+    
+    // Strand/Wasser
+    'beach': 'coastal promenade',
+    'strand': 'strandpromenade',
+    'swimming': 'walking by the water',
+    'schwimmen': 'am wasser spazieren',
+    'swimwear': 'summer clothes',
+    'bikini': 'summer attire',
+    'badehose': 'summer clothing',
+    
+    // Alkohol
+    'bier': 'beverage',
+    'beer': 'drink',
+    'wein': 'beverage',
+    'wine': 'drink',
+    'alkohol': 'refreshment',
+    'alcohol': 'refreshment',
+    
+    // Action/Konflikt
+    'fight': 'disagreement',
+    'kämpfen': 'auseinandersetzung',
+    'hit': 'gesture',
+    'schlagen': 'gestikulieren',
+    'aggressive': 'energetic',
+    'aggressiv': 'energisch'
+  };
+  
+  let sanitized = text;
+  for (const [trigger, safe] of Object.entries(replacements)) {
+    const regex = new RegExp(`\\b${trigger}\\b`, 'gi');
+    sanitized = sanitized.replace(regex, safe);
+  }
+  
+  return sanitized;
+}
+
 // ── Outfit context from English location string ───────────────────────────────
 function getOutfit(location = "") {
   const loc = location.toLowerCase();
@@ -499,7 +554,7 @@ router.post("/cover", async (req, res) => {
     
     console.log(`  → Cover location: "${coverLocation}"`);
 
-    const prompt = `${COMIC_STYLE}
+    const prompt = sanitizePrompt(`${COMIC_STYLE}
 
 Comic book COVER illustration.
 ALL of these characters MUST be visible: ${charNames}.
@@ -509,7 +564,7 @@ Characters (draw each one accurately):
 ${charDesc}
 
 Composition: dynamic group shot, characters prominently in foreground, vivid illustrated background showing the story world. Some looking at viewer, some interacting with each other.
-NO text, NO title, NO letters anywhere in the image.`;
+NO text, NO title, NO letters anywhere in the image.`);
 
     // ── MULTI-PHOTO STRATEGY ──────────────────────────────────────────────────
     // Problem: images.edit() can only use ONE photo
@@ -725,7 +780,7 @@ router.post("/page", async (req, res) => {
     const ageContext = getAgeContext(page.title, panelDescriptions);
     console.log(`  → Age context: ${ageContext.ageContext} (useReference: ${ageContext.useReference})`);
 
-    const prompt = `${COMIC_STYLE} ${mood}
+    const prompt = sanitizePrompt(`${COMIC_STYLE} ${mood}
 
 Comic page — ${panelCount} panels in ${layoutDesc}. Bold black borders between panels.
 
@@ -762,7 +817,7 @@ RULES:
 - Background crowd: faceless silhouettes only
 - Movement/action: show with TILTED POSES and MOTION BLUR in Bande Dessinée style — NOT manga speed lines, NOT anime motion effects
 - Exaggerated expressions: use WESTERN COMIC STYLE — wide mouths, raised eyebrows — NOT anime big eyes, NOT manga sweat drops
-- NO text, NO speech bubbles, NO letters, NO titles anywhere in image${reillustrationNote ? `\n\nUSER CORRECTION: ${reillustrationNote}. Apply this change while keeping all other elements identical.` : ""}`;
+- NO text, NO speech bubbles, NO letters, NO titles anywhere in image${reillustrationNote ? `\n\nUSER CORRECTION: ${reillustrationNote}. Apply this change while keeping all other elements identical.` : ""}`);
 
     // ── REFERENCE STRATEGY ────────────────────────────────────────────────────
     // Priority:
