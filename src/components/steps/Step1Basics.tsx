@@ -380,31 +380,44 @@ export default function Step1Basics() {
                   </div>
                   
                   <div className="space-y-2">
-                    <label className="block">
-                      <input
-                        type="file"
-                        accept="image/*"
-                        disabled={!consent}
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (file) updateCharacterPhoto(char.id, file);
-                        }}
-                        className="hidden"
-                        id={`photo-${char.id}`}
-                      />
-                      <div
-                        onClick={() => consent && document.getElementById(`photo-${char.id}`)?.click()}
-                        className={`border-2 border-dashed rounded-lg p-4 text-center cursor-pointer transition-all ${
-                          consent ? "border-gray-300 hover:border-brand-400 hover:bg-brand-50/30" : "border-gray-200 bg-gray-50 opacity-50 cursor-not-allowed"
-                        }`}
-                      >
-                        <p className="text-sm text-gray-600">📷 Foto hochladen</p>
-                      </div>
-                    </label>
-                    
-                    {char.preview && (
-                      <div className="relative rounded-lg overflow-hidden aspect-square bg-gray-100">
+                    {!char.preview ? (
+                      <label className="block">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          disabled={!consent}
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) updateCharacterPhoto(char.id, file);
+                          }}
+                          className="hidden"
+                          id={`photo-${char.id}`}
+                        />
+                        <div
+                          onClick={() => consent && document.getElementById(`photo-${char.id}`)?.click()}
+                          className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-all ${
+                            consent ? "border-gray-300 hover:border-brand-400 hover:bg-brand-50/30" : "border-gray-200 bg-gray-50 opacity-50 cursor-not-allowed"
+                          }`}
+                        >
+                          <div className="text-3xl mb-2">📷</div>
+                          <p className="text-sm font-medium text-gray-700">Foto hochladen</p>
+                          <p className="text-xs text-gray-500 mt-1">JPG, PNG, WEBP – max. 10 MB</p>
+                        </div>
+                      </label>
+                    ) : (
+                      <div className="relative rounded-lg overflow-hidden aspect-square bg-gray-100 border-2 border-brand-200">
                         <Image src={char.preview} alt={char.name} fill className="object-cover" />
+                        <button
+                          onClick={() => {
+                            setCharacters(characters.map(c => 
+                              c.id === char.id ? { ...c, photo: null, preview: null } : c
+                            ));
+                            toast.success("Foto entfernt");
+                          }}
+                          className="absolute top-2 right-2 bg-red-500 text-white text-sm px-3 py-1.5 rounded-lg hover:bg-red-600 transition-colors shadow-md"
+                        >
+                          Entfernen
+                        </button>
                       </div>
                     )}
                   </div>
