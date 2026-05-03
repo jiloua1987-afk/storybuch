@@ -13,7 +13,7 @@ export default function Navbar() {
           onClick={resetProject}
           className="hover:opacity-70 transition-opacity overflow-hidden"
         >
-          <div className="w-32 h-16 relative">
+          <div className="w-48 h-24 relative">
             <Image 
               src="/Logo 1.png" 
               alt="MyComicStory Logo" 
