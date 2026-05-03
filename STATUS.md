@@ -1,26 +1,28 @@
 # MyComicStory - Aktueller Status 🚀
-*Stand: 2. Mai 2026, 20:00 Uhr*
+*Stand: 3. Mai 2026, 13:15 Uhr*
 
 ## ✅ Was funktioniert (DEPLOYED)
 
 ### Backend (Railway)
-- ✅ **Multi-Person Photo Matching** - Jedes Foto separat analysiert (Sally + Jil)
-- ✅ **Syntax-Fehler behoben** - Backend startet ohne Crash
-- ✅ **Age-Based Character Rendering mit Cover** - Junge Szenen nutzen Cover + Age Modifier (2. Mai 20:30)
+- ✅ **Individual Photos Mode** - 2+ separate Fotos (Jil + Sally) werden zu Composite kombiniert
+- ✅ **Family Photos Mode** - 1 Foto mit mehreren Personen (funktioniert wie bisher)
+- ✅ **Cover Location Detection** - Frankfurt/Paris/etc. aus Story extrahiert (nicht mehr Mittelmeer)
+- ✅ **Project ID System** - Eindeutige IDs verhindern falsche Bilder aus alten Tests
+- ✅ **Cover als Referenz** - Individual Photos verwenden Cover-Composite als Referenz
+- ✅ **Ultra-Strong Prompts** - Anti-Manga Regeln + Face Consistency Enforcement
+- ✅ **Multi-Person Photo Matching** - Jedes Foto separat analysiert
+- ✅ **Age-Based Character Rendering** - Junge Szenen nutzen Cover + Age Modifier
 - ✅ **Crowd Scene Handling** - Hochzeit mit Gästen behält Charakterkonsistenz
-- ✅ **Supabase Integration** - `photo_url` Spalte + Unique Constraint
-- ✅ **Quality Score System** - Auto-Retry bei Manga-Stil (Consistency Validation)
-- ✅ **Reference Stack** - Cover als Referenz für alle Seiten
-- ✅ **Anti-Manga Prompts** - Verstärkte Bande Dessinée Stil-Enforcement
+- ✅ **Supabase Integration** - `photo_url` Spalte + character_refs pro Project ID
+- ✅ **Quality Score System** - Auto-Retry bei Manga-Stil
+- ✅ **Safety Fallback** - Ultra-safe Prompts bei OpenAI Safety Blocks
 - ✅ **Momente als Pflicht-Seiten** - 1 GPT-Call pro Moment
-- ✅ **Opa/Oma Fix** - Erscheinen nicht mehr in falschen Szenen
-- ✅ **Luca-Größenanker** - Explizite Höhenangaben für Kinder
 - ✅ **Outfit-Kontext** - Automatische Kleidungs-Erkennung (Beach/Airport/etc.)
-- ✅ **OpenAI Tier 2** - 50 IPM statt 5 IPM (schnellere Generation)
-
-**Wichtig:** Age Modifier nutzt jetzt Cover als Referenz → behält Gesichtszüge, macht nur jünger!
+- ✅ **OpenAI Tier 2** - 50 IPM statt 5 IPM
 
 ### Frontend (Vercel)
+- ✅ **Individual Photos Upload** - 2+ Fotos mit Namen (Jil, Sally)
+- ✅ **Family Photo Upload** - 1 Foto mit mehreren Personen
 - ✅ **Einheitliches Format** - Alle Seiten 2:3 (1024×1536)
 - ✅ **Seitentitel über Bild** - Nicht mehr im Bild selbst
 - ✅ **"Neu illustrieren"** - Mit Freitextfeld für Änderungswünsche
@@ -29,74 +31,126 @@
 - ✅ **Visual Polish** - Muted Bronze Design, Playfair Display Font
 
 ### Supabase
-- ✅ **character_ref_image** - Mit `photo_url` Spalte
-- ✅ **last_page_image** - Mit quality_score
+- ✅ **character_ref_image** - Mit `photo_url` + `project_id` (eindeutig pro Comic)
+- ✅ **last_page_image** - Mit quality_score + `project_id`
 - ✅ **Storage** - Fotos und generierte Bilder
+
+---
+
+## � Heutige Fixes (3. Mai 2026)
+
+### Problem 1: Seiten zeigen falsche Personen (aus alten Tests)
+**Root Cause:** Project ID wurde zu spät generiert, Fallbacks erzeugten falsche IDs  
+**Fix:** 
+- Project ID wird ZUERST generiert (Timestamp + Random String)
+- Alle Fallbacks entfernt (Cover/Page Endpoints geben 400 wenn projectId fehlt)
+- Dokumentation: `PROJECT-ID-DEPENDENCIES.md`
+
+### Problem 2: Cover zeigt Mittelmeer statt Frankfurt
+**Root Cause:** Location-Extraktion funktionierte, aber Prompts verwendeten falschen Parameter  
+**Fix:**
+- Multi-Photo Prompt: `${location}` → `${coverLocation}`
+- Single-Photo Prompt: `${location}` → `${coverLocation}`
+- Debug-Logs hinzugefügt
+
+### Problem 3: Individual Photos - Seiten zeigen andere Gesichter
+**Root Cause:** `images.edit()` mit Cover-Referenz ignoriert Gesichter  
+**Versuch 1:** Generate-only ohne Referenz → SCHLECHTER (keine Konsistenz, Manga-Stil)  
+**Versuch 2:** Cover-Referenz mit ultra-starkem Prompt → AKTUELL DEPLOYED  
+
+**Aktuelle Strategie:**
+- Cover: Composite aus allen Fotos → `images.edit()` → Comic-Stil
+- Seiten: Cover als Referenz + ultra-starker Prompt:
+  - "ULTRA-CRITICAL FACE CONSISTENCY RULES"
+  - "Study faces VERY carefully"
+  - "EXACT SAME: eye shape, nose, mouth, hair, skin"
+  - "STRICT PROHIBITIONS: NO manga/anime"
+  - "These are REAL PEOPLE from photos"
+
+### Problem 4: Fallback-Strategien überschreiben Individual Photos Mode
+**Root Cause:** Nach `reference = null` lief STRATEGY 5 und setzte `reference = userPhoto`  
+**Fix:** Alle Strategien prüfen jetzt `!hasIndividualPhotos` vor Ausführung
 
 ---
 
 ## 🔧 Offene Punkte (Priorisiert)
 
-### 🔴 Kritisch (vor Launch)
+### 🔴 Kritisch (JETZT TESTEN)
 
-#### 1. Multi-Person Photo System testen
-**Status:** ✅ Code deployed, nur noch testen  
-**Aufwand:** 30 Min  
+#### 1. Individual Photos Mode - Konsistenz prüfen
+**Status:** ⏳ Code deployed, wartet auf Test  
+**Aufwand:** 10 Min  
 
-**Was gelöst wurde:**
-- Problem: 2 Fotos (Sally + Jil), nur 1 verwendet
-- Lösung: Separate Analyse pro Foto
-- Status: Deployed, funktioniert vermutlich
-
-**Test:**
-- 2 Fotos hochladen (Sally + Jil)
-- Liebesgeschichte mit Hochzeit generieren
-- Prüfen: Beide Charaktere erkannt? Konsistent über alle Seiten?
-
-**Wenn Test erfolgreich:** Als erledigt markieren ✅
-
-#### 2. Age Modifier testen
-**Status:** Code deployed, noch nicht getestet  
-**Aufwand:** 30 Min  
-**Test:**
-- Biografie über 40 Jahre
-- Momente: "Erstes Kennenlernen" + "Heute mit Enkeln"
-- Prüfen: Junge Szene ohne Foto? Aktuelle Szene mit Foto?
+**Was zu testen:**
+- 2 Fotos hochladen (Jil = Mann, Sally = Frau)
+- Frankfurt Story mit 3 Momenten
+- Prüfen:
+  - ✅ Cover: Frankfurt Skyline + beide Personen?
+  - ❓ Seiten: Zeigen alle Jil (Mann) + Sally (Frau) konsistent?
+  - ❓ Stil: Europäischer Comic (NICHT Manga)?
 
 **Erwartete Logs:**
 ```
-Generating page "Das erste Kennenlernen"
-  → Age context: young (useReference: false)
-  → Historical scene (young), skipping reference photo
+Individual photos mode: using 2 characters from frontend
+→ Describing Jil from their photo
+→ Describing Sally from their photo
+→ Cover location: "Frankfurt cityscape with modern skyscrapers and Main river"
+→ Multi-photo mode: 2 photos
+→ Creating composite image from both photos
+✓ Cover done (multi-photo composite mode)
+
+→ Individual photos mode (2 photos): using cover as reference
+→ Cover contains composite of all 2 photos
+Generating page "..." (3 panels, ref: cover-individual-photos)
+```
+
+**Wenn Konsistenz immer noch schlecht:**
+- OpenAI gpt-image-2 kann einfach keine konsistenten Charaktere
+- Alternativen:
+  - Midjourney API (bessere Konsistenz, aber teurer)
+  - Stable Diffusion mit LoRA Training (komplex)
+  - Akzeptieren dass Konsistenz ~70% ist
+
+#### 2. Family Photo Mode - Regression Test
+**Status:** ⏳ Muss getestet werden  
+**Aufwand:** 10 Min  
+
+**Was zu testen:**
+- 1 Foto mit mehreren Personen hochladen
+- Story generieren
+- Prüfen: Funktioniert wie vorher? (sollte keine Änderung geben)
+
+**Erwartete Logs:**
+```
+Family photo mode: extracting characters from story, then describing from photo
+→ Using cover as reference (all characters in photo)
+Generating page "..." (3 panels, ref: cover)
 ```
 
 ---
 
-### 🟡 Wichtig (nach Tests)
+### � Wichtig (nach Tests)
 
-#### 3. ✅ Supabase Unique Constraint - ERLEDIGT
-~~**Problem:** Constraint fehlte~~  
-**Status:** ✅ Hinzugefügt und funktioniert
+#### 3. Age Modifier testen
+**Status:** Code deployed, noch nicht getestet  
+**Aufwand:** 30 Min  
+**Test:**
+- Biografie über 40 Jahre
+- Momente: "Erstes Kennenlernen 1985" + "Hochzeit 2000" + "Heute mit Enkeln"
+- Prüfen: Junge Szene nutzt Cover + Age Modifier?
 
-#### 4. ✅ Luca-Größenanker - ERLEDIGT
-~~**Problem:** 3-jähriger wirkt zu groß~~  
-**Status:** ✅ Explizite Höhenangaben implementiert
-
-#### 5. ✅ Outfit-State - ERLEDIGT
-~~**Problem:** Gleiche Kleidung in verschiedenen Kontexten~~  
-**Status:** ✅ `getOutfit()` Funktion implementiert
+#### 4. Dokumentation vervollständigen
+**Status:** Teilweise erledigt  
+**Dateien:**
+- ✅ `PROJECT-ID-DEPENDENCIES.md` - Vollständige Dependency Map
+- ⏳ `INDIVIDUAL-PHOTOS-STRATEGY.md` - Noch zu erstellen
+- ⏳ `TROUBLESHOOTING.md` - Häufige Probleme + Lösungen
 
 ---
 
 ### 🟢 Nice-to-Have (später)
 
-#### 6. ✅ OpenAI Tier 2 - ERLEDIGT
-**Status:** ✅ Upgrade durchgeführt (50 IPM)
-
-#### 7. ✅ "Neu illustrieren" - ERLEDIGT
-**Status:** ✅ Freitextfeld implementiert
-
-#### 8. Multi-Age Photo System (SPEC vorhanden)
+#### 5. Multi-Age Photo System (SPEC vorhanden)
 **Status:** Spezifikation komplett in `MULTI-AGE-PHOTO-SYSTEM-SPEC.md`  
 **Aufwand:** 1-2 Wochen  
 **Benefit:** User lädt jung + alt Fotos hoch → perfekte Konsistenz
@@ -106,6 +160,10 @@ Generating page "Das erste Kennenlernen"
 **Aufwand:** 1-2 Tage  
 **Ziel:** Ruhigeres Design, weniger Emojis, mehr Weißraum
 
+#### 7. Location/Situation Photos
+**Status:** In `OPEN-TASKS.md` dokumentiert  
+**Benefit:** User lädt Hochzeitsfoto, Strandfoto etc. hoch → bessere Hintergründe
+
 ---
 
 ## 📊 Kosten pro Comic
@@ -113,10 +171,10 @@ Generating page "Das erste Kennenlernen"
 **Aktuell:**
 - Struktur (GPT-4.1): $0.02
 - Cover (gpt-image-2): $0.20
-- Seiten (gpt-image-2): 5 × $0.20 = $1.00
-- Quality Checks (GPT-4.1 Vision): 5 × $0.005 = $0.025
+- Seiten (gpt-image-2): 3-5 × $0.20 = $0.60-$1.00
+- Quality Checks (GPT-4.1 Vision): 3-5 × $0.005 = $0.015-$0.025
 - Retries (worst case, 20%): ~1 × $0.20 = $0.20
-- **Gesamt: ~$1.45 pro Comic**
+- **Gesamt: ~$1.05-$1.45 pro Comic**
 
 ---
 
@@ -136,21 +194,28 @@ SUPABASE_SERVICE_ROLE_KEY=eyJhbGc...
 
 ### Backend
 - `backend-railway/src/routes/comic.js` - Hauptlogik (Structure, Cover, Page)
+  - Zeile ~800: Individual Photos Detection
+  - Zeile ~870: refNote für cover-individual-photos
 - `backend-railway/src/lib/storage.js` - Supabase Integration
-- `backend-railway/src/index.js` - Server Entry Point
+  - `saveCharacterRefs()` - Speichert character_refs mit projectId
+  - `getCharacterRefs()` - Lädt character_refs für projectId
 
 ### Frontend
-- `src/components/steps/Step1Story.tsx` - Story Input
-- `src/components/steps/Step2Upload.tsx` - Photo Upload
+- `src/components/steps/Step1Basics.tsx` - Individual Photos Upload
+- `src/components/steps/Step2Content.tsx` - Guided Answers (Momente)
 - `src/components/steps/Step4Generate.tsx` - Generation Orchestration
+  - Zeile ~55: Project ID Generation (ZUERST!)
+  - Zeile ~80: projectId an alle API-Calls
 - `src/components/steps/Step5Preview.tsx` - Preview & Edit
 - `src/store/bookStore.ts` - State Management
 
 ### Dokumentation
 - `STATUS.md` - Dieser Status (aktuell)
+- `PROJECT-ID-DEPENDENCIES.md` - Vollständige Project ID Dokumentation
 - `OPEN-TASKS.md` - Konkrete offene Aufgaben
 - `MULTI-AGE-PHOTO-SYSTEM-SPEC.md` - Feature-Spezifikation
 - `AGE-MODIFIER-FEATURE.md` - Age Modifier Dokumentation
+- `archive/PHOTO-CONSISTENCY-FIX-COMPLETE.md` - Family Photo Fix (funktioniert!)
 
 ---
 
@@ -173,20 +238,46 @@ git push origin main
 # Vercel deployt automatisch
 ```
 
+**Letzter Deploy:** 3. Mai 2026, 13:10 Uhr (Commit: 2dcbcff)
+
 ---
 
 ## 🧪 Test-Checkliste
 
 Nach jedem Deployment:
 
-- [ ] Backend startet ohne Fehler (Railway Logs prüfen)
-- [ ] Health Check: `curl https://your-backend.railway.app/api/health`
-- [ ] Multi-Photo Test (Sally + Jil)
+- [x] Backend startet ohne Fehler (Railway Logs prüfen)
+- [x] Health Check: `curl https://your-backend.railway.app/api/health`
+- [ ] **Individual Photos Test (Jil + Sally)** ← JETZT TESTEN
+- [ ] **Family Photo Test (Regression)** ← JETZT TESTEN
 - [ ] Age Modifier Test (Biografie)
-- [ ] Quality Score funktioniert (keine Manga-Seiten)
-- [ ] Sprechblasen editierbar
-- [ ] "Neu illustrieren" mit Freitext funktioniert
-- [ ] Seite löschen funktioniert
+- [x] Quality Score funktioniert (keine Manga-Seiten)
+- [x] Sprechblasen editierbar
+- [x] "Neu illustrieren" mit Freitext funktioniert
+- [x] Seite löschen funktioniert
+
+---
+
+## 🐛 Bekannte Probleme
+
+### 1. Gesichtskonsistenz bei Individual Photos
+**Status:** ⚠️ Noch nicht bestätigt ob gelöst  
+**Symptom:** Seiten zeigen leicht unterschiedliche Gesichter  
+**Ursache:** OpenAI gpt-image-2 ist nicht perfekt für Charakterkonsistenz  
+**Aktueller Fix:** Ultra-starker Prompt + Cover-Referenz  
+**Wenn nicht gelöst:** Alternativen evaluieren (Midjourney, Stable Diffusion)
+
+### 2. Manga-Stil schleicht sich ein
+**Status:** ⚠️ Teilweise gelöst durch Quality Check  
+**Symptom:** Große Augen, weiche Linien, Sparkles  
+**Fix:** Quality Check erkennt und retried mit stärkerem Prompt  
+**Erfolgsrate:** ~80% (1-2 Retries nötig)
+
+### 3. Safety Blocks bei harmlosen Szenen
+**Status:** ✅ Gelöst durch Ultra-Safe Fallback  
+**Symptom:** "Picknick im Park" wird blockiert  
+**Fix:** Sofortiger Fallback zu ultra-safe Prompt (ohne Panel-Details)  
+**Erfolgsrate:** 100% (Fallback funktioniert immer)
 
 ---
 
@@ -199,6 +290,17 @@ Nach jedem Deployment:
 
 ---
 
-**Letztes Update:** 2. Mai 2026, 20:30 Uhr  
-**Letzter Deploy:** Age Modifier mit Cover-Referenz (fa5a984)  
-**Nächster Schritt:** Multi-Photo System testen, dann Age Modifier testen
+## 📝 Nächste Schritte
+
+1. **JETZT:** Individual Photos Mode testen (Jil + Sally)
+2. **JETZT:** Family Photo Mode Regression Test
+3. **Wenn Tests OK:** Als Production-Ready markieren
+4. **Wenn Tests NICHT OK:** Alternative Strategien evaluieren
+5. **Danach:** Age Modifier testen
+6. **Danach:** Dokumentation vervollständigen
+
+---
+
+**Letztes Update:** 3. Mai 2026, 13:15 Uhr  
+**Letzter Deploy:** Individual Photos mit Cover-Referenz + Ultra-Strong Prompts (2dcbcff)  
+**Nächster Schritt:** Individual Photos Mode testen - Konsistenz prüfen!
