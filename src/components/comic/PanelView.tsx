@@ -292,7 +292,13 @@ export default function PanelView({ imageUrl, title, panels = [], panelPositions
       const hPx = Math.max(48, 28 + lines * 20);
       return { top, left, w: (wPx / 400) * 100, h: (hPx / 600) * 100 };
     });
-    return resolveCollisions(initial);
+    const resolved = resolveCollisions(initial);
+    // Merge resolved positions with original w/h
+    return resolved.map((pos, idx) => ({
+      ...pos,
+      w: initial[idx].w,
+      h: initial[idx].h
+    }));
   }, [dialogPanels.length, hasDetectedPositions, panels.length]); // eslint-disable-line
 
   const handleMouseDown = (e: React.MouseEvent, type: "panel" | "extra", index: number) => {
