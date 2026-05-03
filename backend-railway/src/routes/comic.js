@@ -576,12 +576,13 @@ NO text, NO title, NO letters anywhere in the image.`;
         const item = (res2.data || [])[0];
         const url = item?.url || (item?.b64_json ? `data:image/png;base64,${item.b64_json}` : null);
         if (url) {
-          const coverUrl = await saveImage(url, "covers", `cover-${Date.now()}`);
           // CRITICAL: projectId MUST come from frontend, no fallback
           if (!req.body.projectId) {
             console.error("❌ CRITICAL: No projectId provided to cover endpoint!");
             return res.status(400).json({ error: "projectId is required", coverImageUrl: "" });
           }
+          // Save with projectId in path to prevent cache issues
+          const coverUrl = await saveImage(url, req.body.projectId, `cover-${Date.now()}`);
           await saveCharacterRefs(req.body.projectId, characters, coverUrl || url, referenceImageUrls);
           console.log("✓ Cover done (multi-photo composite mode)");
           return res.json({ coverImageUrl: coverUrl || url, projectId: req.body.projectId });
@@ -625,12 +626,13 @@ NO text, NO title, NO letters anywhere in the image.`,
         const item = (res2.data || [])[0];
         const url = item?.url || (item?.b64_json ? `data:image/png;base64,${item.b64_json}` : null);
         if (url) {
-          const coverUrl = await saveImage(url, "covers", `cover-${Date.now()}`);
           // CRITICAL: projectId MUST come from frontend, no fallback
           if (!req.body.projectId) {
             console.error("❌ CRITICAL: No projectId provided to cover endpoint!");
             return res.status(400).json({ error: "projectId is required", coverImageUrl: "" });
           }
+          // Save with projectId in path to prevent cache issues
+          const coverUrl = await saveImage(url, req.body.projectId, `cover-${Date.now()}`);
           await saveCharacterRefs(req.body.projectId, characters, coverUrl || url, referenceImageUrls);
           console.log("✓ Cover done (multi-photo mode)");
           return res.json({ coverImageUrl: coverUrl || url, projectId: req.body.projectId });
@@ -642,12 +644,13 @@ NO text, NO title, NO letters anywhere in the image.`,
 
     // Fallback: generate without reference
     const { url: rawUrl } = await generateImage(prompt, null);
-    const coverUrl = await saveImage(rawUrl, "covers", `cover-${Date.now()}`);
     // CRITICAL: projectId MUST come from frontend, no fallback
     if (!req.body.projectId) {
       console.error("❌ CRITICAL: No projectId provided to cover endpoint!");
       return res.status(400).json({ error: "projectId is required", coverImageUrl: "" });
     }
+    // Save with projectId in path to prevent cache issues
+    const coverUrl = await saveImage(rawUrl, req.body.projectId, `cover-${Date.now()}`);
     await saveCharacterRefs(req.body.projectId, characters, coverUrl || rawUrl, referenceImageUrls);
     console.log("✓ Cover done (generate only)");
     res.json({ coverImageUrl: coverUrl || rawUrl, projectId: req.body.projectId });
@@ -1119,8 +1122,11 @@ ${prompt}`;
       }
     }
 
-    const bookId = page.id?.split("-")[0] || `book-${Date.now()}`;
-    const storedUrl = await saveImage(rawUrl, bookId, page.id || `page-${Date.now()}`);
+    // Save image with projectId in path to prevent cache issues
+    // Path: projectId/page-1.png (unique per comic generation)
+    const folder = projectId || `book-${Date.now()}`;
+    const filename = page.id || `page-${Date.now()}`;
+    const storedUrl = await saveImage(rawUrl, folder, filename);
     const finalUrl = storedUrl || rawUrl;
 
     // Panel position detection
