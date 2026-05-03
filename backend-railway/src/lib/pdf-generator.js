@@ -32,34 +32,43 @@ async function createComicPDF(project) {
     
     try {
       const coverBuffer = await fetchImageBuffer(project.coverImageUrl);
+      
+      // Cover im Portrait-Format (2:3 Ratio wie Original 1024×1536)
+      // Maximale Höhe nutzen mit kleinem Rand
+      const margin = 30;
+      const coverHeight = A4_HEIGHT - (margin * 2);
+      const coverWidth = coverHeight * (2/3); // 2:3 Ratio beibehalten
+      const coverX = (A4_WIDTH - coverWidth) / 2;
+      const coverY = margin;
+      
       const coverProcessed = await sharp(coverBuffer)
-        .resize(1024, 1536, { fit: 'contain', background: { r: 245, g: 237, b: 224 } })
+        .resize(Math.round(coverWidth * 2), Math.round(coverHeight * 2), { 
+          fit: 'cover',
+          position: 'center'
+        })
         .png()
         .toBuffer();
-      
-      // Cover zentriert auf A4
-      const coverWidth = 400;  // ~14 cm
-      const coverHeight = 600; // ~21 cm
-      const coverX = (A4_WIDTH - coverWidth) / 2;
-      const coverY = (A4_HEIGHT - coverHeight) / 2;
       
       doc.image(coverProcessed, coverX, coverY, { 
         width: coverWidth, 
         height: coverHeight 
       });
       
-      // Titel unten
-      doc.fontSize(24)
+      // Titel als Overlay unten auf dem Bild
+      const overlayY = coverY + coverHeight - 100;
+      doc.fontSize(28)
          .font('Helvetica-Bold')
-         .fillColor('#1A1410')
-         .text(project.title.toUpperCase(), 50, A4_HEIGHT - 80, {
-           width: A4_WIDTH - 100,
+         .fillColor('#FFFFFF')
+         .fillOpacity(1)
+         .text(project.title.toUpperCase(), coverX, overlayY, {
+           width: coverWidth,
            align: 'center'
          });
       
     } catch (e) {
       console.error('Cover processing error:', e.message);
       // Fallback: Nur Titel
+      doc.rect(0, 0, A4_WIDTH, A4_HEIGHT).fill('#F5EDE0');
       doc.fontSize(32)
          .font('Helvetica-Bold')
          .fillColor('#1A1410')
@@ -82,27 +91,31 @@ async function createComicPDF(project) {
       doc.rect(0, 0, A4_WIDTH, A4_HEIGHT)
          .fill('#F5EDE0');
       
-      // Titel oben
+      // Titel oben mit Hintergrund
+      doc.rect(0, 0, A4_WIDTH, 60)
+         .fill('#FFFFFF');
+      
       doc.fontSize(18)
          .font('Helvetica-Bold')
          .fillColor('#1A1410')
-         .text(page.title.toUpperCase(), 50, 30, {
-           width: A4_WIDTH - 100,
+         .text(page.title.toUpperCase(), 40, 22, {
+           width: A4_WIDTH - 80,
            align: 'center'
          });
       
-      // Comic-Bild
+      // Comic-Bild - größer, füllt mehr Platz
       if (page.imageUrl) {
         const pageBuffer = await fetchImageBuffer(page.imageUrl);
         const pageProcessed = await sharp(pageBuffer)
-          .resize(1024, 1536, { fit: 'contain' })
+          .resize(1024, 1536, { fit: 'cover' })
           .png()
           .toBuffer();
         
-        const imgWidth = 400;
-        const imgHeight = 600;
-        const imgX = (A4_WIDTH - imgWidth) / 2;
-        const imgY = 80;
+        // Bild füllt fast die ganze Seite (mit Platz für Titel oben und Seitenzahl unten)
+        const imgWidth = A4_WIDTH;
+        const imgHeight = A4_HEIGHT - 100; // 60px Titel + 40px Seitenzahl
+        const imgX = 0;
+        const imgY = 60;
         
         doc.image(pageProcessed, imgX, imgY, { 
           width: imgWidth, 
@@ -115,8 +128,8 @@ async function createComicPDF(project) {
           
           panels.forEach((panel, idx) => {
             // Position aus panelPositions oder Fallback
-            let bubbleX = imgX + 20;
-            let bubbleY = imgY + 20 + (idx * 80);
+            let bubbleX = imgX + 30;
+            let bubbleY = imgY + 30 + (idx * 100);
             
             if (page.panelPositions && page.panelPositions.length > 0) {
               const pos = page.panelPositions.find(p => p.nummer === panel.nummer) || page.panelPositions[idx];
@@ -133,15 +146,15 @@ async function createComicPDF(project) {
               : '';
             const text = speaker + panel.dialog;
             
-            // Bubble-Größe berechnen
-            const maxBubbleWidth = 140;
-            const padding = 8;
+            // Bubble-Größe berechnen (größer für bessere Lesbarkeit)
+            const maxBubbleWidth = 180;
+            const padding = 10;
             
             // Text-Höhe messen
-            doc.fontSize(9).font('Helvetica');
+            doc.fontSize(11).font('Helvetica');
             const textHeight = doc.heightOfString(text, { width: maxBubbleWidth - (padding * 2) });
-            const bubbleWidth = Math.min(maxBubbleWidth, Math.max(80, text.length * 2.5));
-            const bubbleHeight = textHeight + (padding * 2) + 4;
+            const bubbleWidth = Math.min(maxBubbleWidth, Math.max(100, text.length * 3));
+            const bubbleHeight = textHeight + (padding * 2) + 6;
             
             // Bubble-Hintergrund (weiß mit schwarzem Rand)
             const isCaption = panel.bubble_type === 'caption';
@@ -149,17 +162,18 @@ async function createComicPDF(project) {
             const textColor = isCaption ? '#FFFFFF' : '#1A1410';
             
             doc.save();
-            doc.roundedRect(bubbleX, bubbleY, bubbleWidth, bubbleHeight, 6)
+            doc.roundedRect(bubbleX, bubbleY, bubbleWidth, bubbleHeight, 8)
+               .lineWidth(2)
                .fillAndStroke(bgColor, '#1A1410');
             
             // Text in Bubble
-            doc.fontSize(9)
+            doc.fontSize(11)
                .font(speaker ? 'Helvetica-Bold' : 'Helvetica')
                .fillColor(textColor)
-               .text(text, bubbleX + padding, bubbleY + padding, {
+               .text(text, bubbleX + padding, bubbleY + padding + 2, {
                  width: bubbleWidth - (padding * 2),
                  align: 'left',
-                 lineGap: 2
+                 lineGap: 3
                });
             
             doc.restore();
@@ -167,11 +181,14 @@ async function createComicPDF(project) {
         }
       }
       
-      // Seitenzahl unten
-      doc.fontSize(12)
+      // Seitenzahl unten mit weißem Hintergrund
+      doc.rect(0, A4_HEIGHT - 40, A4_WIDTH, 40)
+         .fill('#FFFFFF');
+      
+      doc.fontSize(11)
          .font('Helvetica')
          .fillColor('#8B7355')
-         .text(`${i + 1} / ${pages.length}`, 50, A4_HEIGHT - 40, {
+         .text(`Seite ${i + 1} von ${pages.length}`, 50, A4_HEIGHT - 25, {
            width: A4_WIDTH - 100,
            align: 'center'
          });
