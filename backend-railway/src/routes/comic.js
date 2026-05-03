@@ -170,6 +170,7 @@ router.post("/structure", async (req, res) => {
     const {
       storyInput, guidedAnswers = {}, tone, comicStyle, mustHaveSentences,
       language, category, numPages = 5, referenceImages = [], referenceImageUrls = [],
+      photoMode = "none", characters: frontendCharacters = [],  // NEW: Characters from frontend
     } = req.body;
 
     // Primary reference: Supabase URLs (no size limit) > Base64 fallback
@@ -200,35 +201,131 @@ router.post("/structure", async (req, res) => {
       ? momentsText.split("|").map(m => m.trim()).filter(Boolean)
       : [];
 
-    // Step 1: Extract characters (parallel with page structure)
-    const charPromise = openai.chat.completions.create({
-      model: "gpt-4.1",
-      messages: [{
-        role: "system",
-        content: `Extract ALL characters from the story. Include grandparents, parents, children, friends — everyone mentioned.
+    // ═══════════════════════════════════════════════════════════════════════════
+    // NEW CHARACTER HANDLING - Use characters from frontend directly
+    // ═══════════════════════════════════════════════════════════════════════════
+    
+    let characters = [];
+    
+    if (photoMode === "family" && (primaryRefUrl || primaryRefBase64)) {
+      // FAMILY PHOTO MODE: Extract characters from story, then describe from photo
+      console.log("Family photo mode: extracting characters from story, then describing from photo");
+      
+      const charPromise = openai.chat.completions.create({
+        model: "gpt-4.1",
+        messages: [{
+          role: "system",
+          content: `Extract ALL characters from the story. Include grandparents, parents, children, friends — everyone mentioned.
+For each write: name, approximate age.
+Respond ONLY with JSON: {"characters":[{"name":"Name","age":30}]}`
+        }, {
+          role: "user", content: storyCtx,
+        }],
+        response_format: { type: "json_object" },
+        temperature: 0.3,
+      });
+      
+      const charRes = await charPromise;
+      characters = JSON.parse(charRes.choices[0].message.content || "{}").characters || [];
+      
+      // Describe all characters from the family photo
+      if (characters.length > 0) {
+        console.log(`Describing ${characters.length} characters from family photo`);
+        const refImageContent = primaryRefUrl
+          ? { type: "image_url", image_url: { url: primaryRefUrl, detail: "high" } }
+          : { type: "image_url", image_url: { url: `data:image/jpeg;base64,${primaryRefBase64}`, detail: "high" } };
+        
+        characters = await Promise.all(characters.map(async (char) => {
+          try {
+            const r = await openai.chat.completions.create({
+              model: "gpt-4.1",
+              messages: [{ role: "user", content: [
+                refImageContent,
+                { type: "text", text: `Describe the person who is approximately ${char.age} years old in this photo.
+Write 40-50 words: exact age appearance, hair color/style, skin tone, eye color, distinctive features, body type.
+Format: "${char.name}: [age] years old, [exact visible features]"
+English only.` },
+              ]}],
+              max_tokens: 120,
+            });
+            console.log(`  → ${char.name}: described from family photo`);
+            return { ...char, visual_anchor: r.choices[0].message.content || `${char.name}, ${char.age} years old`, inPhoto: true };
+          } catch (e) {
+            console.error(`Photo description error for ${char.name}:`, e.message);
+            return { ...char, visual_anchor: `${char.name}, ${char.age} years old`, inPhoto: false };
+          }
+        }));
+      }
+      
+    } else if (photoMode === "individual" && frontendCharacters.length > 0) {
+      // INDIVIDUAL PHOTOS MODE: Use characters from frontend with their photos
+      console.log(`Individual photos mode: using ${frontendCharacters.length} characters from frontend`);
+      
+      characters = await Promise.all(frontendCharacters.map(async (char) => {
+        const matchedPhoto = referenceImageUrls.find(ref => 
+          ref.label.toLowerCase().trim() === char.name.toLowerCase().trim()
+        );
+        
+        if (matchedPhoto) {
+          console.log(`  → Describing ${char.name} from their photo`);
+          try {
+            const r = await openai.chat.completions.create({
+              model: "gpt-4.1",
+              messages: [{ role: "user", content: [
+                { type: "image_url", image_url: { url: matchedPhoto.url, detail: "high" } },
+                { type: "text", text: `Describe ONLY what you can ACTUALLY SEE on this person.
+Write 40-50 words: age appearance, hair color/style, skin tone, eye color, distinctive features, body type.
+Format: "${char.name}: [age] years old, [exact visible features]"
+English only.` },
+              ]}],
+              max_tokens: 120,
+            });
+            return { 
+              name: char.name, 
+              age: 30,  // Default age
+              visual_anchor: r.choices[0].message.content || `${char.name}, adult`, 
+              inPhoto: true 
+            };
+          } catch (e) {
+            console.error(`Photo description error for ${char.name}:`, e.message);
+            return { name: char.name, age: 30, visual_anchor: `${char.name}, adult`, inPhoto: false };
+          }
+        } else {
+          console.log(`  → ${char.name}: no photo, using generic description`);
+          return { name: char.name, age: 30, visual_anchor: `${char.name}, adult`, inPhoto: false };
+        }
+      }));
+      
+    } else {
+      // NO PHOTOS MODE: Extract characters from story with GPT
+      console.log("No photos mode: extracting characters from story");
+      
+      const charPromise = openai.chat.completions.create({
+        model: "gpt-4.1",
+        messages: [{
+          role: "system",
+          content: `Extract ALL characters from the story. Include grandparents, parents, children, friends — everyone mentioned.
 For each write a DETAILED visual description (40-50 words):
 - Exact age, gender
 - Hair: color, length, style
 - Skin tone, eye color
-- Distinctive features: beard, glasses, hijab, wrinkles — write "always wears/has [feature]"
+- Distinctive features: beard, glasses, hijab, wrinkles
 - Body type
 
-CRITICAL — HEIGHT AND SIZE FOR CHILDREN:
-- Children under 5: "toddler, approximately 85-95cm tall" — always visibly much smaller than older children and adults
-- Children 5-8: "young child, approximately 110-120cm tall" — clearly shorter than teenagers and adults
-- Children 9-13: "child, approximately 130-145cm tall" — noticeably shorter than adults
-- Teenagers 14-17: "teenager, approximately 160-170cm tall" — close to adult height
-- ALWAYS add relative size: "visibly smaller than [older sibling/parent name]"
-- Example: "Luca: 3-year-old boy, toddler, approximately 90cm tall, visibly much smaller than his 8-year-old sister Maria and half the height of adults"
-- Size ratios MUST be maintained in every panel — a 3-year-old must never appear as tall as an 8-year-old
-
 Respond ONLY with JSON: {"characters":[{"name":"Name","age":30,"visual_anchor":"DETAILED English description..."}]}`
-      }, {
-        role: "user", content: storyCtx,
-      }],
-      response_format: { type: "json_object" },
-      temperature: 0.3,
-    });
+        }, {
+          role: "user", content: storyCtx,
+        }],
+        response_format: { type: "json_object" },
+        temperature: 0.3,
+      });
+      
+      const charRes = await charPromise;
+      characters = JSON.parse(charRes.choices[0].message.content || "{}").characters || [];
+      characters = characters.map(c => ({ ...c, inPhoto: false }));
+    }
+
+    console.log(`✓ Characters: ${characters.length} (photoMode: ${photoMode})`);
 
     // Step 2: Structure pages
     // If moments provided → one GPT call PER moment (guaranteed mapping)
@@ -331,225 +428,6 @@ Respond ONLY with JSON: {"pages":[{"id":"page1","pageNumber":1,"title":"Title in
         temperature: 0.85,
       });
       pageStructures = JSON.parse(structRes.choices[0].message.content || "{}").pages || [];
-    }
-
-    // Wait for characters
-    const charRes = await charPromise;
-    let characters = JSON.parse(charRes.choices[0].message.content || "{}").characters || [];
-
-    // Enrich characters from reference photo
-    // Step 1: Detect WHO is actually visible in the photo
-    // Step 2: Only enrich characters that are in the photo — others get story-based visual_anchor
-    if ((referenceImageUrls.length > 0 || referenceImages.length > 0) && characters.length > 0) {
-      console.log(`Analyzing ${referenceImageUrls.length || referenceImages.length} photo(s) — detecting which characters are visible...`);
-      
-      // DEBUG: Log what we received from frontend
-      if (referenceImageUrls.length > 0) {
-        console.log(`  → DEBUG: referenceImageUrls =`, JSON.stringify(referenceImageUrls.map(r => ({ label: r.label, url: r.url?.substring(0, 50) + '...' })), null, 2));
-      }
-      console.log(`  → DEBUG: characters from GPT =`, JSON.stringify(characters.map(c => ({ name: c.name, age: c.age })), null, 2));
-
-      // ── MULTI-PHOTO MODE: Analyze each photo separately ────────────────────
-      if (referenceImageUrls.length > 1) {
-        console.log(`  → Multi-photo mode: analyzing each photo individually`);
-        
-        characters = await Promise.all(characters.map(async (char) => {
-          // Find photo matching this character's name
-          const matchedPhoto = referenceImageUrls.find(ref => 
-            ref.label.toLowerCase() === char.name.toLowerCase()
-          );
-          
-          if (matchedPhoto) {
-            console.log(`  → Analyzing ${matchedPhoto.label}'s photo...`);
-            try {
-              const refImageContent = { 
-                type: "image_url", 
-                image_url: { url: matchedPhoto.url, detail: "high" } 
-              };
-              
-              const r = await openai.chat.completions.create({
-                model: "gpt-4.1",
-                messages: [{ role: "user", content: [
-                  refImageContent,
-                  { type: "text", text: `Describe ONLY what you can ACTUALLY SEE on the person in this photo (age approximately ${char.age} years old).
-
-ULTRA-CRITICAL RULES — BE EXTREMELY ACCURATE:
-
-HAIR COLOR — Look very carefully:
-- Gray/silver/white hair → MUST say "gray hair", "silver hair", or "white hair"
-- If hair looks light but person is 50+ years old → it's probably GRAY, not blonde
-- Dark hair → say "dark brown" or "black"
-- Light brown → say "light brown"
-- Blonde (only if clearly golden/yellow AND person is young) → say "blonde"
-- NEVER confuse gray hair with blonde hair!
-
-HAIR LENGTH — Measure carefully:
-- Very short (above ears) → say "very short hair"
-- Short (covers ears) → say "short hair"  
-- Shoulder-length → say "shoulder-length hair"
-- Long (past shoulders) → say "long hair"
-- NEVER say "long" if hair is short!
-
-AGE INDICATORS:
-- Person 50+ years old with light hair → almost always GRAY, not blonde
-- Receding hairline → mention it
-- Wrinkles, age lines → mention them
-
-DOUBLE-CHECK EVERYTHING:
-1. Look at hair color again — is it truly blonde or is it gray?
-2. Look at hair length again — is it truly long or is it short?
-3. Does your description match a person of age ${char.age}?
-
-If you CANNOT see a feature clearly → DO NOT mention it.
-Do NOT invent, assume, or guess ANY details.
-Do NOT identify anyone.
-
-Format: "${char.name}: [age] years old, [exact visible features]"
-English, max 50 words.` },
-                ]}],
-                max_tokens: 120,
-              });
-              console.log(`  → ${char.name}: described from their photo`);
-              return { ...char, visual_anchor: r.choices[0].message.content || char.visual_anchor, inPhoto: true };
-            } catch (e) {
-              console.error(`Photo description error for ${char.name}:`, e.message);
-              return { ...char, inPhoto: false };
-            }
-          } else {
-            // No photo for this character → generate from story
-            try {
-              const r = await openai.chat.completions.create({
-                model: "gpt-4.1",
-                messages: [{
-                  role: "system",
-                  content: `Create a detailed visual description for a comic book character based on their name, age, and story context. 
-Write 40-50 words covering: exact age appearance, hair color/style, skin tone, eye color, distinctive features, body type.
-This character is NOT in any reference photo — invent a realistic appearance consistent with their age and cultural background.
-Respond with ONLY the description, starting with the character name.`,
-                }, {
-                  role: "user",
-                  content: `Character: ${char.name}, age ${char.age}. Story context: ${storyCtx}`,
-                }],
-                max_tokens: 120,
-              });
-              console.log(`  → ${char.name}: generated from story (no photo provided)`);
-              return { ...char, visual_anchor: r.choices[0].message.content || char.visual_anchor, inPhoto: false };
-            } catch (e) {
-              console.error(`Story generation error for ${char.name}:`, e.message);
-              return char;
-            }
-          }
-        }));
-        
-        console.log(`✓ Multi-photo analysis complete`);
-      } else {
-        // ── SINGLE PHOTO MODE: Original logic ──────────────────────────────────
-        // Use URL if available, otherwise base64
-        const refImageContent = primaryRefUrl
-          ? { type: "image_url", image_url: { url: primaryRefUrl, detail: "high" } }
-          : { type: "image_url", image_url: { url: `data:image/jpeg;base64,${primaryRefBase64}`, detail: "high" } };
-
-        try {
-          const detectionRes = await openai.chat.completions.create({
-            model: "gpt-4.1",
-            messages: [{ role: "user", content: [
-              refImageContent,
-              { type: "text", text: `This photo contains some of these characters: ${characters.map(c => `${c.name} (${c.age} years old)`).join(", ")}.
-How many people are visible in this photo? Which of the listed characters are most likely shown based on their age?
-Return JSON only: {"visible_count": 4, "likely_characters": ["Mama", "Papa", "Luca", "Maria"]}
-Base your answer ONLY on ages and count of people visible. Do NOT identify anyone.` },
-            ]}],
-            response_format: { type: "json_object" },
-            max_tokens: 100,
-          });
-
-          const detection = JSON.parse(detectionRes.choices[0].message.content || "{}");
-          const likelyInPhoto = new Set((detection.likely_characters || []).map((n) => n.toLowerCase()));
-          console.log(`  → Detected in photo: ${[...likelyInPhoto].join(", ")}`);
-
-          characters = await Promise.all(characters.map(async (char) => {
-            const inPhoto = likelyInPhoto.has(char.name.toLowerCase());
-
-            if (inPhoto) {
-              try {
-                const r = await openai.chat.completions.create({
-                  model: "gpt-4.1",
-                  messages: [{ role: "user", content: [
-                    refImageContent,
-                    { type: "text", text: `Describe ONLY what you can ACTUALLY SEE on the person who is approximately ${char.age} years old in this photo.
-
-ULTRA-CRITICAL RULES — BE EXTREMELY ACCURATE:
-
-HAIR COLOR — Look very carefully:
-- Gray/silver/white hair → MUST say "gray hair", "silver hair", or "white hair"
-- If hair looks light but person is 50+ years old → it's probably GRAY, not blonde
-- Dark hair → say "dark brown" or "black"
-- Light brown → say "light brown"
-- Blonde (only if clearly golden/yellow AND person is young) → say "blonde"
-- NEVER confuse gray hair with blonde hair!
-
-HAIR LENGTH — Measure carefully:
-- Very short (above ears) → say "very short hair"
-- Short (covers ears) → say "short hair"  
-- Shoulder-length → say "shoulder-length hair"
-- Long (past shoulders) → say "long hair"
-- NEVER say "long" if hair is short!
-
-AGE INDICATORS:
-- Person 50+ years old with light hair → almost always GRAY, not blonde
-- Receding hairline → mention it
-- Wrinkles, age lines → mention them
-
-DOUBLE-CHECK EVERYTHING:
-1. Look at hair color again — is it truly blonde or is it gray?
-2. Look at hair length again — is it truly long or is it short?
-3. Does your description match a person of age ${char.age}?
-
-If you CANNOT see a feature clearly → DO NOT mention it.
-Do NOT invent, assume, or guess ANY details.
-Do NOT identify anyone.
-
-Format: "${char.name}: [age] years old, [exact visible features]"
-English, max 50 words.` },
-                  ]}],
-                  max_tokens: 120,
-                });
-                console.log(`  → ${char.name}: described from photo`);
-                return { ...char, visual_anchor: r.choices[0].message.content || char.visual_anchor, inPhoto: true };
-              } catch (e) {
-                console.error(`Photo description error for ${char.name}:`, e.message);
-                return { ...char, inPhoto: true };
-              }
-            } else {
-              // Character NOT in photo → generate visual_anchor from story description
-              try {
-                const r = await openai.chat.completions.create({
-                  model: "gpt-4.1",
-                  messages: [{
-                    role: "system",
-                    content: `Create a detailed visual description for a comic book character based on their name, age, and story context. 
-Write 40-50 words covering: exact age appearance, hair color/style, skin tone, eye color, distinctive features, body type.
-This character is NOT in any reference photo — invent a realistic appearance consistent with their age and cultural background.
-Respond with ONLY the description, starting with the character name.`,
-                  }, {
-                    role: "user",
-                    content: `Character: ${char.name}, age ${char.age}. Story context: ${storyCtx}`,
-                  }],
-                  max_tokens: 120,
-                });
-                console.log(`  → ${char.name}: generated from story (not in photo)`);
-                return { ...char, visual_anchor: r.choices[0].message.content || char.visual_anchor, inPhoto: false };
-              } catch (e) {
-                console.error(`Story description error for ${char.name}:`, e.message);
-                return { ...char, inPhoto: false };
-              }
-            }
-          }));
-        } catch (e) {
-          console.error("Photo detection error:", e.message);
-          // Fallback: use story-based anchors for all
-        }
-      }
     }
 
     console.log(`✓ Structure: ${pageStructures.length} pages, ${characters.length} characters`);

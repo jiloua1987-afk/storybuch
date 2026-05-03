@@ -3,15 +3,377 @@
 
 ## 🎯 Ziel
 
-**Wizard vereinfachen** und **Multi-Photo Problem lösen** durch:
-1. Charaktere explizit erfassen (kein GPT-Raten)
-2. Redundante Felder entfernen
-3. Logischeren Flow: Figuren → Stil → Momente
-4. **Familienbild UND Einzelfotos unterstützen**
+**Wizard drastisch vereinfachen:**
+1. Nur 2 Content-Steps (statt 3-4)
+2. Fokus auf Momente & Dialoge
+3. Alle spezifischen Fragen raus
+4. Bilder direkt in Step 1
 
 ---
 
-## 🆕 Neue Wizard-Struktur
+## 🆕 Neue Wizard-Struktur (5 Steps)
+
+### **Step 1: Geschichte, Stil & Bilder** 🎨📸
+
+**UI:**
+```
+┌─────────────────────────────────────────────────────────┐
+│ 1. Um was für eine Geschichte handelt es sich?         │
+├─────────────────────────────────────────────────────────┤
+│ [Liebesgeschichte] [Familie] [Urlaub] [Feier]          │
+│ [Biografie] [Freundschaft] [Sonstiges]                 │
+└─────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────┐
+│ 2. Welchen Stil soll dein Comic haben?                 │
+├─────────────────────────────────────────────────────────┤
+│ [Action] [Emotional] [Humor]                           │
+└─────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────┐
+│ 3. Bilder (optional)                                    │
+├─────────────────────────────────────────────────────────┤
+│                                                         │
+│  ○ Familienbild / Gruppenfoto                          │
+│    ✅ Empfohlen - funktioniert am besten!              │
+│    [📷 Foto hochladen]                                  │
+│    [Vorschau wenn hochgeladen]                         │
+│                                                         │
+│  ○ Einzelne Hauptfiguren                               │
+│    [+ Figur hinzufügen]                                │
+│    ┌─────────────────────────────┐                     │
+│    │ Name: [Jil__________]       │                     │
+│    │ Foto: [📷 Hochladen]        │                     │
+│    └─────────────────────────────┘                     │
+│                                                         │
+│  ○ Keine Bilder                                         │
+│                                                         │
+└─────────────────────────────────────────────────────────┘
+
+[Weiter →]
+```
+
+**Datenstruktur:**
+```typescript
+{
+  category: "liebe",
+  comicStyle: "emotional",
+  photoMode: "family" | "individual" | "none",
+  familyPhoto: File | null,
+  characters: [
+    { id: "c1", name: "Jil", photo: File | null }
+  ]
+}
+```
+
+**Was raus ist:**
+- ❌ Alle spezifischen Fragen (Kennenlernen, Zusammen, Personen, Zeitraum)
+- ❌ Freitext-Modus (kommt in Step 2)
+- ❌ Titel (kommt in Step 2)
+
+---
+
+### **Step 2: Inhalt** ✍️
+
+**UI:**
+```
+┌─────────────────────────────────────────────────────────┐
+│ Titel deines Comics                                     │
+├─────────────────────────────────────────────────────────┤
+│ [z. B. Unser Sommer auf Sardinien__________________]   │
+└─────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────┐
+│ Wie möchtest du deine Geschichte erzählen?             │
+├─────────────────────────────────────────────────────────┤
+│  ○ Momente & Dialoge (empfohlen)                       │
+│  ○ Freitext                                             │
+└─────────────────────────────────────────────────────────┘
+
+[Wenn "Momente & Dialoge" gewählt:]
+
+┌─────────────────────────────────────────────────────────┐
+│ Besondere Momente                                       │
+├─────────────────────────────────────────────────────────┤
+│ 💡 Vorschläge für Liebesgeschichte:                     │
+│ [+ Das erste Treffen] [+ Der Antrag] [+ Die Hochzeit]  │
+│                                                         │
+│ [+ Eigenen Moment hinzufügen]                          │
+│                                                         │
+│ ┌─────────────────────────────────┐                    │
+│ │ Moment #1                   [×] │                    │
+│ ├─────────────────────────────────┤                    │
+│ │ Titel: [Das erste Treffen___]   │                    │
+│ │ Beschreibung:                   │                    │
+│ │ [In der Bibliothek, Jil sucht  │                    │
+│ │  ein Buch...]                   │                    │
+│ └─────────────────────────────────┘                    │
+│                                                         │
+│ 💡 Jeder Moment wird eine eigene Seite                 │
+└─────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────┐
+│ Dialoge                                                 │
+├─────────────────────────────────────────────────────────┤
+│  ○ Automatisch vorschlagen                             │
+│  ○ Eigene Dialoge eingeben                             │
+│                                                         │
+│ [Wenn "Eigene Dialoge":]                               │
+│ [+ Dialog hinzufügen]                                  │
+│ ┌─────────────────────────────────┐                    │
+│ │ Sprecher: [Jil__________]       │                    │
+│ │ Text: [Warte, kennst du mich?_] │                    │
+│ └─────────────────────────────────┘                    │
+└─────────────────────────────────────────────────────────┘
+
+[Wenn "Freitext" gewählt:]
+
+┌─────────────────────────────────────────────────────────┐
+│ Deine Geschichte                                        │
+├─────────────────────────────────────────────────────────┤
+│ [Stichpunkte reichen! z. B.:                           │
+│  Toskana, Sommer 2023, Emma 6 Jahre,                   │
+│  erster Gelato, Sonnenuntergang am Strand...]          │
+│                                                         │
+│                                                         │
+│                                                         │
+└─────────────────────────────────────────────────────────┘
+
+[← Zurück]  [Weiter →]
+```
+
+**Datenstruktur:**
+```typescript
+{
+  title: "Unser Sommer auf Sardinien",
+  contentMode: "moments" | "freetext",
+  
+  // Wenn "moments":
+  moments: [
+    { id: "m1", title: "Das erste Treffen", description: "..." }
+  ],
+  dialogMode: "auto" | "custom",
+  customDialogs: [
+    { id: "d1", speaker: "Jil", text: "..." }
+  ],
+  
+  // Wenn "freetext":
+  storyInput: "Toskana, Sommer 2023..."
+}
+```
+
+**Momente-Vorschläge:**
+```typescript
+const MOMENT_SUGGESTIONS = {
+  liebe: [
+    "Das erste Treffen",
+    "Der erste Kuss",
+    "Der Antrag",
+    "Die Hochzeit",
+    "Heute"
+  ],
+  familie: [
+    "Morgens am Frühstückstisch",
+    "Spielplatz-Abenteuer",
+    "Gute-Nacht-Geschichte",
+    "Familienausflug"
+  ],
+  urlaub: [
+    "Ankunft am Urlaubsort",
+    "Am Strand",
+    "Kulinarisches Highlight",
+    "Unvergesslicher Ausflug"
+  ],
+  biografie: [
+    "Kindheit",
+    "Jugend",
+    "Berufseinstieg",
+    "Familie gründen",
+    "Heute"
+  ],
+  feier: [
+    "Die Vorbereitung",
+    "Die Überraschung",
+    "Die Feier",
+    "Der Höhepunkt"
+  ],
+  freunde: [
+    "Wie wir uns kennenlernten",
+    "Unser erstes Abenteuer",
+    "Ein unvergesslicher Tag",
+    "Heute"
+  ]
+};
+```
+
+---
+
+### **Step 3: Widmung** 💝
+*(Unverändert)*
+
+---
+
+### **Step 4: Vorschau & Bearbeiten** 👁️
+*(Unverändert - wie aktuell Step 5)*
+
+---
+
+### **Step 5: Bestellen** 🛒
+*(Unverändert - wie aktuell Step 6)*
+
+---
+
+## 📊 Vergleich Alt vs. Neu
+
+| **Aspekt** | **Alt** | **Neu** |
+|------------|---------|---------|
+| **Content Steps** | 3 (Story, Upload, Widmung) | 2 (Basis, Inhalt) |
+| **Felder in Step 1** | 8-10 (je nach Kategorie) | 3 (Kategorie, Stil, Bilder) |
+| **Spezifische Fragen** | Ja (Kennenlernen, Zusammen, etc.) | ❌ Nein |
+| **Freitext vs. Geführt** | Separate Modi | Zusammen in Step 2 |
+| **Bilder** | Eigener Step | In Step 1 integriert |
+| **Momente** | In Step 1 versteckt | Fokus in Step 2 |
+| **Dialoge** | In Step 1 versteckt | Fokus in Step 2 |
+
+---
+
+## 🔧 Backend-Änderungen
+
+### **Minimal - nur Datenstruktur anpassen:**
+
+```javascript
+// Vorher:
+const { storyInput, guidedAnswers, ... } = req.body;
+
+// Nachher:
+const { 
+  category,
+  comicStyle,
+  photoMode,
+  familyPhoto,
+  characters,
+  title,
+  contentMode,
+  moments,
+  dialogMode,
+  customDialogs,
+  storyInput  // Nur bei Freitext
+} = req.body;
+
+// Story Context bauen:
+let storyCtx = "";
+if (contentMode === "moments") {
+  storyCtx = moments.map(m => `${m.title}: ${m.description}`).join("\n");
+} else {
+  storyCtx = storyInput;
+}
+```
+
+**Wichtig:** Backend-Logik bleibt fast identisch!
+
+---
+
+## 📋 Implementierungs-Schritte
+
+### Phase 1: Frontend (3-4 Stunden)
+
+**Step1Story.tsx → Step1Basics.tsx:**
+```typescript
+// Entfernen:
+- Freitext-Modus Toggle
+- Titel-Input
+- Spezifische Fragen (kennengelernt, zusammen, etc.)
+- Momente-Editor
+- Dialog-Editor
+
+// Hinzufügen:
+- Bilder-Upload (Familie / Einzeln / Keine)
+- Figuren-Editor (nur bei "Einzeln")
+
+// Behalten:
+- Kategorie-Auswahl
+- Stil-Auswahl
+```
+
+**Step2Upload.tsx → Step2Content.tsx:**
+```typescript
+// Entfernen:
+- Foto-Upload (ist jetzt in Step 1)
+- DSGVO-Checkbox (ist jetzt in Step 1)
+
+// Hinzufügen:
+- Titel-Input
+- Content-Modus Toggle (Momente / Freitext)
+- Momente-Editor (aus Step 1)
+- Momente-Vorschläge (neu!)
+- Dialog-Editor (aus Step 1)
+- Freitext-Textarea (aus Step 1)
+```
+
+**Step3Widmung.tsx:**
+```typescript
+// Unverändert
+```
+
+**Step4Generate.tsx → Step4Preview.tsx:**
+```typescript
+// Unverändert (nur umbenennen)
+```
+
+**Step5Preview.tsx → Step5Checkout.tsx:**
+```typescript
+// Unverändert (nur umbenennen)
+```
+
+### Phase 2: Backend (1 Stunde)
+- Datenstruktur-Mapping anpassen
+- Foto-Handling für beide Modi (Familie / Einzeln)
+- Story Context aus Momenten oder Freitext bauen
+
+### Phase 3: Testing (1 Stunde)
+- Familienbild-Test
+- Einzelfotos-Test
+- Momente-Test
+- Freitext-Test
+
+---
+
+## ✅ Vorteile
+
+### UX:
+- ✅ **Viel einfacher** - nur 2 Content-Steps
+- ✅ **Fokus auf Wichtiges** - Momente & Dialoge
+- ✅ **Schneller** - weniger Felder
+- ✅ **Klarer** - Bilder direkt bei Basis-Infos
+
+### Technisch:
+- ✅ **Weniger Code** - spezifische Fragen entfernt
+- ✅ **Einfacher zu warten** - weniger Logik
+- ✅ **Backend fast unverändert** - nur Mapping anpassen
+
+---
+
+## 🎯 Erfolgs-Kriterien
+
+1. **Wizard ist einfacher:**
+   - ✅ Maximal 5 Felder in Step 1
+   - ✅ Momente-Vorschläge per Klick
+   - ✅ Keine spezifischen Fragen mehr
+
+2. **Familienbild funktioniert:**
+   - ✅ 1 Foto hochladen
+   - ✅ Cover zeigt alle im Comic-Stil
+   - ✅ Seiten konsistent
+
+3. **Einzelfotos funktionieren:**
+   - ✅ Pro Person 1 Foto + Name
+   - ✅ Cover zeigt alle
+   - ✅ Seiten konsistent
+
+---
+
+**Status:** Spezifikation aktualisiert nach User-Feedback
+**Wichtig:** Viel einfacher als vorherige Version!
 
 ### **Step 1: Figuren & Fotos** 👥
 

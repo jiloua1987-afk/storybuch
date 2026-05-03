@@ -95,25 +95,32 @@ Generating page "Das erste Kennenlernen"
 ## 🟡 Wichtig (morgen - nach Wizard-Umbau)
 
 ### 4. Wizard-Umstrukturierung 🎨
-**Aufwand:** 4-6 Stunden  
-**Status:** Spezifikation komplett  
+**Aufwand:** 3-5 Stunden  
+**Status:** Spezifikation aktualisiert  
 **Dateien:** `WIZARD-REDESIGN-SPEC.md`
 
-**Ziele:**
-1. ✅ Wizard vereinfachen (weniger Felder)
-2. ✅ Multi-Photo Problem lösen (kein Name-Matching)
-3. ✅ **Familienbild UND Einzelfotos unterstützen**
-4. ✅ Logischer Flow: Figuren → Stil → Momente
+**Neue Struktur (5 Steps):**
+1. **Geschichte, Stil & Bilder** - Kategorie + Stil + Foto-Upload (Familie/Einzeln/Keine)
+2. **Inhalt** - Titel + Momente/Freitext + Dialoge
+3. **Widmung** - (unverändert)
+4. **Vorschau & Bearbeiten** - (unverändert)
+5. **Bestellen** - (unverändert)
+
+**Was raus ist:**
+- ❌ Alle spezifischen Fragen (Kennenlernen, Zusammen, Personen, Zeitraum)
+- ❌ Freitext/Geführt Toggle in Step 1
+- ❌ Separater Upload-Step
+
+**Was neu ist:**
+- ✅ Bilder direkt in Step 1 (Familie/Einzeln/Keine)
+- ✅ Momente-Vorschläge per Klick
+- ✅ Fokus auf Momente & Dialoge in Step 2
+- ✅ Freitext als Option in Step 2
 
 **Wichtig:**
-- **Familienbild-Modus MUSS weiterhin funktionieren** (hat bisher super geklappt!)
-- User kann wählen: Familienbild / Einzelfotos / Keine Fotos
-- Familienbild wird als "bewährt" markiert
-
-**Neue Struktur:**
-- Step 1: Figuren & Fotos (mit Foto-Modus-Auswahl)
-- Step 2: Stil & Kategorie (keine Fragen mehr)
-- Step 3: Momente (mit Vorschlägen)
+- **Familienbild-Modus MUSS weiterhin funktionieren** (hat super geklappt!)
+- Viel einfacher: nur 2 Content-Steps statt 3-4
+- Backend fast unverändert (nur Mapping anpassen)
 
 **Nach Implementierung:** Multi-Photo System testen
 

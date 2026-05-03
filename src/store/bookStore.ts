@@ -70,6 +70,7 @@ export interface BookProject {
   customDialogs?: CustomDialog[];
   mustHaveSentences?: string;
   numPages?: number;            // Anzahl Comic-Seiten (Standard: 5, Premium: 8+)
+  photoMode?: "family" | "individual" | "none";  // NEW: Photo upload mode
   storyInput: string;
   guidedAnswers: {
     characters: string;

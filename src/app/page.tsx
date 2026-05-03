@@ -4,15 +4,15 @@ import { useBookStore } from "@/store/bookStore";
 import Navbar from "@/components/Navbar";
 import StepIndicator from "@/components/ui/StepIndicator";
 import LandingHero from "@/components/LandingHero";
-import Step1Story from "@/components/steps/Step1Story";
-import Step2Upload from "@/components/steps/Step2Upload";
+import Step1Basics from "@/components/steps/Step1Basics";
+import Step2Content from "@/components/steps/Step2Content";
 import Step3Style from "@/components/steps/Step3Style";
 import Step4Generate from "@/components/steps/Step4Generate";
 import Step5Preview from "@/components/steps/Step5Preview";
 import Step6Checkout from "@/components/steps/Step6Checkout";
 import { AnimatePresence, motion } from "framer-motion";
 
-const STEPS = [Step1Story, Step2Upload, Step3Style, Step4Generate, Step5Preview, Step6Checkout];
+const STEPS = [Step1Basics, Step2Content, Step3Style, Step4Generate, Step5Preview, Step6Checkout];
 
 export default function Home() {
   const { currentStep, setStep } = useBookStore();
@@ -32,7 +32,7 @@ export default function Home() {
     );
   }
 
-  const StepComponent = STEPS[currentStep] ?? Step1Story;
+  const StepComponent = STEPS[currentStep] ?? Step1Basics;
 
   return (
     <>
