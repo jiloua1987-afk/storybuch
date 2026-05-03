@@ -467,11 +467,19 @@ router.post("/cover", async (req, res) => {
       else if (storyText.includes("hamburg")) coverLocation = "Hamburg harbor with Elbe river";
       else if (storyText.includes("köln") || storyText.includes("cologne")) coverLocation = "Cologne with cathedral";
       
-      // Other locations
+      // International cities
+      else if (storyText.includes("barcelona")) coverLocation = "Barcelona with Sagrada Familia and beach";
       else if (storyText.includes("paris")) coverLocation = "Paris with Eiffel Tower";
       else if (storyText.includes("london")) coverLocation = "London with Big Ben";
       else if (storyText.includes("new york")) coverLocation = "New York City skyline";
-      else if (storyText.includes("rom") || storyText.includes("rome")) coverLocation = "Rome with Colosseum";
+      else if (storyText.includes("madrid")) coverLocation = "Madrid with Royal Palace";
+      else if (storyText.includes("lissabon") || storyText.includes("lisbon")) coverLocation = "Lisbon with colorful buildings";
+      else if (storyText.includes("amsterdam")) coverLocation = "Amsterdam with canals";
+      else if (storyText.includes("prag") || storyText.includes("prague")) coverLocation = "Prague with Charles Bridge";
+      else if (storyText.includes("wien") || storyText.includes("vienna")) coverLocation = "Vienna with St. Stephen's Cathedral";
+      
+      // IMPORTANT: Check for "rom" AFTER "barcelona" to avoid false match
+      else if (storyText.includes("rom ") || storyText.includes("rome")) coverLocation = "Rome with Colosseum";
       
       // Generic locations
       else if (storyText.includes("strand") || storyText.includes("beach") || storyText.includes("meer") || storyText.includes("sea")) 
@@ -969,6 +977,14 @@ MANDATORY:
 - Do NOT add features not mentioned (glasses, beard, mustache, jewelry, tattoos)
 - Do NOT change their appearance from the descriptions
 
+NATURAL SCENE BEHAVIOR:
+- Characters are IN THE SCENE, not posing for a photo
+- They interact with each other and their environment
+- NO direct eye contact with viewer/camera
+- NO portrait-style poses looking at camera
+- Show them from various angles: 3/4 view, profile, back view, action shots
+- They are LIVING the moment, not posing for it
+
 These descriptions are based on real photos — accuracy is critical.\n\n`
       : refSource === "cover" || refSource === "cover-with-crowd"
       ? `${COMIC_STYLE}
@@ -997,10 +1013,44 @@ NATURAL SCENE BEHAVIOR:
 
 DO NOT invent new faces. DO NOT change their appearance. Draw them EXACTLY as they look in this cover.\n\n`
       : refSource === "user-photo"
-      ? `${COMIC_STYLE}\nThe people in this photo are the main characters. Draw them in the comic style above. NOT photorealistic. IMPORTANT: IGNORE the clothing from the photo — use the clothing described in the prompt instead.\n\n`
+      ? `${COMIC_STYLE}
+
+The people in this photo are the main characters. Draw them in the comic style above. NOT photorealistic.
+IMPORTANT: IGNORE the clothing from the photo — use the clothing described in the prompt instead.
+
+NATURAL SCENE BEHAVIOR:
+- Characters are IN THE SCENE, not posing for a photo
+- They interact with each other and their environment
+- NO direct eye contact with viewer/camera
+- NO portrait-style poses looking at camera
+- Show them from various angles: 3/4 view, profile, back view, action shots
+- They are LIVING the moment, not posing for it\n\n`
       : refSource === "user-photo-style"
-      ? `${COMIC_STYLE}\nUse this photo ONLY for the art style and color palette — NOT for the faces. Draw ALL characters exactly as described in the character descriptions below. NOT photorealistic. IGNORE the clothing from the photo.\n\n`
-      : `${COMIC_STYLE}\nDraw in the style of a printed Franco-Belgian comic album (Bande Dessinée) — bold ink outlines, flat cel-shaded colors, stylized expressive faces. NOT manga. NOT anime. NOT photorealistic. Crisp defined ink lines on every figure, identical style to a Blacksad or Bastien Vivès page.\n\n`;
+      ? `${COMIC_STYLE}
+
+Use this photo ONLY for the art style and color palette — NOT for the faces.
+Draw ALL characters exactly as described in the character descriptions below. NOT photorealistic.
+IGNORE the clothing from the photo.
+
+NATURAL SCENE BEHAVIOR:
+- Characters are IN THE SCENE, not posing for a photo
+- They interact with each other and their environment
+- NO direct eye contact with viewer/camera
+- NO portrait-style poses looking at camera
+- Show them from various angles: 3/4 view, profile, back view, action shots
+- They are LIVING the moment, not posing for it\n\n`
+      : `${COMIC_STYLE}
+
+Draw in the style of a printed Franco-Belgian comic album (Bande Dessinée) — bold ink outlines, flat cel-shaded colors, stylized expressive faces.
+NOT manga. NOT anime. NOT photorealistic. Crisp defined ink lines on every figure, identical style to a Blacksad or Bastien Vivès page.
+
+NATURAL SCENE BEHAVIOR:
+- Characters are IN THE SCENE, not posing for a photo
+- They interact with each other and their environment
+- NO direct eye contact with viewer/camera
+- NO portrait-style poses looking at camera
+- Show them from various angles: 3/4 view, profile, back view, action shots
+- They are LIVING the moment, not posing for it\n\n`;
 
     console.log(`Generating page "${page.title}" (${panelCount} panels, ref: ${refSource})`);
     let { url: rawUrl, usedReference } = await generateImage(`${refNote}${prompt}`, reference).catch(async (err) => {
@@ -1016,6 +1066,14 @@ Characters: ${charAnchors}
 Show a peaceful family scene in ${layoutDesc} layout.
 Characters are smiling, relaxed, enjoying time together.
 Warm, friendly atmosphere. Beautiful outdoor setting.
+
+NATURAL SCENE BEHAVIOR:
+- Characters are IN THE SCENE, not posing for a photo
+- They interact with each other and their environment
+- NO direct eye contact with viewer/camera
+- NO portrait-style poses looking at camera
+- Show them from various angles: 3/4 view, profile, back view, action shots
+- They are LIVING the moment, not posing for it
 
 NO text, NO speech bubbles anywhere in image.`;
         
@@ -1061,7 +1119,15 @@ RULES:
 - Sharp detailed faces — eyes, nose, mouth clearly visible
 - Movement/action: show with TILTED POSES and MOTION BLUR in Bande Dessinée style — NOT manga speed lines
 - Exaggerated expressions: use WESTERN COMIC STYLE — NOT anime big eyes, NOT manga sweat drops
-- NO text, NO speech bubbles, NO letters, NO titles anywhere in image${reillustrationNote ? `\n\nUSER CORRECTION: ${reillustrationNote}. Apply this change while keeping all other elements identical.` : ""}`;
+- NO text, NO speech bubbles, NO letters, NO titles anywhere in image
+
+NATURAL SCENE BEHAVIOR:
+- Characters are IN THE SCENE, not posing for a photo
+- They interact with each other and their environment
+- NO direct eye contact with viewer/camera
+- NO portrait-style poses looking at camera
+- Show them from various angles: 3/4 view, profile, back view, action shots
+- They are LIVING the moment, not posing for it${reillustrationNote ? `\n\nUSER CORRECTION: ${reillustrationNote}. Apply this change while keeping all other elements identical.` : ""}`;
 
       try {
         const result2 = await generateImage(`${COMIC_STYLE} ${mood}\n\n${safePrompt}`, null);

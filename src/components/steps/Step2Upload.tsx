@@ -31,6 +31,7 @@ export default function Step2Upload() {
   const [activeType, setActiveType] = useState<"person" | "location" | "situation">("person");
   const [labelInput, setLabelInput] = useState("");
   const [uploading, setUploading] = useState(false);
+  const [familyCharacterNames, setFamilyCharacterNames] = useState("");  // NEW: For family photo mode
 
   const onDrop = useCallback(
     async (acceptedFiles: File[]) => {
@@ -59,10 +60,17 @@ export default function Step2Upload() {
   const removeImage = (id: string) => setImages((prev) => prev.filter((img) => img.id !== id));
 
   const handleNext = async () => {
+    const personImages = images.filter(img => img.type === "person");
+    
+    // Validation: If 1 photo (family mode), require character names
+    if (personImages.length === 1 && !familyCharacterNames.trim()) {
+      toast.error("Bitte gib die Namen der Personen im Foto ein (z.B. 'Marc, Hassan, Maria')");
+      return;
+    }
+    
     setUploading(true);
     try {
     let referenceImageUrls: { label: string; url: string }[] = [];
-    const personImages = images.filter(img => img.type === "person");
 
     if (personImages.length > 0) {
       try {
@@ -81,20 +89,44 @@ export default function Step2Upload() {
       }
     }
 
-    const characters = personImages.map((img) => ({
-      id: img.id,
-      name: img.label,
-      role: "Hauptfigur",
-      imageUrl: img.preview,
-      base64: img.base64,
-    }));
+    // Determine photo mode and characters
+    let photoMode = "none";
+    let characters: any[] = [];
+    
+    if (personImages.length === 0) {
+      photoMode = "none";
+    } else if (personImages.length === 1) {
+      // FAMILY MODE: 1 photo with multiple people
+      photoMode = "family";
+      // Parse character names from input (comma-separated)
+      const names = familyCharacterNames.split(",").map(n => n.trim()).filter(Boolean);
+      characters = names.map((name, i) => ({
+        id: `char-${i}`,
+        name,
+        role: "Hauptfigur",
+        imageUrl: personImages[0].preview,
+        base64: personImages[0].base64,
+      }));
+    } else {
+      // INDIVIDUAL MODE: 2+ separate photos
+      photoMode = "individual";
+      characters = personImages.map((img) => ({
+        id: img.id,
+        name: img.label,
+        role: "Hauptfigur",
+        imageUrl: img.preview,
+        base64: img.base64,
+      }));
+    }
+    
     const locationImages = images.filter(img => img.type === "location").map(img => img.base64).filter(Boolean);
 
     updateProject({
       characters,
-      referenceImages: characters.map(c => c.base64).filter(Boolean), // Base64 fallback
+      referenceImages: personImages.map(img => img.base64).filter(Boolean), // Base64 fallback
       referenceImageUrls,  // Supabase URLs (primary)
       locationImages,
+      photoMode,
     });
     setStep(2);
     } finally {
@@ -197,6 +229,31 @@ export default function Step2Upload() {
                 </motion.div>
               ))}
             </div>
+            
+            {/* NEW: Character names input for family photo mode (1 photo) */}
+            {images.filter(img => img.type === "person").length === 1 && (
+              <div className="bg-blue-50 border border-blue-200 rounded-xl p-5 space-y-3">
+                <div className="flex items-start gap-2">
+                  <span className="text-2xl">👥</span>
+                  <div className="flex-1">
+                    <p className="text-sm font-semibold text-blue-900 mb-1">Wer ist auf dem Foto?</p>
+                    <p className="text-sm text-blue-800 mb-3">
+                      Gib die Namen aller Personen ein (mit Komma getrennt)
+                    </p>
+                    <input
+                      value={familyCharacterNames}
+                      onChange={(e) => setFamilyCharacterNames(e.target.value)}
+                      placeholder="z.B. Marc, Hassan, Maria"
+                      className="w-full p-3 rounded-lg border border-blue-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none text-gray-900 bg-white"
+                      required
+                    />
+                    <p className="text-xs text-blue-700 mt-2">
+                      ✓ Diese Namen helfen uns, die Personen im Comic konsistent darzustellen
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
           </motion.div>
         )}
       </AnimatePresence>
