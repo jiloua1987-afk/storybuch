@@ -800,19 +800,23 @@ RULES:
       console.log(`  → Historical scene (${ageContext.ageContext}), no cover available - generate-only`);
       refSource = "generate-only-age-modified";
     } else {
-      // ── STRATEGY 1: Individual Photos Mode → Generate-Only ────────────────────
-      // CRITICAL: For individual photos, DON'T use cover as reference!
-      // Reason: images.edit() is unreliable for face consistency
-      // Solution: Use images.generate() with detailed visual_anchors from photos
-      // Detection: Multiple photos (referenceImageUrls.length > 1) means individual photos mode
+      // ── STRATEGY 1: Individual Photos Mode → Use Cover Reference ──────────────
+      // CRITICAL: For individual photos, USE cover as reference (like family photo mode)!
+      // The cover was created from composite of all photos → contains all faces
+      // Solution: Use cover as reference + very strong prompt to maintain faces
       const hasIndividualPhotos = referenceImageUrls.length > 1;
       
-      if (hasIndividualPhotos) {
-        reference = null;
-        refSource = "generate-only-individual-photos";
-        console.log(`  → Individual photos mode (${referenceImageUrls.length} photos): using generate-only with visual anchors`);
-        console.log(`  → Reason: images.edit() unreliable for face consistency`);
-        // IMPORTANT: Don't run other strategies - we want generate-only!
+      if (hasIndividualPhotos && coverImageUrl) {
+        try {
+          reference = await fetchBuffer(coverImageUrl);
+          refSource = "cover-individual-photos";
+          console.log(`  → Individual photos mode (${referenceImageUrls.length} photos): using cover as reference`);
+          console.log(`  → Cover contains composite of all ${referenceImageUrls.length} photos`);
+        } catch (e) {
+          console.warn("  → Cover fetch failed for individual photos:", e.message);
+          reference = null;
+          refSource = "generate-only-individual-photos";
+        }
       }
       // ── STRATEGY 2: Cover (best for consistency) ──────────────────────────────
       // Family photo mode: 1 photo with all characters
@@ -898,6 +902,37 @@ MANDATORY:
 - Match the art style and color palette of the cover exactly
 
 DO NOT invent new faces. These must be the SAME people from the cover, just at a younger age.\n\n`
+      : refSource === "cover-individual-photos"
+      ? `${COMIC_STYLE}
+
+ULTRA-CRITICAL FACE CONSISTENCY RULES (Individual Photos Mode):
+This cover was created from ${referenceImageUrls.length} separate photos combined together.
+You MUST draw the EXACT SAME faces from this cover in this page.
+
+${finalCharacters.map(c => `${c.name}: ${c.visual_anchor}`).join("\n\n")}
+
+ABSOLUTE REQUIREMENTS:
+- Study the faces in this cover image VERY carefully
+- Draw ${finalCharacters.map(c => c.name).join(" and ")} with IDENTICAL faces to the cover
+- EXACT SAME: eye shape, eye color, nose shape, mouth shape, face proportions, jawline
+- EXACT SAME: hair color, hair style, hair length, hair texture
+- EXACT SAME: skin tone, facial features, overall appearance
+- Match the art style and color palette of the cover EXACTLY
+
+STRICT PROHIBITIONS:
+- DO NOT change their faces in ANY way
+- DO NOT make eyes bigger or rounder (NO manga/anime style!)
+- DO NOT add sparkles, shine effects, or soft gradients
+- DO NOT use manga/anime facial expressions
+- DO NOT invent new facial features
+
+STYLE ENFORCEMENT:
+- European Bande Dessinée ONLY - bold ink outlines, flat cel-shaded colors
+- NOT manga, NOT anime, NOT Japanese comic style
+- Western comic book anatomy and proportions
+- Realistic face shapes, NOT stylized anime faces
+
+These are REAL PEOPLE from photos. Accuracy is CRITICAL.\n\n`
       : refSource === "generate-only-individual-photos"
       ? `${COMIC_STYLE}
 
