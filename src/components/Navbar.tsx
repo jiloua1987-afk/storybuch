@@ -11,15 +11,16 @@ export default function Navbar() {
       <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
         <button
           onClick={resetProject}
-          className="hover:opacity-70 transition-opacity"
+          className="hover:opacity-70 transition-opacity overflow-hidden"
         >
-          <Image 
-            src="/Logo 1.png" 
-            alt="MyComicStory Logo" 
-            width={200} 
-            height={200}
-            className="w-48 h-48"
-          />
+          <div className="w-32 h-16 relative">
+            <Image 
+              src="/Logo 1.png" 
+              alt="MyComicStory Logo" 
+              fill
+              className="object-cover scale-150"
+            />
+          </div>
         </button>
         <div className="flex items-center gap-6 text-[14px] text-[#8B7355]">
           <Link href="/ueber-uns" className="hover:text-[#1A1410] transition-colors">Über uns</Link>
