@@ -457,6 +457,8 @@ router.post("/cover", async (req, res) => {
     if (!coverLocation && (storyInput || guidedAnswers.location || guidedAnswers.specialMoments)) {
       // Try to extract location from story
       const storyText = `${storyInput} ${guidedAnswers.location || ""} ${guidedAnswers.specialMoments || ""}`.toLowerCase();
+      console.log(`  → Extracting location from story text (length: ${storyText.length} chars)`);
+      console.log(`  → Story text preview: ${storyText.substring(0, 200)}...`);
       
       // German cities
       if (storyText.includes("frankfurt")) coverLocation = "Frankfurt cityscape with modern skyscrapers and Main river";
@@ -486,6 +488,8 @@ router.post("/cover", async (req, res) => {
     
     // Final fallback if still empty
     if (!coverLocation) coverLocation = "beautiful park with trees and flowers";
+    
+    console.log(`  → Cover location: "${coverLocation}"`);
 
     const prompt = `${COMIC_STYLE}
 
@@ -557,7 +561,7 @@ Bold ink outlines on every person. Flat cel-shaded colors. Expressive cartoon fa
 Left person is ${referenceImageUrls[0].label}: ${characters.find(c => c.name === referenceImageUrls[0].label)?.visual_anchor || ""}
 Right person is ${referenceImageUrls[1].label}: ${characters.find(c => c.name === referenceImageUrls[1].label)?.visual_anchor || ""}
 
-Draw BOTH characters together in ${location || "a beautiful Mediterranean setting"}.
+Draw BOTH characters together in ${coverLocation}.
 Composition: dynamic group shot, both characters prominently visible, vivid illustrated background.
 NO text, NO title, NO letters anywhere in the image.`;
 
@@ -611,7 +615,7 @@ REDRAW everyone in this photo as hand-drawn comic book characters. This must loo
 Bold ink outlines on every person. Flat cel-shaded colors. Expressive cartoon faces. NO photographic lighting, NO realistic skin textures, NO photo-realistic details.
 Draw ALL characters: ${charNames}.
 For characters not in the photo, draw them from their description.
-Setting: ${location || "a beautiful Mediterranean setting"}.
+Setting: ${coverLocation}.
 Character descriptions: ${charDesc}
 Composition: dynamic group shot, characters in foreground, vivid illustrated background.
 NO text, NO title, NO letters anywhere in the image.`,
