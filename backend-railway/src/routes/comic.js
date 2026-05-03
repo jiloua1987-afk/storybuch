@@ -862,13 +862,42 @@ RULES:
     }
 
     const refNote = refSource.startsWith("cover-age-")
-      ? `${COMIC_STYLE}\nThis cover shows the characters at their current age. ${ageContext.modifier}
-CRITICAL: Keep the SAME facial features, bone structure, eye shape, and overall face proportions as shown in the cover.
-Only change: make skin smoother, hair darker/fuller, remove wrinkles, more youthful energy in poses.
-Draw the main characters (${finalCharacters.map(c => c.name).join(", ")}) with their recognizable faces from the cover, just younger.
-Match the art style and color palette of the cover exactly.\n\n`
+      ? `${COMIC_STYLE}
+
+CRITICAL FACE CONSISTENCY RULES (Age-Modified Scene):
+This cover image shows the characters at their current age.
+You must draw them YOUNGER while keeping their faces recognizable.
+
+${finalCharacters.map(c => `${c.name}: ${c.visual_anchor}`).join("\n")}
+
+${ageContext.modifier}
+
+MANDATORY:
+- Keep the SAME facial features from the cover: eye shape, nose shape, mouth shape, face bone structure
+- Keep the SAME face proportions and overall facial structure
+- Only change: smoother skin, darker/fuller hair (no gray), fewer wrinkles, more youthful energy
+- Draw ${finalCharacters.map(c => c.name).join(" and ")} so they are recognizable as the SAME people from the cover, just younger
+- Match the art style and color palette of the cover exactly
+
+DO NOT invent new faces. These must be the SAME people from the cover, just at a younger age.\n\n`
       : refSource === "cover" || refSource === "cover-with-crowd"
-      ? `${COMIC_STYLE}\nUse the EXACT same art style, character designs and color palette as this cover image.\nDraw the main characters (${finalCharacters.map(c => c.name).join(", ")}) EXACTLY as they appear in this cover.\n${hasManyPeople ? "Add background guests/crowd as faceless silhouettes or simple figures.\n" : ""}\n`
+      ? `${COMIC_STYLE}
+
+CRITICAL FACE CONSISTENCY RULES:
+This cover image shows the EXACT faces you must draw in this page.
+Study the faces in this cover carefully and replicate them EXACTLY.
+
+${finalCharacters.map(c => `${c.name}: ${c.visual_anchor}`).join("\n")}
+
+MANDATORY:
+- Draw ${finalCharacters.map(c => c.name).join(" and ")} with the EXACT SAME faces as shown in this cover
+- Same facial features: eye shape, nose shape, mouth shape, face proportions
+- Same hair color, hair style, hair length
+- Same skin tone
+- Same overall appearance
+- Match the art style and color palette of the cover exactly
+${hasManyPeople ? "- Add background guests/crowd as faceless silhouettes or simple figures\n" : ""}
+DO NOT invent new faces. DO NOT change their appearance. Draw them EXACTLY as they look in this cover.\n\n`
       : refSource === "user-photo"
       ? `${COMIC_STYLE}\nThe people in this photo are the main characters. Draw them in the comic style above. NOT photorealistic. IMPORTANT: IGNORE the clothing from the photo — use the clothing described in the prompt instead.\n\n`
       : refSource === "user-photo-style"
