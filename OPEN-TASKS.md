@@ -165,7 +165,46 @@ UNIQUE (project_id, character_name);
 
 ## 🟢 Nice-to-Have (später)
 
-### 6. ✅ OpenAI Tier 2 upgraden
+### 6. Orts-/Situationsfotos hinzufügen 📸
+**Aufwand:** 2-3 Stunden  
+**Status:** Konzept erstellt, noch nicht implementiert  
+**Priorität:** Niedrig (nach Wizard-Umbau & Tests)
+
+**Konzept:**
+- User kann Fotos von besonderen Orten hochladen (z. B. Strand, Restaurant, Hochzeitslocation)
+- Orts-Fotos werden als Hintergrund/Setting-Referenz für spezifische Seiten verwendet
+- Personen-Fotos bleiben für Charaktere (Cover → Konsistenz)
+
+**Empfohlene Implementierung:**
+- **Option 1:** Separate Sektion in Step 1 (nach Personen-Fotos)
+  - "4. Orts-Fotos (optional)"
+  - Upload mit Label (z. B. "Strand am Main", "Restaurant")
+  - Max. 3-5 Fotos
+- **Option 2:** Pro Moment in Step 2
+  - Jeder Moment kann optional ein Orts-Foto haben
+  - Spezifischer, aber komplexer
+
+**Backend-Verwendung:**
+- Cover Generation: Orts-Fotos NICHT verwendet (nur Personen)
+- Page Generation: GPT matched `page.location` mit `locationImages[].label`
+- Wenn Match → Orts-Foto als zusätzliche Referenz für Hintergrund
+- Charaktere bleiben vom Cover (Konsistenz!)
+
+**Offene Fragen:**
+- Welche Option? (Step 1 vs. Step 2)
+- Wie viele Fotos? (Unbegrenzt vs. Max. 3-5)
+- Label-System? (Freitext vs. Dropdown)
+- Verwendung? (Nur Hintergrund vs. auch Objekte)
+
+**Dateien:**
+- `src/components/steps/Step1Basics.tsx` (Option 1)
+- `src/components/steps/Step2Content.tsx` (Option 2)
+- `src/store/bookStore.ts` (locationImages Array)
+- `backend-railway/src/routes/comic.js` (Location matching)
+
+---
+
+### 7. ✅ OpenAI Tier 2 upgraden
 **Status:** ✅ ERLEDIGT  
 **Aufwand:** 5 Minuten  
 
@@ -176,7 +215,7 @@ UNIQUE (project_id, character_name);
 
 ---
 
-### 7. ✅ "Neu illustrieren" mit Freitextfeld
+### 8. ✅ "Neu illustrieren" mit Freitextfeld
 **Status:** ✅ ERLEDIGT  
 **Aufwand:** 3-4 Stunden  
 
@@ -184,7 +223,7 @@ UNIQUE (project_id, character_name);
 
 ---
 
-### 8. Multi-Age Photo System implementieren 📸
+### 9. Multi-Age Photo System implementieren 📸
 **Aufwand:** 1-2 Wochen  
 **Spezifikation:** `MULTI-AGE-PHOTO-SYSTEM-SPEC.md`  
 **Status:** Nur Spezifikation, noch nicht implementiert
@@ -208,7 +247,7 @@ UNIQUE (project_id, character_name);
 
 ---
 
-### 9. UI/UX Redesign 🎨
+### 10. UI/UX Redesign 🎨
 **Aufwand:** 1-2 Tage  
 **Dateien:** `Step1-6.tsx`, `page.tsx`, `ueber-uns/page.tsx`  
 
@@ -223,7 +262,7 @@ UNIQUE (project_id, character_name);
 
 ---
 
-### 10. PDF-Export + Druckspezifikation 📄
+### 11. PDF-Export + Druckspezifikation 📄
 **Aufwand:** 1 Tag  
 **Status:** Warten auf Format-Entscheidung  
 
