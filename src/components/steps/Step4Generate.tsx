@@ -156,28 +156,62 @@ export default function Step4Generate() {
               referenceImageUrls:   project?.referenceImageUrls || [],
               coverImageUrl,
               projectId:            newProjectId,
+              photoMode:            project?.photoMode || "none",  // NEW: Pass photoMode
             });
 
-            chapters[i] = {
-              id:             page.id || `page-${i}`,
-              title:          page.title,
-              content:        page.panels?.map((p: any) => p.dialog || "").filter(Boolean).join(" ") || "",
-              imageUrl:       pageData.imageUrl || "",
-              imagePrompt:    "",
-              panels:         pageData.panels || page.panels || [],
-              panelPositions: pageData.panelPositions || null,
-            };
-            addLog(`Seite ${i + 1} fertig`, true);
+            // Check if page was skipped due to safety block
+            if (pageData.skipped) {
+              console.warn(`Page ${i + 1} skipped:`, pageData.message);
+              chapters[i] = { 
+                id: page.id || `page-${i}`, 
+                title: page.title, 
+                content: "", 
+                imageUrl: "", 
+                imagePrompt: "",
+                skipped: true,
+                skipReason: pageData.message || "Safety block",
+                suggestion: pageData.suggestion || ""
+              };
+              addLog(`Seite ${i + 1}: Übersprungen (Safety Block)`, true);
+            } else {
+              chapters[i] = {
+                id:             page.id || `page-${i}`,
+                title:          page.title,
+                content:        page.panels?.map((p: any) => p.dialog || "").filter(Boolean).join(" ") || "",
+                imageUrl:       pageData.imageUrl || "",
+                imagePrompt:    "",
+                panels:         pageData.panels || page.panels || [],
+                panelPositions: pageData.panelPositions || null,
+              };
+              addLog(`Seite ${i + 1} fertig`, true);
+            }
           } catch (err: any) {
             console.error(`Page ${i + 1} generation failed:`, err);
-            chapters[i] = { 
-              id: page.id || `page-${i}`, 
-              title: page.title, 
-              content: "", 
-              imageUrl: "", 
-              imagePrompt: "" 
-            };
-            addLog(`Seite ${i + 1}: Fehler (${err.message || 'Unbekannt'})`, true);
+            
+            // Check if error response contains skip info
+            const errorData = err.response?.data || {};
+            if (errorData.skipped) {
+              chapters[i] = { 
+                id: page.id || `page-${i}`, 
+                title: page.title, 
+                content: "", 
+                imageUrl: "", 
+                imagePrompt: "",
+                skipped: true,
+                skipReason: errorData.message || "Safety block",
+                suggestion: errorData.suggestion || ""
+              };
+              addLog(`Seite ${i + 1}: Übersprungen (${errorData.message || 'Safety Block'})`, true);
+            } else {
+              chapters[i] = { 
+                id: page.id || `page-${i}`, 
+                title: page.title, 
+                content: "", 
+                imageUrl: "", 
+                imagePrompt: "" 
+              };
+              addLog(`Seite ${i + 1}: Fehler (${err.message || 'Unbekannt'})`, true);
+            }
           }
 
           setProgress(30 + (chapters.filter(Boolean).length / pages.length) * progressPerPage);

@@ -1053,39 +1053,114 @@ NATURAL SCENE BEHAVIOR:
 - They are LIVING the moment, not posing for it\n\n`;
 
     console.log(`Generating page "${page.title}" (${panelCount} panels, ref: ${refSource})`);
+    
+    // Track if we have photos - CRITICAL for maintaining face consistency
+    const hasPhotos = (req.body.photoMode === "family" || req.body.photoMode === "individual") && 
+                      (primaryRefUrl || primaryRefBase64 || coverImageUrl);
+    
     let { url: rawUrl, usedReference } = await generateImage(`${refNote}${prompt}`, reference).catch(async (err) => {
-      // If safety error on first attempt → try ultra-safe version immediately
+      // If safety error on first attempt → create safe alternative scene
       if (err?.message?.includes("safety") || err?.message?.includes("rejected")) {
-        console.log(`  → Safety block on first attempt, trying ultra-safe prompt`);
-        const ultraSafePrompt = `${COMIC_STYLE} ${mood}
+        console.log(`  → Safety block on first attempt`);
+        console.log(`  → Creating safe alternative scene with same characters`);
+        
+        // Generate safe alternative: same characters, safer context
+        const safeAlternativePrompt = `${COMIC_STYLE} ${mood}
 
-Comic page with ${panelCount} panels. Bold black borders between panels.
+Comic page: "${page.title}" (safe family-friendly version)
+${panelCount} panels in ${layoutDesc}. Bold black borders between panels.
 
-Characters: ${charAnchors}
+CHARACTERS (draw EXACTLY as described):
+${charAnchors}
 
-Show a peaceful family scene in ${layoutDesc} layout.
-Characters are smiling, relaxed, enjoying time together.
-Warm, friendly atmosphere. Beautiful outdoor setting.
+SAFE ALTERNATIVE SCENE:
+Create a family-friendly version of this scene with the same emotional tone.
+- If beach/strand → show boardwalk/promenade with ice cream, NOT beach activities
+- If party/club → show restaurant dinner with conversation, NOT dancing
+- If action/danger → show planning or aftermath, NOT the action itself
+- Keep all characters present and interacting naturally
+
+Same story beat, same emotions, just safer context.
+Appropriate clothing for the setting, warm atmosphere.
 
 NATURAL SCENE BEHAVIOR:
-- Characters are IN THE SCENE, not posing for a photo
-- They interact with each other and their environment
-- NO direct eye contact with viewer/camera
-- NO portrait-style poses looking at camera
-- Show them from various angles: 3/4 view, profile, back view, action shots
-- They are LIVING the moment, not posing for it
+- Characters interact naturally with each other
+- NO camera poses, NO direct eye contact with viewer
+- Various angles: 3/4 view, profile, action shots
 
 NO text, NO speech bubbles anywhere in image.`;
         
-        return await generateImage(ultraSafePrompt, null);
+        // CRITICAL: Try with reference to maintain faces!
+        return await generateImage(safeAlternativePrompt, reference);
       }
       throw err;
     });
 
-    // If reference was blocked by safety filter → sanitize prompt and retry generate-only
-    // The panel descriptions themselves may trigger safety (e.g. jubilation, shouting, children)
-    // Sanitized prompt removes potentially triggering words while keeping the scene intent
-    if (!usedReference && rawUrl) {
+    // CRITICAL CHECK: If reference was NOT used but we have photos → Try safe alternative
+    if (!usedReference && hasPhotos && rawUrl) {
+      console.warn(`  ⚠️ WARNING: Generated without reference despite having photos!`);
+      console.log(`  → This would show WRONG FACES - attempting safe alternative with reference`);
+      
+      try {
+        // Generate safe alternative scene WITH reference
+        const safeScenePrompt = `${refNote}${COMIC_STYLE} ${mood}
+
+Comic page: "${page.title}" (safe version with reference faces)
+${panelCount} panels in ${layoutDesc}. Bold black borders between panels.
+
+CRITICAL - USE REFERENCE FACES:
+Draw the EXACT SAME faces as shown in the reference image.
+${charAnchors}
+
+SAFE SCENE ALTERNATIVE:
+- Same characters, same emotional moment
+- Family-friendly setting (if beach → promenade, if party → restaurant)
+- All characters present, warm atmosphere
+- Appropriate clothing for safe context
+
+NATURAL SCENE BEHAVIOR:
+- Characters interact naturally
+- NO camera poses, various angles
+
+NO text, NO speech bubbles.`;
+
+        const safeResult = await generateImage(safeScenePrompt, reference);
+        
+        if (safeResult.usedReference) {
+          console.log(`  ✓ Safe alternative generated WITH reference - faces maintained!`);
+          rawUrl = safeResult.url;
+          usedReference = true;
+        } else {
+          // Still no reference → REJECT to prevent wrong faces
+          console.error(`  ❌ CRITICAL: Cannot generate with reference - would show wrong faces`);
+          return res.status(400).json({ 
+            error: "SAFETY_BLOCK_PREVENTED_REFERENCE",
+            message: `Die Seite "${page.title}" konnte nicht mit deinen Fotos erstellt werden (OpenAI Safety System blockiert diese Szene). Bitte formuliere um: z.B. "Strandpromenade" statt "Strand", "Restaurant" statt "Party".`,
+            imageUrl: "",
+            panels: page.panels,
+            skipped: true,
+            suggestion: page.location?.toLowerCase().includes("beach") || page.location?.toLowerCase().includes("strand")
+              ? "Versuche: 'Strandpromenade mit Eis' statt Strand-Aktivitäten"
+              : page.title?.toLowerCase().includes("party")
+              ? "Versuche: 'Abendessen im Restaurant' statt Party"
+              : "Formuliere die Szene familienfreundlicher"
+          });
+        }
+      } catch (altErr) {
+        console.error(`  ❌ Safe alternative failed:`, altErr.message);
+        return res.status(400).json({ 
+          error: "SAFETY_BLOCK_PREVENTED_REFERENCE",
+          message: `Die Seite "${page.title}" konnte nicht erstellt werden. Bitte formuliere die Szene um.`,
+          imageUrl: "",
+          panels: page.panels,
+          skipped: true
+        });
+      }
+    }
+
+    // If reference was blocked by safety filter → sanitize prompt and retry
+    // ONLY if we don't have photos (otherwise already handled above)
+    if (!usedReference && rawUrl && !hasPhotos) {
       console.log(`  → Safety block, retrying with sanitized prompt + generate-only`);
       const sanitizedPanelDescs = page.panels
         .map(p => `Panel ${p.nummer}: ${(p.szene || "")
