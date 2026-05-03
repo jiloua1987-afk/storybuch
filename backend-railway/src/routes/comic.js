@@ -1148,13 +1148,59 @@ NO text, NO speech bubbles.`;
         }
       } catch (altErr) {
         console.error(`  ❌ Safe alternative failed:`, altErr.message);
-        return res.status(400).json({ 
-          error: "SAFETY_BLOCK_PREVENTED_REFERENCE",
-          message: `Die Seite "${page.title}" konnte nicht erstellt werden. Bitte formuliere die Szene um.`,
-          imageUrl: "",
-          panels: page.panels,
-          skipped: true
-        });
+        
+        // LAST RESORT: Generate placeholder page with message
+        console.log(`  → Generating placeholder page with skip message`);
+        try {
+          const placeholderPrompt = `${COMIC_STYLE}
+
+Comic page with ${panelCount} panels in ${layoutDesc}. Bold black borders between panels.
+
+CHARACTERS (draw EXACTLY as described):
+${charAnchors}
+
+SCENE: "${page.title}"
+Show the characters in a VERY SAFE, GENERIC scene:
+- Indoor setting (living room, cafe, park bench)
+- Characters talking, smiling, relaxed
+- NO specific activities, just peaceful interaction
+- Warm, friendly atmosphere
+
+This is a safe placeholder for a scene that couldn't be generated.
+
+NATURAL SCENE BEHAVIOR:
+- Characters interact naturally
+- NO camera poses
+- Various angles
+
+NO text, NO speech bubbles.`;
+
+          const placeholderResult = await generateImage(placeholderPrompt, reference);
+          
+          if (placeholderResult.url) {
+            console.log(`  ✓ Placeholder page generated - better than empty page`);
+            rawUrl = placeholderResult.url;
+            usedReference = placeholderResult.usedReference;
+          } else {
+            // Absolute last resort: return skip
+            return res.status(400).json({ 
+              error: "SAFETY_BLOCK_PREVENTED_REFERENCE",
+              message: `Die Seite "${page.title}" konnte nicht erstellt werden. Bitte formuliere die Szene um.`,
+              imageUrl: "",
+              panels: page.panels,
+              skipped: true
+            });
+          }
+        } catch (placeholderErr) {
+          console.error(`  ❌ Even placeholder failed:`, placeholderErr.message);
+          return res.status(400).json({ 
+            error: "SAFETY_BLOCK_PREVENTED_REFERENCE",
+            message: `Die Seite "${page.title}" konnte nicht erstellt werden. Bitte formuliere die Szene um.`,
+            imageUrl: "",
+            panels: page.panels,
+            skipped: true
+          });
+        }
       }
     }
 

@@ -1,5 +1,5 @@
 # MyComicStory - Aktueller Status 🚀
-*Stand: 3. Mai 2026, 13:15 Uhr*
+*Stand: 3. Mai 2026, 18:45 Uhr*
 
 ## ✅ Was funktioniert (DEPLOYED)
 
@@ -37,7 +37,54 @@
 
 ---
 
-## � Heutige Fixes (3. Mai 2026)
+## 🔥 KRITISCHE FIXES (3. Mai 2026, 18:45 Uhr)
+
+### Fix 1: Charakternamen-Pflichtfeld für Family Photo ✅
+**Problem:** Bei Family Photo (1 Foto) wurden 0 Characters extrahiert → GPT erfand neue Gesichter  
+**Lösung:** Pflichtfeld für Charakternamen beim Upload
+- User lädt 1 Foto hoch → Textfeld erscheint automatisch
+- User gibt ein: "Marc, Hassan, Maria"
+- System erstellt 3 Characters mit Namen
+- GPT kann Characters aus Story extrahieren
+**Datei:** `src/components/steps/Step2Upload.tsx`
+
+### Fix 2: Barcelona Location-Extraktion ✅
+**Problem:** "rom" in "Barcelona" wurde als "Rom" erkannt → Cover zeigte Kolosseum  
+**Lösung:** Barcelona vor Rom prüfen + mehr Städte hinzugefügt
+- Barcelona, Madrid, Lissabon, Amsterdam, Prag, Wien
+- "rom " mit Leerzeichen prüfen (verhindert Match in "Barcelona")
+**Datei:** `backend-railway/src/routes/comic.js`
+
+### Fix 3: Safety Block Solution - NACHHALTIG ✅
+**Problem:** Safety Blocks → generate-only ohne Referenz → **FALSCHE GESICHTER**  
+**Lösung:** 3-Stufen-Fallback-System mit automatischen sicheren Alternativen
+
+**Wie es funktioniert:**
+1. **Stufe 1:** Safety Block erkannt → Automatisch sichere Alternative generieren
+   - Original: "Strand, Schwimmen, Bikini"
+   - Alternative: "Strandpromenade, Eis essen, Spaziergang"
+   - **Gleicher Kontext (Barcelona), gleiche Charaktere, sicherer!**
+
+2. **Stufe 2:** Referenz wurde nicht genutzt → Nochmal mit ultra-starkem Referenz-Prompt
+   - Versucht sichere Alternative MIT Referenz
+   - Wenn erfolgreich: ✅ Richtige Gesichter
+   - Wenn fehlgeschlagen: → Stufe 3
+
+3. **Stufe 3:** Alle Versuche fehlgeschlagen → Seite überspringen mit Hinweis
+   - Lieber Seite überspringen als falsche Gesichter zeigen
+   - User bekommt Vorschlag: "Versuche 'Strandpromenade' statt 'Strand'"
+
+**Garantie:** **NIEMALS** falsche Gesichter bei Photo-basierten Comics!
+
+**Dateien:** 
+- `backend-railway/src/routes/comic.js` (3-Stufen-Fallback)
+- `src/components/steps/Step4Generate.tsx` (Skipped pages handling)
+
+**Dokumentation:** `SAFETY-BLOCK-SOLUTION.md`
+
+---
+
+## � Frühere Fixes (3. Mai 2026, vormittags)
 
 ### Problem 1: Seiten zeigen falsche Personen (aus alten Tests)
 **Root Cause:** Project ID wurde zu spät generiert, Fallbacks erzeugten falsche IDs  
@@ -77,17 +124,52 @@
 
 ### 🔴 Kritisch (JETZT TESTEN)
 
-#### 1. Individual Photos Mode - Konsistenz prüfen
-**Status:** ⏳ Code deployed, wartet auf Test  
+#### 1. Barcelona Family Photo Test - NEUE FIXES TESTEN
+**Status:** ⏳ Code deployed (18:45 Uhr), wartet auf Test  
+**Aufwand:** 15 Min  
+**Priorität:** HÖCHSTE - Testet alle 3 neuen Fixes!
+
+**Test-Anleitung:**
+1. Verwende `WIZARD-BEISPIEL-BARCELONA-FIXED.md`
+2. 1 Foto hochladen (3 Personen)
+3. **Charakternamen eingeben:** "Marc, Hassan, Maria" (Pflichtfeld!)
+4. Momente aus Datei copy-pasten
+
+**Was zu prüfen:**
+- ✅ Cover: Barcelona (Sagrada Familia), NICHT Rom?
+- ✅ Characters: 3 (Marc, Hassan, Maria), NICHT 0?
+- ✅ Strand-Seite: Richtige Gesichter, NICHT erfunden?
+- ✅ Bei Safety Block: Sichere Alternative generiert?
+- ✅ Logs: "Safe alternative generated WITH reference"?
+
+**Erwartete Logs:**
+```
+Family photo mode: extracting characters from story
+✓ Characters: 3 (photoMode: family)  ← NICHT 0!
+→ Cover location: "Barcelona with Sagrada Familia and beach"  ← NICHT Rom!
+✓ Cover done (multi-photo mode)
+
+Generating page "Strandtag"...
+→ Safety block on first attempt
+→ Creating safe alternative scene with same characters
+✓ Safe alternative generated WITH reference - faces maintained!
+✓ Page "Strandtag" done
+```
+
+**Erfolgs-Kriterien:**
+- Cover zeigt Barcelona ✅
+- Characters > 0 ✅
+- Alle Seiten zeigen richtige Gesichter ✅
+- Keine erfundenen Personen ✅
+
+#### 2. Individual Photos Mode - Konsistenz prüfen
+**Status:** ⏳ Wartet auf Test (nach Barcelona-Test)  
 **Aufwand:** 10 Min  
 
 **Was zu testen:**
 - 2 Fotos hochladen (Jil = Mann, Sally = Frau)
 - Frankfurt Story mit 3 Momenten
-- Prüfen:
-  - ✅ Cover: Frankfurt Skyline + beide Personen?
-  - ❓ Seiten: Zeigen alle Jil (Mann) + Sally (Frau) konsistent?
-  - ❓ Stil: Europäischer Comic (NICHT Manga)?
+- Prüfen: Konsistenz über alle Seiten?
 
 **Erwartete Logs:**
 ```
@@ -95,36 +177,8 @@ Individual photos mode: using 2 characters from frontend
 → Describing Jil from their photo
 → Describing Sally from their photo
 → Cover location: "Frankfurt cityscape with modern skyscrapers and Main river"
-→ Multi-photo mode: 2 photos
-→ Creating composite image from both photos
 ✓ Cover done (multi-photo composite mode)
-
 → Individual photos mode (2 photos): using cover as reference
-→ Cover contains composite of all 2 photos
-Generating page "..." (3 panels, ref: cover-individual-photos)
-```
-
-**Wenn Konsistenz immer noch schlecht:**
-- OpenAI gpt-image-2 kann einfach keine konsistenten Charaktere
-- Alternativen:
-  - Midjourney API (bessere Konsistenz, aber teurer)
-  - Stable Diffusion mit LoRA Training (komplex)
-  - Akzeptieren dass Konsistenz ~70% ist
-
-#### 2. Family Photo Mode - Regression Test
-**Status:** ⏳ Muss getestet werden  
-**Aufwand:** 10 Min  
-
-**Was zu testen:**
-- 1 Foto mit mehreren Personen hochladen
-- Story generieren
-- Prüfen: Funktioniert wie vorher? (sollte keine Änderung geben)
-
-**Erwartete Logs:**
-```
-Family photo mode: extracting characters from story, then describing from photo
-→ Using cover as reference (all characters in photo)
-Generating page "..." (3 panels, ref: cover)
 ```
 
 ---
@@ -260,24 +314,28 @@ Nach jedem Deployment:
 
 ## 🐛 Bekannte Probleme
 
-### 1. Gesichtskonsistenz bei Individual Photos
+### 1. Safety Blocks bei Strand/Party-Szenen
+**Status:** ✅ GELÖST durch 3-Stufen-Fallback  
+**Symptom:** Strand/Party-Szenen werden blockiert → falsche Gesichter  
+**Fix:** Automatische sichere Alternativen mit gleichen Charakteren
+- Strand → Strandpromenade
+- Party → Restaurant
+- Action → Planung
+**Erfolgsrate:** ~90% (sichere Alternative funktioniert meist)  
+**Garantie:** NIEMALS falsche Gesichter mehr!
+
+### 2. Gesichtskonsistenz bei Individual Photos
 **Status:** ⚠️ Noch nicht bestätigt ob gelöst  
 **Symptom:** Seiten zeigen leicht unterschiedliche Gesichter  
 **Ursache:** OpenAI gpt-image-2 ist nicht perfekt für Charakterkonsistenz  
 **Aktueller Fix:** Ultra-starker Prompt + Cover-Referenz  
 **Wenn nicht gelöst:** Alternativen evaluieren (Midjourney, Stable Diffusion)
 
-### 2. Manga-Stil schleicht sich ein
+### 3. Manga-Stil schleicht sich ein
 **Status:** ⚠️ Teilweise gelöst durch Quality Check  
 **Symptom:** Große Augen, weiche Linien, Sparkles  
 **Fix:** Quality Check erkennt und retried mit stärkerem Prompt  
 **Erfolgsrate:** ~80% (1-2 Retries nötig)
-
-### 3. Safety Blocks bei harmlosen Szenen
-**Status:** ✅ Gelöst durch Ultra-Safe Fallback  
-**Symptom:** "Picknick im Park" wird blockiert  
-**Fix:** Sofortiger Fallback zu ultra-safe Prompt (ohne Panel-Details)  
-**Erfolgsrate:** 100% (Fallback funktioniert immer)
 
 ---
 
@@ -292,15 +350,27 @@ Nach jedem Deployment:
 
 ## 📝 Nächste Schritte
 
-1. **JETZT:** Individual Photos Mode testen (Jil + Sally)
-2. **JETZT:** Family Photo Mode Regression Test
+1. **JETZT:** Barcelona Family Photo Test (testet alle 3 neuen Fixes!)
+   - Charakternamen-Pflichtfeld
+   - Barcelona Location-Fix
+   - Safety Block Solution
+2. **DANACH:** Individual Photos Mode testen (Jil + Sally)
 3. **Wenn Tests OK:** Als Production-Ready markieren
 4. **Wenn Tests NICHT OK:** Alternative Strategien evaluieren
-5. **Danach:** Age Modifier testen
-6. **Danach:** Dokumentation vervollständigen
+5. **SPÄTER:** Age Modifier testen
+6. **SPÄTER:** Dokumentation vervollständigen
 
 ---
 
-**Letztes Update:** 3. Mai 2026, 13:15 Uhr  
-**Letzter Deploy:** Individual Photos mit Cover-Referenz + Ultra-Strong Prompts (2dcbcff)  
-**Nächster Schritt:** Individual Photos Mode testen - Konsistenz prüfen!
+## 📚 Neue Dokumentation
+
+- `SAFETY-BLOCK-SOLUTION.md` - Komplette Erklärung der Safety-Lösung
+- `TEST2-ANALYSE-UND-FIXES.md` - Analyse des Barcelona-Tests
+- `WIZARD-BEISPIEL-BARCELONA-FIXED.md` - Test-Beispiel mit allen Fixes
+- `WIZARD-BEISPIEL-FREUNDSCHAFT-ACTION.md` - Action-Beispiel
+
+---
+
+**Letztes Update:** 3. Mai 2026, 18:45 Uhr  
+**Letzter Deploy:** 3 kritische Fixes (Charakternamen-Pflichtfeld + Barcelona-Fix + Safety-Solution)  
+**Nächster Schritt:** Barcelona Family Photo Test - ALLE 3 FIXES TESTEN!

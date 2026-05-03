@@ -90,7 +90,7 @@ export default function Step2Upload() {
     }
 
     // Determine photo mode and characters
-    let photoMode = "none";
+    let photoMode: "none" | "family" | "individual" = "none";
     let characters: any[] = [];
     
     if (personImages.length === 0) {
