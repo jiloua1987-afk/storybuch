@@ -800,8 +800,21 @@ RULES:
       console.log(`  → Historical scene (${ageContext.ageContext}), no cover available - generate-only`);
       refSource = "generate-only-age-modified";
     } else {
-      // ── STRATEGY 1: Cover (best for consistency) ──────────────────────────────
-      if (coverImageUrl && !hasCharNotInPhoto) {
+      // ── STRATEGY 1: Individual Photos Mode → Generate-Only ────────────────────
+      // CRITICAL: For individual photos, DON'T use cover as reference!
+      // Reason: images.edit() is unreliable for face consistency
+      // Solution: Use images.generate() with detailed visual_anchors from photos
+      const hasIndividualPhotos = finalCharacters.every(c => c.inPhoto === true) && 
+                                   finalCharacters.length > 1;
+      
+      if (hasIndividualPhotos) {
+        reference = null;
+        refSource = "generate-only-individual-photos";
+        console.log(`  → Individual photos mode: using generate-only with visual anchors`);
+        console.log(`  → Reason: images.edit() unreliable for face consistency`);
+      }
+      // ── STRATEGY 2: Cover (best for consistency) ──────────────────────────────
+      else if (coverImageUrl && !hasCharNotInPhoto) {
         try {
           reference = await fetchBuffer(coverImageUrl);
           refSource = "cover";
@@ -880,6 +893,23 @@ MANDATORY:
 - Match the art style and color palette of the cover exactly
 
 DO NOT invent new faces. These must be the SAME people from the cover, just at a younger age.\n\n`
+      : refSource === "generate-only-individual-photos"
+      ? `${COMIC_STYLE}
+
+CRITICAL CHARACTER DESCRIPTIONS:
+Draw these characters EXACTLY as described. These descriptions come from analyzing their photos.
+Every detail matters — follow them precisely.
+
+${finalCharacters.map(c => `${c.name}: ${c.visual_anchor}`).join("\n\n")}
+
+MANDATORY:
+- Draw each character EXACTLY as described above
+- Pay special attention to: eye shape, nose shape, mouth shape, face proportions, hair color/style, skin tone
+- Keep these characters CONSISTENT across all panels in this page
+- Do NOT add features not mentioned (glasses, beard, mustache, jewelry, tattoos)
+- Do NOT change their appearance from the descriptions
+
+These descriptions are based on real photos — accuracy is critical.\n\n`
       : refSource === "cover" || refSource === "cover-with-crowd"
       ? `${COMIC_STYLE}
 
