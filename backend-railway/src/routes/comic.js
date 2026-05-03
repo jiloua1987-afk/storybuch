@@ -860,12 +860,31 @@ Match the art style and color palette of the cover exactly.\n\n`
       : `${COMIC_STYLE}\nDraw in the style of a printed Franco-Belgian comic album (Bande Dessinée) — bold ink outlines, flat cel-shaded colors, stylized expressive faces. NOT manga. NOT anime. NOT photorealistic. Crisp defined ink lines on every figure, identical style to a Blacksad or Bastien Vivès page.\n\n`;
 
     console.log(`Generating page "${page.title}" (${panelCount} panels, ref: ${refSource})`);
-    let { url: rawUrl, usedReference } = await generateImage(`${refNote}${prompt}`, reference);
+    let { url: rawUrl, usedReference } = await generateImage(`${refNote}${prompt}`, reference).catch(async (err) => {
+      // If safety error on first attempt → try ultra-safe version immediately
+      if (err?.message?.includes("safety") || err?.message?.includes("rejected")) {
+        console.log(`  → Safety block on first attempt, trying ultra-safe prompt`);
+        const ultraSafePrompt = `${COMIC_STYLE} ${mood}
+
+Comic page with ${panelCount} panels. Bold black borders between panels.
+
+Characters: ${charAnchors}
+
+Show a peaceful family scene in ${layoutDesc} layout.
+Characters are smiling, relaxed, enjoying time together.
+Warm, friendly atmosphere. Beautiful outdoor setting.
+
+NO text, NO speech bubbles anywhere in image.`;
+        
+        return await generateImage(ultraSafePrompt, null);
+      }
+      throw err;
+    });
 
     // If reference was blocked by safety filter → sanitize prompt and retry generate-only
     // The panel descriptions themselves may trigger safety (e.g. jubilation, shouting, children)
     // Sanitized prompt removes potentially triggering words while keeping the scene intent
-    if (!usedReference) {
+    if (!usedReference && rawUrl) {
       console.log(`  → Safety block, retrying with sanitized prompt + generate-only`);
       const sanitizedPanelDescs = page.panels
         .map(p => `Panel ${p.nummer}: ${(p.szene || "")
