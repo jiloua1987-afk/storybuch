@@ -904,6 +904,14 @@ MANDATORY:
 - Draw ${finalCharacters.map(c => c.name).join(" and ")} so they are recognizable as the SAME people from the cover, just younger
 - Match the art style and color palette of the cover exactly
 
+NATURAL SCENE BEHAVIOR:
+- Characters are IN THE SCENE, not posing for a photo
+- They interact with each other and their environment
+- NO direct eye contact with viewer/camera
+- NO portrait-style poses looking at camera
+- Show them from various angles: 3/4 view, profile, back view, action shots
+- They are LIVING the moment, not posing for it
+
 DO NOT invent new faces. These must be the SAME people from the cover, just at a younger age.\n\n`
       : refSource === "cover-individual-photos"
       ? `${COMIC_STYLE}
@@ -922,12 +930,21 @@ ABSOLUTE REQUIREMENTS:
 - EXACT SAME: skin tone, facial features, overall appearance
 - Match the art style and color palette of the cover EXACTLY
 
+NATURAL SCENE BEHAVIOR:
+- Characters are IN THE SCENE, not posing for a photo
+- They interact with each other and their environment
+- NO direct eye contact with viewer/camera
+- NO portrait-style poses looking at camera
+- Show them from various angles: 3/4 view, profile, back view, action shots
+- They are LIVING the moment, not posing for it
+
 STRICT PROHIBITIONS:
 - DO NOT change their faces in ANY way
 - DO NOT make eyes bigger or rounder (NO manga/anime style!)
 - DO NOT add sparkles, shine effects, or soft gradients
 - DO NOT use manga/anime facial expressions
 - DO NOT invent new facial features
+- DO NOT make them look at the camera/viewer
 
 STYLE ENFORCEMENT:
 - European Bande Dessinée ONLY - bold ink outlines, flat cel-shaded colors
@@ -970,6 +987,14 @@ MANDATORY:
 - Same overall appearance
 - Match the art style and color palette of the cover exactly
 ${hasManyPeople ? "- Add background guests/crowd as faceless silhouettes or simple figures\n" : ""}
+NATURAL SCENE BEHAVIOR:
+- Characters are IN THE SCENE, not posing for a photo
+- They interact with each other and their environment
+- NO direct eye contact with viewer/camera
+- NO portrait-style poses looking at camera
+- Show them from various angles: 3/4 view, profile, back view, action shots
+- They are LIVING the moment, not posing for it
+
 DO NOT invent new faces. DO NOT change their appearance. Draw them EXACTLY as they look in this cover.\n\n`
       : refSource === "user-photo"
       ? `${COMIC_STYLE}\nThe people in this photo are the main characters. Draw them in the comic style above. NOT photorealistic. IMPORTANT: IGNORE the clothing from the photo — use the clothing described in the prompt instead.\n\n`
