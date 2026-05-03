@@ -90,6 +90,7 @@ export default function Step1Basics() {
   const updateCharacterPhoto = async (id: string, file: File) => {
     if (!consent) { toast.error("Bitte stimme zuerst der Datenschutzerklärung zu."); return; }
     const preview = URL.createObjectURL(file);
+    console.log(`📷 Photo uploaded for character ${id}:`, { fileName: file.name, preview });
     setCharacters(characters.map(c => c.id === id ? { ...c, photo: file, preview } : c));
     toast.success("Foto hochgeladen!");
   };
@@ -364,7 +365,9 @@ export default function Step1Basics() {
           {/* Individual Characters */}
           {photoMode === "individual" && (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-3">
-              {characters.map((char, i) => (
+              {characters.map((char, i) => {
+                console.log(`🎨 Rendering character ${i}:`, { id: char.id, name: char.name, hasPreview: !!char.preview });
+                return (
                 <div key={char.id} className="bg-white border border-gray-200 rounded-xl p-4 space-y-3">
                   <div className="flex items-center gap-3">
                     <span className="text-xs font-semibold text-gray-400 w-8">#{i + 1}</span>
@@ -406,7 +409,7 @@ export default function Step1Basics() {
                       </label>
                     ) : (
                       <div className="relative rounded-lg overflow-hidden aspect-square bg-gray-100 border-2 border-brand-200">
-                        <Image src={char.preview} alt={char.name} fill className="object-cover" />
+                        <Image src={char.preview} alt={char.name || "Character"} fill className="object-cover" />
                         <button
                           onClick={() => {
                             setCharacters(characters.map(c => 
@@ -422,7 +425,7 @@ export default function Step1Basics() {
                     )}
                   </div>
                 </div>
-              ))}
+              )})}
               
               <button
                 onClick={addCharacter}
