@@ -57,6 +57,8 @@ export default function Step4Generate() {
 
       const [{ pages, characters }, endData] = await Promise.all([
         post("/api/comic/structure", {
+          photoMode:            project?.photoMode || "none",
+          characters:           project?.characters || [],
           storyInput:           project?.storyInput || "",
           guidedAnswers:        project?.guidedAnswers || {},
           tone:                 project?.tone || "humorvoll",
