@@ -812,6 +812,7 @@ RULES:
         refSource = "generate-only-individual-photos";
         console.log(`  → Individual photos mode (${referenceImageUrls.length} photos): using generate-only with visual anchors`);
         console.log(`  → Reason: images.edit() unreliable for face consistency`);
+        // IMPORTANT: Don't run other strategies - we want generate-only!
       }
       // ── STRATEGY 2: Cover (best for consistency) ──────────────────────────────
       // Family photo mode: 1 photo with all characters
@@ -825,10 +826,11 @@ RULES:
         }
       }
 
-      // ── STRATEGY 2: Crowd scenes (for scenes with many people) ────────────────
+      // ── STRATEGY 3: Crowd scenes (for scenes with many people) ────────────────
       // CRITICAL: Even if scene has "many guests", main characters must stay consistent
       // Use cover as base reference to maintain character appearance
-      if (!reference && hasManyPeople && coverImageUrl) {
+      // SKIP if individual photos mode (already handled)
+      if (!hasIndividualPhotos && !reference && hasManyPeople && coverImageUrl) {
         try {
           reference = await fetchBuffer(coverImageUrl);
           refSource = "cover-with-crowd";
@@ -838,8 +840,9 @@ RULES:
         }
       }
 
-      // ── STRATEGY 3: Character not in photo → use photo as style reference ─────
-      if (!reference && hasCharNotInPhoto) {
+      // ── STRATEGY 4: Character not in photo → use photo as style reference ─────
+      // SKIP if individual photos mode (already handled)
+      if (!hasIndividualPhotos && !reference && hasCharNotInPhoto) {
         // Use user photo as STYLE reference only
         // The prompt explicitly describes all characters including those not in photo
         if (primaryRefUrl) {
@@ -858,8 +861,9 @@ RULES:
         console.log(`  → Page has non-photo characters, ref: ${refSource}`);
       }
 
-      // ── STRATEGY 4: Fallback to user photo ────────────────────────────────────
-      if (!reference) {
+      // ── STRATEGY 5: Fallback to user photo ────────────────────────────────────
+      // SKIP if individual photos mode (we want generate-only, not user-photo!)
+      if (!hasIndividualPhotos && !reference) {
         if (primaryRefUrl) {
           try {
             reference = await fetchBuffer(primaryRefUrl);
