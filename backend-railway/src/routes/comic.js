@@ -573,10 +573,14 @@ NO text, NO title, NO letters anywhere in the image.`;
         const url = item?.url || (item?.b64_json ? `data:image/png;base64,${item.b64_json}` : null);
         if (url) {
           const coverUrl = await saveImage(url, "covers", `cover-${Date.now()}`);
-          const projectId = req.body.projectId || `proj-${Date.now()}`;
-          await saveCharacterRefs(projectId, characters, coverUrl || url, referenceImageUrls);
+          // CRITICAL: projectId MUST come from frontend, no fallback
+          if (!req.body.projectId) {
+            console.error("❌ CRITICAL: No projectId provided to cover endpoint!");
+            return res.status(400).json({ error: "projectId is required", coverImageUrl: "" });
+          }
+          await saveCharacterRefs(req.body.projectId, characters, coverUrl || url, referenceImageUrls);
           console.log("✓ Cover done (multi-photo composite mode)");
-          return res.json({ coverImageUrl: coverUrl || url, projectId });
+          return res.json({ coverImageUrl: coverUrl || url, projectId: req.body.projectId });
         }
       } catch (e) {
         console.warn("  → Cover with multi-photo composite failed:", e.message);
@@ -618,10 +622,14 @@ NO text, NO title, NO letters anywhere in the image.`,
         const url = item?.url || (item?.b64_json ? `data:image/png;base64,${item.b64_json}` : null);
         if (url) {
           const coverUrl = await saveImage(url, "covers", `cover-${Date.now()}`);
-          const projectId = req.body.projectId || `proj-${Date.now()}`;
-          await saveCharacterRefs(projectId, characters, coverUrl || url, referenceImageUrls);
+          // CRITICAL: projectId MUST come from frontend, no fallback
+          if (!req.body.projectId) {
+            console.error("❌ CRITICAL: No projectId provided to cover endpoint!");
+            return res.status(400).json({ error: "projectId is required", coverImageUrl: "" });
+          }
+          await saveCharacterRefs(req.body.projectId, characters, coverUrl || url, referenceImageUrls);
           console.log("✓ Cover done (multi-photo mode)");
-          return res.json({ coverImageUrl: coverUrl || url, projectId });
+          return res.json({ coverImageUrl: coverUrl || url, projectId: req.body.projectId });
         }
       } catch (e) {
         console.warn("  → Cover with photo failed:", e.message);
@@ -631,10 +639,14 @@ NO text, NO title, NO letters anywhere in the image.`,
     // Fallback: generate without reference
     const { url: rawUrl } = await generateImage(prompt, null);
     const coverUrl = await saveImage(rawUrl, "covers", `cover-${Date.now()}`);
-    const projectId = req.body.projectId || `proj-${Date.now()}`;
-    await saveCharacterRefs(projectId, characters, coverUrl || rawUrl, referenceImageUrls);
+    // CRITICAL: projectId MUST come from frontend, no fallback
+    if (!req.body.projectId) {
+      console.error("❌ CRITICAL: No projectId provided to cover endpoint!");
+      return res.status(400).json({ error: "projectId is required", coverImageUrl: "" });
+    }
+    await saveCharacterRefs(req.body.projectId, characters, coverUrl || rawUrl, referenceImageUrls);
     console.log("✓ Cover done (generate only)");
-    res.json({ coverImageUrl: coverUrl || rawUrl, projectId });
+    res.json({ coverImageUrl: coverUrl || rawUrl, projectId: req.body.projectId });
   } catch (err) {
     console.error("Cover error:", err.message);
     res.status(500).json({ error: err.message, coverImageUrl: "" });
@@ -1029,15 +1041,20 @@ ${prompt}`;
     console.log(`✓ Page "${page.title}" done`);
 
     // Save to memory with quality score
-    const pageCharacters = page.panels.flatMap(p => p.speaker ? [p.speaker] : []).filter(Boolean);
-    await savePage(
-      projectId || page.id?.split("-")[0] || "unknown",
-      page.pageNumber || 1,
-      finalUrl,
-      pageCharacters,
-      refSource,
-      qualityScore
-    );
+    // CRITICAL: projectId MUST be provided, no fallback to avoid wrong data
+    if (!projectId) {
+      console.error(`❌ CRITICAL: No projectId for page "${page.title}"!`);
+    } else {
+      const pageCharacters = page.panels.flatMap(p => p.speaker ? [p.speaker] : []).filter(Boolean);
+      await savePage(
+        projectId,
+        page.pageNumber || 1,
+        finalUrl,
+        pageCharacters,
+        refSource,
+        qualityScore
+      );
+    }
 
     res.json({ imageUrl: finalUrl, panels: page.panels, panelPositions });
   } catch (err) {
