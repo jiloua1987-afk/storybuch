@@ -99,16 +99,17 @@ async function createComicPDF(project) {
       doc.rect(0, 0, A4_WIDTH, A4_HEIGHT)
          .fill('#F5EDE0');
       
-      // Titel oben mit Hintergrund
-      doc.rect(0, 0, A4_WIDTH, 60)
+      // Titel oben mit Hintergrund - schönere Schrift
+      doc.rect(0, 0, A4_WIDTH, 70)
          .fill('#FFFFFF');
       
-      doc.fontSize(18)
+      doc.fontSize(22)
          .font('Helvetica-Bold')
          .fillColor('#1A1410')
-         .text(page.title.toUpperCase(), 40, 22, {
+         .text(page.title.toUpperCase(), 40, 25, {
            width: A4_WIDTH - 80,
-           align: 'center'
+           align: 'center',
+           characterSpacing: 1.2
          });
       
       // Comic-Bild - größer, füllt mehr Platz
@@ -121,9 +122,9 @@ async function createComicPDF(project) {
         
         // Bild füllt fast die ganze Seite (mit Platz für Titel oben und Seitenzahl unten)
         const imgWidth = A4_WIDTH;
-        const imgHeight = A4_HEIGHT - 100; // 60px Titel + 40px Seitenzahl
+        const imgHeight = A4_HEIGHT - 110; // 70px Titel + 40px Seitenzahl
         const imgX = 0;
-        const imgY = 60;
+        const imgY = 70;
         
         doc.image(pageProcessed, imgX, imgY, { 
           width: imgWidth, 
@@ -154,15 +155,15 @@ async function createComicPDF(project) {
               : '';
             const text = speaker + panel.dialog;
             
-            // Bubble-Größe berechnen (größer für bessere Lesbarkeit)
+            // Bubble-Größe berechnen (wie in Vorschau)
             const maxBubbleWidth = 180;
             const padding = 10;
             
-            // Text-Höhe messen mit Comic-Schrift
-            doc.fontSize(10).font('Helvetica');
+            // Text-Höhe messen
+            doc.fontSize(12).font('Helvetica');
             const textHeight = doc.heightOfString(text, { width: maxBubbleWidth - (padding * 2) });
             const bubbleWidth = Math.min(maxBubbleWidth, Math.max(100, text.length * 3));
-            const bubbleHeight = textHeight + (padding * 2) + 6;
+            const bubbleHeight = textHeight + (padding * 2) + 8;
             
             // Bubble-Hintergrund (weiß mit dünnem schwarzem Rand wie in Vorschau)
             const isCaption = panel.bubble_type === 'caption';
@@ -170,17 +171,17 @@ async function createComicPDF(project) {
             const textColor = isCaption ? '#FFFFFF' : '#1A1410';
             
             doc.save();
-            doc.roundedRect(bubbleX, bubbleY, bubbleWidth, bubbleHeight, 8)
+            doc.roundedRect(bubbleX, bubbleY, bubbleWidth, bubbleHeight, 6)
                .lineWidth(1.5)  // Dünner Rahmen wie in Vorschau
                .fillAndStroke(bgColor, '#1A1410');
             
-            // Text in Bubble - Speaker fett, Rest normal
+            // Text in Bubble - Speaker fett, Rest normal (wie in Vorschau)
             if (speaker) {
               // Speaker fett
-              doc.fontSize(10)
+              doc.fontSize(12)
                  .font('Helvetica-Bold')
                  .fillColor(textColor)
-                 .text(speaker, bubbleX + padding, bubbleY + padding + 2, {
+                 .text(speaker, bubbleX + padding, bubbleY + padding + 3, {
                    width: bubbleWidth - (padding * 2),
                    continued: true
                  })
@@ -189,17 +190,17 @@ async function createComicPDF(project) {
                  .text(panel.dialog, {
                    width: bubbleWidth - (padding * 2),
                    align: 'left',
-                   lineGap: 3
+                   lineGap: 2
                  });
             } else {
               // Nur Dialog, normal
-              doc.fontSize(10)
+              doc.fontSize(12)
                  .font('Helvetica')
                  .fillColor(textColor)
-                 .text(text, bubbleX + padding, bubbleY + padding + 2, {
+                 .text(text, bubbleX + padding, bubbleY + padding + 3, {
                    width: bubbleWidth - (padding * 2),
                    align: 'left',
-                   lineGap: 3
+                   lineGap: 2
                  });
             }
             

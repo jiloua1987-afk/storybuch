@@ -94,6 +94,7 @@ export default function Step5Preview() {
   const [showDebugTools, setShowDebugTools] = useState(false);
   const [exportingPDF, setExportingPDF] = useState(false);
   const [regeneratingCover, setRegeneratingCover] = useState(false);
+  const [coverRegenNote, setCoverRegenNote] = useState("");
 
   const RAILWAY_URL = process.env.NEXT_PUBLIC_RAILWAY_URL || "";
 
@@ -195,12 +196,14 @@ export default function Step5Preview() {
           referenceImages: project.referenceImages || [],
           referenceImageUrls: project.referenceImageUrls || [],
           projectId: project.id || "",
-          location: project.guidedAnswers?.location || "", // Explizit Location übergeben
+          location: project.guidedAnswers?.location || "",
+          coverRegenNote: coverRegenNote || "", // Freitext-Anweisung
         }),
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const result = await res.json();
       updateProject({ coverImageUrl: result.imageUrl });
+      setCoverRegenNote(""); // Reset nach Erfolg
       toast.success("Cover neu generiert! 🎨");
     } catch (e) {
       console.error("Cover regeneration error:", e);
@@ -300,14 +303,23 @@ export default function Step5Preview() {
                   imageUrl={project.coverImageUrl}
                   title={project.title}
                 />
-                {/* Cover regenerate button */}
+                {/* Cover regenerate controls */}
                 {!regeneratingCover && (
-                  <button
-                    onClick={handleRegenerateCover}
-                    className="absolute bottom-4 right-4 text-xs bg-white/90 hover:bg-white border border-[#E8D9C0] text-[#8B7355] px-3 py-2 rounded-lg shadow-md transition-all flex items-center gap-2"
-                  >
-                    🎨 Cover neu generieren
-                  </button>
+                  <div className="absolute bottom-4 right-4 left-4 bg-white/95 border border-[#E8D9C0] rounded-xl p-3 shadow-lg space-y-2">
+                    <textarea
+                      value={coverRegenNote}
+                      onChange={(e) => setCoverRegenNote(e.target.value)}
+                      placeholder="Was soll anders sein? z.B. 'Lissabon statt Frankfurt' (optional)"
+                      className="w-full text-xs border border-[#E8D9C0] rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#C9963A]/30 resize-none"
+                      rows={2}
+                    />
+                    <button
+                      onClick={handleRegenerateCover}
+                      className="w-full text-sm bg-[#C9963A] hover:bg-[#A67A28] text-white px-4 py-2 rounded-lg transition-all flex items-center justify-center gap-2 font-medium"
+                    >
+                      🎨 Cover neu generieren
+                    </button>
+                  </div>
                 )}
                 {regeneratingCover && (
                   <div className="absolute inset-0 bg-[#F5EDE0]/95 rounded-xl flex flex-col items-center justify-center gap-3">

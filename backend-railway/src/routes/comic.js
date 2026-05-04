@@ -502,7 +502,15 @@ Respond ONLY with JSON: {"pages":[{"id":"page1","pageNumber":1,"title":"Title in
 // ─────────────────────────────────────────────────────────────────────────────
 router.post("/cover", async (req, res) => {
   try {
-    const { characters = [], location = "", storyInput = "", guidedAnswers = {}, referenceImages = [], referenceImageUrls = [] } = req.body;
+    const { 
+      characters = [], 
+      location = "", 
+      storyInput = "", 
+      guidedAnswers = {}, 
+      referenceImages = [], 
+      referenceImageUrls = [],
+      coverRegenNote = "" // Freitext-Anweisung vom User
+    } = req.body;
 
     const charDesc = characters.map(c => `${c.name}: ${c.visual_anchor}`).join("\n");
     const charNames = characters.map(c => c.name).join(", ");
@@ -551,6 +559,12 @@ router.post("/cover", async (req, res) => {
     
     // Final fallback if still empty
     if (!coverLocation) coverLocation = "beautiful park with trees and flowers";
+    
+    // User override via coverRegenNote
+    if (coverRegenNote && coverRegenNote.trim()) {
+      console.log(`  → User requested cover change: "${coverRegenNote}"`);
+      coverLocation = coverRegenNote; // Direkt verwenden
+    }
     
     console.log(`  → Cover location: "${coverLocation}"`);
 
