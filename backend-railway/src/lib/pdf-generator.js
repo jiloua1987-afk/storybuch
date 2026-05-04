@@ -115,16 +115,21 @@ async function createComicPDF(project) {
       // Comic-Bild - größer, füllt mehr Platz
       if (page.imageUrl) {
         const pageBuffer = await fetchImageBuffer(page.imageUrl);
+        
+        // Bild mit Padding für konsistente Panel-Rahmen
+        const padding = 15; // Weißer Rand um das Bild
+        const imgWidth = A4_WIDTH - (padding * 2);
+        const imgHeight = A4_HEIGHT - 110 - (padding * 2); // 70px Titel + 40px Seitenzahl
+        const imgX = padding;
+        const imgY = 70 + padding;
+        
         const pageProcessed = await sharp(pageBuffer)
-          .resize(1024, 1536, { fit: 'cover' })
+          .resize(Math.round(imgWidth * 2), Math.round(imgHeight * 2), { 
+            fit: 'contain',
+            background: { r: 245, g: 237, b: 224 } // Cream background
+          })
           .png()
           .toBuffer();
-        
-        // Bild füllt fast die ganze Seite (mit Platz für Titel oben und Seitenzahl unten)
-        const imgWidth = A4_WIDTH;
-        const imgHeight = A4_HEIGHT - 110; // 70px Titel + 40px Seitenzahl
-        const imgX = 0;
-        const imgY = 70;
         
         doc.image(pageProcessed, imgX, imgY, { 
           width: imgWidth, 
@@ -174,6 +179,17 @@ async function createComicPDF(project) {
             doc.roundedRect(bubbleX, bubbleY, bubbleWidth, bubbleHeight, 6)
                .lineWidth(1.5)  // Dünner Rahmen wie in Vorschau
                .fillAndStroke(bgColor, '#1A1410');
+            
+            // Tail (Schwänzchen) hinzufügen - kleines Dreieck nach unten links
+            if (!isCaption) {
+              const tailX = bubbleX + 20;
+              const tailY = bubbleY + bubbleHeight;
+              doc.moveTo(tailX, tailY)
+                 .lineTo(tailX - 8, tailY + 12)
+                 .lineTo(tailX + 12, tailY)
+                 .closePath()
+                 .fillAndStroke(bgColor, '#1A1410');
+            }
             
             // Text in Bubble - Speaker fett, Rest normal (wie in Vorschau)
             if (speaker) {
