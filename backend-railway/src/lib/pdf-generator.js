@@ -54,15 +54,23 @@ async function createComicPDF(project) {
         height: coverHeight 
       });
       
-      // Titel als Overlay unten auf dem Bild
-      const overlayY = coverY + coverHeight - 100;
-      doc.fontSize(28)
+      // Titel als Overlay unten auf dem Bild mit schönerer Schrift
+      const overlayY = coverY + coverHeight - 120;
+      
+      // Dunkler Hintergrund für bessere Lesbarkeit
+      doc.rect(coverX, overlayY - 10, coverWidth, 110)
+         .fillOpacity(0.88)
+         .fill('#1A1410');
+      
+      doc.fillOpacity(1)
+         .fontSize(32)
          .font('Helvetica-Bold')
          .fillColor('#FFFFFF')
-         .fillOpacity(1)
-         .text(project.title.toUpperCase(), coverX, overlayY, {
-           width: coverWidth,
-           align: 'center'
+         .text(project.title.toUpperCase(), coverX + 20, overlayY + 15, {
+           width: coverWidth - 40,
+           align: 'center',
+           characterSpacing: 1.5,
+           lineGap: 5
          });
       
     } catch (e) {
@@ -150,31 +158,50 @@ async function createComicPDF(project) {
             const maxBubbleWidth = 180;
             const padding = 10;
             
-            // Text-Höhe messen
-            doc.fontSize(11).font('Helvetica');
+            // Text-Höhe messen mit Comic-Schrift
+            doc.fontSize(10).font('Helvetica');
             const textHeight = doc.heightOfString(text, { width: maxBubbleWidth - (padding * 2) });
             const bubbleWidth = Math.min(maxBubbleWidth, Math.max(100, text.length * 3));
             const bubbleHeight = textHeight + (padding * 2) + 6;
             
-            // Bubble-Hintergrund (weiß mit schwarzem Rand)
+            // Bubble-Hintergrund (weiß mit dünnem schwarzem Rand wie in Vorschau)
             const isCaption = panel.bubble_type === 'caption';
             const bgColor = isCaption ? '#1E0F32' : '#FFFEF8';
             const textColor = isCaption ? '#FFFFFF' : '#1A1410';
             
             doc.save();
             doc.roundedRect(bubbleX, bubbleY, bubbleWidth, bubbleHeight, 8)
-               .lineWidth(2)
+               .lineWidth(1.5)  // Dünner Rahmen wie in Vorschau
                .fillAndStroke(bgColor, '#1A1410');
             
-            // Text in Bubble
-            doc.fontSize(11)
-               .font(speaker ? 'Helvetica-Bold' : 'Helvetica')
-               .fillColor(textColor)
-               .text(text, bubbleX + padding, bubbleY + padding + 2, {
-                 width: bubbleWidth - (padding * 2),
-                 align: 'left',
-                 lineGap: 3
-               });
+            // Text in Bubble - Speaker fett, Rest normal
+            if (speaker) {
+              // Speaker fett
+              doc.fontSize(10)
+                 .font('Helvetica-Bold')
+                 .fillColor(textColor)
+                 .text(speaker, bubbleX + padding, bubbleY + padding + 2, {
+                   width: bubbleWidth - (padding * 2),
+                   continued: true
+                 })
+                 // Dialog normal
+                 .font('Helvetica')
+                 .text(panel.dialog, {
+                   width: bubbleWidth - (padding * 2),
+                   align: 'left',
+                   lineGap: 3
+                 });
+            } else {
+              // Nur Dialog, normal
+              doc.fontSize(10)
+                 .font('Helvetica')
+                 .fillColor(textColor)
+                 .text(text, bubbleX + padding, bubbleY + padding + 2, {
+                   width: bubbleWidth - (padding * 2),
+                   align: 'left',
+                   lineGap: 3
+                 });
+            }
             
             doc.restore();
           });
@@ -215,44 +242,46 @@ async function createComicPDF(project) {
        .fill('#FDF8F2');
     
     // Dekorative Linie oben
-    doc.moveTo(A4_WIDTH / 2 - 40, 100)
-       .lineTo(A4_WIDTH / 2 + 40, 100)
-       .lineWidth(2)
+    doc.moveTo(A4_WIDTH / 2 - 50, 120)
+       .lineTo(A4_WIDTH / 2 + 50, 120)
+       .lineWidth(2.5)
        .strokeColor('#C9963A')
        .stroke();
     
-    // "Widmung" Label
-    doc.fontSize(10)
+    // "Widmung" Label (ohne '&)
+    doc.fontSize(11)
        .font('Helvetica')
        .fillColor('#C9963A')
-       .text('✦ WIDMUNG ✦', 50, 120, {
+       .text('✦  WIDMUNG  ✦', 50, 140, {
          width: A4_WIDTH - 100,
-         align: 'center'
+         align: 'center',
+         characterSpacing: 3
        });
     
-    // Widmungstext
-    doc.fontSize(16)
+    // Widmungstext - schönere Schrift
+    doc.fontSize(17)
        .font('Helvetica-Oblique')
        .fillColor('#1A1410')
-       .text(project.endingData.endingText, 80, 200, {
+       .text(project.endingData.endingText, 80, 220, {
          width: A4_WIDTH - 160,
          align: 'center',
-         lineGap: 8
+         lineGap: 10
        });
     
     // Dekorative Linie mitte
-    doc.moveTo(A4_WIDTH / 2 - 30, 400)
-       .lineTo(A4_WIDTH / 2 + 30, 400)
+    const middleY = 220 + doc.heightOfString(project.endingData.endingText, { width: A4_WIDTH - 160, lineGap: 10 }) + 40;
+    doc.moveTo(A4_WIDTH / 2 - 40, middleY)
+       .lineTo(A4_WIDTH / 2 + 40, middleY)
        .lineWidth(2)
        .strokeColor('#C9963A')
        .stroke();
     
     // Zitat (falls vorhanden)
     if (project.endingData.dedication) {
-      doc.fontSize(12)
+      doc.fontSize(13)
          .font('Helvetica-Oblique')
          .fillColor('#8B7355')
-         .text(`"${project.endingData.dedication}"`, 80, 430, {
+         .text(`"${project.endingData.dedication}"`, 80, middleY + 30, {
            width: A4_WIDTH - 160,
            align: 'center'
          });
@@ -260,28 +289,30 @@ async function createComicPDF(project) {
     
     // Von (falls vorhanden)
     if (project.endingData.dedicationFrom) {
-      doc.fontSize(11)
+      const fromY = middleY + (project.endingData.dedication ? 80 : 30);
+      doc.fontSize(12)
          .font('Helvetica')
          .fillColor('#8B7355')
-         .text(`Von: ${project.endingData.dedicationFrom}`, 80, 480, {
+         .text(`Von: ${project.endingData.dedicationFrom}`, 80, fromY, {
            width: A4_WIDTH - 160,
            align: 'center'
          });
     }
     
-    // "The End"
-    doc.fontSize(10)
+    // "The End" (ohne '&)
+    doc.fontSize(11)
        .font('Helvetica')
        .fillColor('#C9963A')
-       .text('✦ THE END ✦', 50, A4_HEIGHT - 100, {
+       .text('✦  THE END  ✦', 50, A4_HEIGHT - 120, {
          width: A4_WIDTH - 100,
-         align: 'center'
+         align: 'center',
+         characterSpacing: 3
        });
     
     // Dekorative Linie unten
-    doc.moveTo(A4_WIDTH / 2 - 40, A4_HEIGHT - 80)
-       .lineTo(A4_WIDTH / 2 + 40, A4_HEIGHT - 80)
-       .lineWidth(2)
+    doc.moveTo(A4_WIDTH / 2 - 50, A4_HEIGHT - 100)
+       .lineTo(A4_WIDTH / 2 + 50, A4_HEIGHT - 100)
+       .lineWidth(2.5)
        .strokeColor('#C9963A')
        .stroke();
   }

@@ -93,6 +93,7 @@ export default function Step5Preview() {
   const [editingEnding, setEditingEnding] = useState(false);
   const [showDebugTools, setShowDebugTools] = useState(false);
   const [exportingPDF, setExportingPDF] = useState(false);
+  const [regeneratingCover, setRegeneratingCover] = useState(false);
 
   const RAILWAY_URL = process.env.NEXT_PUBLIC_RAILWAY_URL || "";
 
@@ -170,6 +171,42 @@ export default function Step5Preview() {
       toast.error("Fehler beim Neu-Illustrieren");
     } finally {
       setRegenerating(null);
+    }
+  };
+
+  const handleRegenerateCover = async () => {
+    if (!project) return;
+    setRegeneratingCover(true);
+    try {
+      const fullUrl = RAILWAY_URL ? `${RAILWAY_URL}/api/comic/cover` : "/api/comic/cover";
+      const res = await fetch(fullUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: project.title,
+          characters: project.characters?.map((c: any) => ({
+            name: c.name,
+            visual_anchor: c.visual_anchor || c.role || "",
+            inPhoto: c.inPhoto ?? true,
+            age: c.age,
+          })) || [],
+          comicStyle: project.comicStyle || "emotional",
+          category: project.guidedAnswers?.category || "familie",
+          referenceImages: project.referenceImages || [],
+          referenceImageUrls: project.referenceImageUrls || [],
+          projectId: project.id || "",
+          location: project.guidedAnswers?.location || "", // Explizit Location übergeben
+        }),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const result = await res.json();
+      updateProject({ coverImageUrl: result.imageUrl });
+      toast.success("Cover neu generiert! 🎨");
+    } catch (e) {
+      console.error("Cover regeneration error:", e);
+      toast.error("Fehler beim Cover-Neu-Generieren");
+    } finally {
+      setRegeneratingCover(false);
     }
   };
 
@@ -258,10 +295,27 @@ export default function Step5Preview() {
             className="bg-white rounded-2xl overflow-hidden shadow-xl border border-gray-100"
           >
             {isCover ? (
-              <CoverView
-                imageUrl={project.coverImageUrl}
-                title={project.title}
-              />
+              <div className="relative">
+                <CoverView
+                  imageUrl={project.coverImageUrl}
+                  title={project.title}
+                />
+                {/* Cover regenerate button */}
+                {!regeneratingCover && (
+                  <button
+                    onClick={handleRegenerateCover}
+                    className="absolute bottom-4 right-4 text-xs bg-white/90 hover:bg-white border border-[#E8D9C0] text-[#8B7355] px-3 py-2 rounded-lg shadow-md transition-all flex items-center gap-2"
+                  >
+                    🎨 Cover neu generieren
+                  </button>
+                )}
+                {regeneratingCover && (
+                  <div className="absolute inset-0 bg-[#F5EDE0]/95 rounded-xl flex flex-col items-center justify-center gap-3">
+                    <div className="text-5xl animate-pulse">🎨</div>
+                    <p className="text-[#8B7355] font-medium">Cover wird neu generiert…</p>
+                  </div>
+                )}
+              </div>
             ) : isEnding && project.endingData ? (
               <div className="relative">
                 <EndingView

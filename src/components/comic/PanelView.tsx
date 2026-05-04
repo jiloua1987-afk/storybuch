@@ -328,19 +328,23 @@ export default function PanelView({ imageUrl, title, panels = [], panelPositions
   const handleMouseUp = () => {
     // Save positions to store when drag ends
     if (dragging && dragging.type === "panel" && onPositionsChange) {
+      console.log('[PanelView] Saving positions on mouseUp', { dragging, dragPositions });
       const updatedPositions: PanelPosition[] = dialogPanels.map((panel, bubbleIndex) => {
         const i = panel.originalIndex;
         const dragPos = dragPositions[i];
         const resolved = resolvedPositions[bubbleIndex];
         
-        return {
+        const position = {
           nummer: i + 1,
           top: dragPos?.top ?? resolved?.top ?? 5,
           left: dragPos?.left ?? resolved?.left ?? 2,
           width: resolved?.w ?? 20,
           height: resolved?.h ?? 10,
         };
+        console.log(`[PanelView] Panel ${i}:`, { dragPos, resolved, position });
+        return position;
       });
+      console.log('[PanelView] Calling onPositionsChange with:', updatedPositions);
       onPositionsChange(updatedPositions);
     }
     setDragging(null);
