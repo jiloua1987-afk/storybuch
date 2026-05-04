@@ -78,7 +78,28 @@
 
 ## 🟡 Wichtig (nach Go-Live)
 
-### 4. Handgezeichnete Bubbles im PDF 🎨
+### 4. Comic-Qualität verbessern 📚
+**Aufwand:** Siehe `QUALITY-IMPROVEMENTS.md`  
+**Status:** Analyse fertig, Implementierung in Phasen  
+**Priorität:** Hoch (fundamentale Qualitätsverbesserung)
+
+**Identifizierte Probleme:**
+1. "1 Panel = 1 Satz" - keine echten Dialoge
+2. Künstliches Wortlimit (15 Wörter)
+3. Keine visuelle Dramaturgie
+4. "1 Moment = 1 Seite" - zu wenig Seiten (5 statt 10-20)
+5. Charaktere zu groß - nur Close-ups, keine Shot-Variation
+
+**Lösungs-Roadmap:**
+- **Phase 1 (Woche 1):** Mehr Momente (3→8) + Shot-Variation
+- **Phase 2 (Monat 1):** Multi-Bubble-Dialoge + Panel-Größen
+- **Phase 3 (Monat 3):** Momente aufteilen + Dramaturgie
+
+**Details:** Siehe `QUALITY-IMPROVEMENTS.md`
+
+---
+
+### 5. Handgezeichnete Bubbles im PDF 🎨
 **Aufwand:** 2-3 Stunden  
 **Status:** Geplant für nach Go-Live  
 **Priorität:** Hoch (Kunde erwartet identisches Aussehen)
