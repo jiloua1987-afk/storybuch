@@ -90,8 +90,18 @@ async function createComicPDF(project) {
   // ── 2. COMIC-SEITEN ─────────────────────────────────────────────────────
   const pages = project.chapters.filter(c => c.id !== 'ending');
   
+  console.log(`\n📄 PDF Export: ${pages.length} pages to render`);
+  
   for (let i = 0; i < pages.length; i++) {
     const page = pages[i];
+    console.log(`\n  Page ${i + 1}: "${page.title}"`);
+    console.log(`    - panels: ${page.panels?.length || 0}`);
+    console.log(`    - panelPositions: ${page.panelPositions?.length || 0}`);
+    if (page.panels && page.panels.length > 0) {
+      const dialogCount = page.panels.filter(p => p.dialog && p.dialog.trim() && p.dialog.toLowerCase() !== 'null').length;
+      console.log(`    - panels with dialog: ${dialogCount}`);
+    }
+    
     doc.addPage();
     
     try {
@@ -116,8 +126,8 @@ async function createComicPDF(project) {
       if (page.imageUrl) {
         const pageBuffer = await fetchImageBuffer(page.imageUrl);
         
-        // Bild mit Padding für konsistente Panel-Rahmen
-        const padding = 15; // Weißer Rand um das Bild
+        // Bild mit kleinerem Padding für bessere Platznutzung
+        const padding = 8; // Reduziert von 15px auf 8px für mehr Bildgröße
         const imgWidth = A4_WIDTH - (padding * 2);
         const imgHeight = A4_HEIGHT - 110 - (padding * 2); // 70px Titel + 40px Seitenzahl
         const imgX = padding;
@@ -138,27 +148,66 @@ async function createComicPDF(project) {
         
         // ── Sprechblasen rendern ──────────────────────────────────────
         if (page.panels && page.panels.length > 0) {
-          const panels = page.panels.filter(p => p.dialog && p.dialog.trim() && p.dialog.toLowerCase() !== 'null');
+          console.log(`    → Rendering bubbles for page ${i + 1}`);
           
-          panels.forEach((panel, idx) => {
+          // Flatten multi-bubble panels (dialogs array) into individual bubbles
+          const allBubbles = [];
+          page.panels.forEach((panel, panelIdx) => {
+            // Check for multi-bubble format (dialogs array)
+            if (panel.dialogs && Array.isArray(panel.dialogs) && panel.dialogs.length > 0) {
+              panel.dialogs.forEach((dialogItem, bubbleIdx) => {
+                if (dialogItem.text && dialogItem.text.trim() && dialogItem.text.toLowerCase() !== 'null') {
+                  allBubbles.push({
+                    nummer: panel.nummer,
+                    dialog: dialogItem.text,
+                    speaker: dialogItem.speaker,
+                    bubble_type: panel.bubble_type,
+                    bubbleIndex: bubbleIdx,
+                    isMultiBubble: true
+                  });
+                }
+              });
+            }
+            // Legacy single bubble format
+            else if (panel.dialog && panel.dialog.trim() && panel.dialog.toLowerCase() !== 'null') {
+              allBubbles.push({
+                nummer: panel.nummer,
+                dialog: panel.dialog,
+                speaker: panel.speaker,
+                bubble_type: panel.bubble_type,
+                bubbleIndex: 0,
+                isMultiBubble: false
+              });
+            }
+          });
+          
+          console.log(`    → Found ${allBubbles.length} bubbles to render`);
+          
+          allBubbles.forEach((bubble, idx) => {
             // Position aus panelPositions oder Fallback
             let bubbleX = imgX + 30;
             let bubbleY = imgY + 30 + (idx * 100);
             
             if (page.panelPositions && page.panelPositions.length > 0) {
-              const pos = page.panelPositions.find(p => p.nummer === panel.nummer) || page.panelPositions[idx];
+              // Find position for this panel number
+              const pos = page.panelPositions.find(p => p.nummer === bubble.nummer) || page.panelPositions[idx];
               if (pos) {
                 // Konvertiere Prozent zu Pixel-Koordinaten
                 bubbleX = imgX + (pos.left / 100) * imgWidth;
                 bubbleY = imgY + (pos.top / 100) * imgHeight;
+                
+                // For multi-bubble panels, stack them vertically
+                if (bubble.isMultiBubble && bubble.bubbleIndex > 0) {
+                  bubbleY += (bubble.bubbleIndex * (imgHeight * 0.15)); // 15% offset per bubble
+                }
               }
             }
             
             // Text vorbereiten
-            const speaker = panel.speaker && panel.speaker !== 'narrator' && panel.speaker.toLowerCase() !== 'null' 
-              ? panel.speaker + ': ' 
+            const speaker = bubble.speaker && bubble.speaker !== 'narrator' && bubble.speaker.toLowerCase() !== 'null' 
+              ? bubble.speaker + ': ' 
               : '';
-            const text = speaker + panel.dialog;
+            const text = speaker + bubble.dialog;
             
             // Bubble-Größe berechnen (wie in Vorschau)
             const maxBubbleWidth = 180;
@@ -171,7 +220,7 @@ async function createComicPDF(project) {
             const bubbleHeight = textHeight + (padding * 2) + 8;
             
             // Bubble-Hintergrund (weiß mit dünnem schwarzem Rand wie in Vorschau)
-            const isCaption = panel.bubble_type === 'caption';
+            const isCaption = bubble.bubble_type === 'caption';
             const bgColor = isCaption ? '#1E0F32' : '#FFFEF8';
             const textColor = isCaption ? '#FFFFFF' : '#1A1410';
             
@@ -203,7 +252,7 @@ async function createComicPDF(project) {
                  })
                  // Dialog normal
                  .font('Helvetica')
-                 .text(panel.dialog, {
+                 .text(bubble.dialog, {
                    width: bubbleWidth - (padding * 2),
                    align: 'left',
                    lineGap: 2
@@ -222,6 +271,10 @@ async function createComicPDF(project) {
             
             doc.restore();
           });
+          
+          console.log(`    ✓ Rendered ${allBubbles.length} bubbles`);
+        } else {
+          console.log(`    ⚠ No panels data for page ${i + 1}`);
         }
       }
       

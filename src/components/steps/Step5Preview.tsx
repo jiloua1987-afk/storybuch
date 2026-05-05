@@ -222,10 +222,19 @@ export default function Step5Preview() {
 
   // Handler für Bubble-Position-Änderungen
   const handlePositionsChange = useCallback((positions: any[]) => {
-    if (!project?.chapters) return;
+    if (!project?.chapters) {
+      console.warn('⚠ Cannot save positions: no project chapters');
+      return;
+    }
     
     const currentPageData = project.chapters[currentPage];
-    if (!currentPageData) return;
+    if (!currentPageData) {
+      console.warn(`⚠ Cannot save positions: no data for page ${currentPage}`);
+      return;
+    }
+    
+    console.log(`💾 Saving ${positions.length} bubble positions for page "${currentPageData.title}"`);
+    console.log('Positions:', positions);
     
     // Update chapter with new positions
     updateChapter(currentPageData.id, {
