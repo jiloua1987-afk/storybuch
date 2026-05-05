@@ -444,27 +444,72 @@ EMOTIONS: Show the CORRECT emotion.
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 DIALOGS — NATURAL CONVERSATIONS:
 
-- Panels can have MULTIPLE speech bubbles (2-3 per panel for conversations)
+CRITICAL INSTRUCTION - READ CAREFULLY:
+
+For panels with 2+ characters interacting, you MUST use the "dialogs" array format.
+DO NOT use single "dialog" + "speaker" for conversations between multiple people.
+
+WHEN TO USE "dialogs" ARRAY (REQUIRED):
+- 2+ characters talking to each other
+- Back-and-forth conversations
+- Group discussions
+- Any scene where multiple people speak
+
+WHEN TO USE single "dialog" + "speaker" (ONLY):
+- Silent panels (empty dialog)
+- Narrator captions
+- Single character monologue (talking to themselves)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+CORRECT FORMAT (use this for conversations):
+{
+  "nummer": 1,
+  "szene": "Maria and Marc discover something amazing",
+  "dialogs": [
+    {"speaker": "Maria", "text": "Schau mal, wie schön!"},
+    {"speaker": "Marc", "text": "Wow, das ist ja unglaublich!"}
+  ],
+  "bubble_type": "speech"
+}
+
+WRONG FORMAT (NEVER use this for conversations):
+{
+  "nummer": 1,
+  "szene": "Maria and Marc discover something amazing",
+  "dialog": "Schau mal, wie schön!",
+  "speaker": "Maria",
+  "bubble_type": "speech"
+}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+DIALOG GUIDELINES:
+- Panels can have 2-3 speech bubbles for natural conversations
 - Dialog length: 10-25 words (flexible, not strict limit)
 - Allow natural back-and-forth dialogue
 - Mix short reactions with longer statements
 - Some panels can be SILENT (no dialog) for visual impact
 
-GOOD EXAMPLE (natural conversation):
+GOOD EXAMPLE (natural conversation with dialogs array):
 Panel 1: 
-  - Maria: "Schau mal, wie schön!"
-  - Marc: "Wow, das ist ja unglaublich!"
+  "dialogs": [
+    {"speaker": "Maria", "text": "Schau mal, wie schön!"},
+    {"speaker": "Marc", "text": "Wow, das ist ja unglaublich!"}
+  ]
 Panel 2: (silent panel - just visual emotion)
+  "dialog": "",
+  "speaker": null
 Panel 3:
-  - Marc: "Danke, dass du mich hierher gebracht hast."
+  "dialogs": [
+    {"speaker": "Marc", "text": "Danke, dass du mich hierher gebracht hast."}
+  ]
 
-BAD EXAMPLE (artificial):
-Panel 1: Maria: "Wir sind am Strand"
-Panel 2: Marc: "Ja, es ist schön hier"
-Panel 3: Maria: "Lass uns spazieren gehen"
+BAD EXAMPLE (using single dialog for conversations):
+Panel 1: "dialog": "Wir sind am Strand", "speaker": "Maria"  ← WRONG!
+Panel 2: "dialog": "Ja, es ist schön hier", "speaker": "Marc"  ← WRONG!
+→ Should use "dialogs" array instead!
 
-Use "dialogs" array for multiple bubbles per panel.
-If only one bubble or silent: use single "dialog" + "speaker" (backward compatible).
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 CRITICAL — ONLY SHOW CHARACTERS PRESENT IN THIS SCENE:
@@ -477,7 +522,7 @@ CRITICAL — ONLY SHOW CHARACTERS PRESENT IN THIS SCENE:
 Respond ONLY with JSON:
 {"id":"page${i + 1}","pageNumber":${i + 1},"title":"Short title in ${lang}","location":"English location description","timeOfDay":"daytime","panels":[{"nummer":1,"szene":"Specific English scene — what characters DO and FEEL","dialogs":[{"speaker":"Name","text":"${lang} dialog 10-25 words"}],"bubble_type":"speech"}]}
 
-For backward compatibility: if panel has only 1 bubble, you can use "dialog" + "speaker" instead of "dialogs" array.`
+IMPORTANT: Use "dialogs" array for conversations (2+ people talking). Only use single "dialog" + "speaker" for silent panels or monologues.`
           }, {
             role: "user",
             content: `Scene to illustrate: ${moment}\n\nStory context: ${storyCtx}${mustHaveSentences ? `\nInclude somewhere: ${mustHaveSentences}` : ""}`,

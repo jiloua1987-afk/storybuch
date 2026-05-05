@@ -213,6 +213,21 @@ export default function Step5Preview() {
     }
   };
 
+  // Handler für Bubble-Position-Änderungen
+  const handlePositionsChange = useCallback((positions: any[]) => {
+    if (!project?.chapters) return;
+    
+    const currentPageData = project.chapters[currentPage];
+    if (!currentPageData) return;
+    
+    // Update chapter with new positions
+    updateChapter(currentPageData.id, {
+      panelPositions: positions
+    });
+    
+    console.log(`✓ Saved ${positions.length} bubble positions for page ${currentPage + 1}`);
+  }, [currentPage, project?.chapters, updateChapter]);
+
   const handleExportPDF = async () => {
     setExportingPDF(true);
     try {
@@ -298,36 +313,39 @@ export default function Step5Preview() {
             className="bg-white rounded-2xl overflow-hidden shadow-xl border border-gray-100"
           >
             {isCover ? (
-              <div className="relative">
+              <>
                 <CoverView
                   imageUrl={project.coverImageUrl}
                   title={project.title}
                 />
-                {/* Cover regenerate controls */}
-                {!regeneratingCover && (
-                  <div className="absolute bottom-4 right-4 left-4 bg-white/95 border border-[#E8D9C0] rounded-xl p-3 shadow-lg space-y-2">
-                    <textarea
-                      value={coverRegenNote}
-                      onChange={(e) => setCoverRegenNote(e.target.value)}
-                      placeholder="Was soll anders sein? z.B. 'Lissabon statt Frankfurt' (optional)"
-                      className="w-full text-xs border border-[#E8D9C0] rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#C9963A]/30 resize-none"
-                      rows={2}
-                    />
-                    <button
-                      onClick={handleRegenerateCover}
-                      className="w-full text-sm bg-[#C9963A] hover:bg-[#A67A28] text-white px-4 py-2 rounded-lg transition-all flex items-center justify-center gap-2 font-medium"
-                    >
-                      🎨 Cover neu generieren
-                    </button>
-                  </div>
-                )}
-                {regeneratingCover && (
-                  <div className="absolute inset-0 bg-[#F5EDE0]/95 rounded-xl flex flex-col items-center justify-center gap-3">
-                    <div className="text-5xl animate-pulse">🎨</div>
-                    <p className="text-[#8B7355] font-medium">Cover wird neu generiert…</p>
-                  </div>
-                )}
-              </div>
+                {/* Cover regenerate controls - UNTER dem Bild wie bei Folgeseiten */}
+                <div className="px-6 py-3 border-t border-gray-100 space-y-2">
+                  <textarea
+                    value={coverRegenNote}
+                    onChange={(e) => setCoverRegenNote(e.target.value)}
+                    placeholder="Was soll anders sein? z.B. 'Lissabon statt Frankfurt' (optional)"
+                    className="w-full text-xs border border-[#E8D9C0] rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#C9963A]/30 resize-none"
+                    rows={2}
+                    disabled={regeneratingCover}
+                  />
+                  <button
+                    onClick={handleRegenerateCover}
+                    disabled={regeneratingCover}
+                    className="w-full text-sm bg-[#C9963A] hover:bg-[#A67A28] text-white px-4 py-2 rounded-lg transition-all flex items-center justify-center gap-2 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {regeneratingCover ? (
+                      <>
+                        <div className="animate-spin">🎨</div>
+                        Cover wird neu generiert…
+                      </>
+                    ) : (
+                      <>
+                        🎨 Cover neu generieren
+                      </>
+                    )}
+                  </button>
+                </div>
+              </>
             ) : isEnding && project.endingData ? (
               <div className="relative">
                 <EndingView
@@ -395,7 +413,9 @@ export default function Step5Preview() {
                       imageUrl={page.imageUrl || ""}
                       panels={page.panels || []}
                       panelPositions={page.panelPositions}
+                      pageId={page.id}
                       pageNumber={currentPage + 1}
+                      onPositionsChange={handlePositionsChange}
                     />
                   </>
                 )}
