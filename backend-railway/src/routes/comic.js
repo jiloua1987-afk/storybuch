@@ -400,6 +400,8 @@ Respond ONLY with JSON: {"characters":[{"name":"Name","age":30,"visual_anchor":"
             content: `You create ONE comic book page for a personal comic in ${lang}.
 Tone: ${toneEn}. Style: ${comicStyle}.
 
+You are a COMIC ART DIRECTOR creating natural conversations, not a story summarizer.
+
 PANEL COUNT — choose based on the scene:
 - 2 panels: one big moment, close emotional scene, single action (e.g. big hug, child's face reaction)
 - 3 panels: scene with clear beginning → middle → end, or 1 wide + 2 small
@@ -439,7 +441,31 @@ EMOTIONS: Show the CORRECT emotion.
 - If funny moment → laughter, surprise
 - Do NOT make everyone smile if the scene is sad or tense
 
-DIALOGS: Every panel needs dialog or narrator caption (10-15 words in ${lang}).
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+DIALOGS — NATURAL CONVERSATIONS:
+
+- Panels can have MULTIPLE speech bubbles (2-3 per panel for conversations)
+- Dialog length: 10-25 words (flexible, not strict limit)
+- Allow natural back-and-forth dialogue
+- Mix short reactions with longer statements
+- Some panels can be SILENT (no dialog) for visual impact
+
+GOOD EXAMPLE (natural conversation):
+Panel 1: 
+  - Maria: "Schau mal, wie schön!"
+  - Marc: "Wow, das ist ja unglaublich!"
+Panel 2: (silent panel - just visual emotion)
+Panel 3:
+  - Marc: "Danke, dass du mich hierher gebracht hast."
+
+BAD EXAMPLE (artificial):
+Panel 1: Maria: "Wir sind am Strand"
+Panel 2: Marc: "Ja, es ist schön hier"
+Panel 3: Maria: "Lass uns spazieren gehen"
+
+Use "dialogs" array for multiple bubbles per panel.
+If only one bubble or silent: use single "dialog" + "speaker" (backward compatible).
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 CRITICAL — ONLY SHOW CHARACTERS PRESENT IN THIS SCENE:
 - Read the scene description carefully. Only include characters explicitly mentioned in it.
@@ -449,7 +475,9 @@ CRITICAL — ONLY SHOW CHARACTERS PRESENT IN THIS SCENE:
 - A character can only be "speaker" if they appear in that panel's szene.
 
 Respond ONLY with JSON:
-{"id":"page${i + 1}","pageNumber":${i + 1},"title":"Short title in ${lang}","location":"English location description","timeOfDay":"daytime","panels":[{"nummer":1,"szene":"Specific English scene — what characters DO and FEEL","dialog":"${lang} dialog","speaker":"Name or null","bubble_type":"speech"}]}`
+{"id":"page${i + 1}","pageNumber":${i + 1},"title":"Short title in ${lang}","location":"English location description","timeOfDay":"daytime","panels":[{"nummer":1,"szene":"Specific English scene — what characters DO and FEEL","dialogs":[{"speaker":"Name","text":"${lang} dialog 10-25 words"}],"bubble_type":"speech"}]}
+
+For backward compatibility: if panel has only 1 bubble, you can use "dialog" + "speaker" instead of "dialogs" array.`
           }, {
             role: "user",
             content: `Scene to illustrate: ${moment}\n\nStory context: ${storyCtx}${mustHaveSentences ? `\nInclude somewhere: ${mustHaveSentences}` : ""}`,

@@ -3,8 +3,9 @@ import { useState, useRef, useCallback, useMemo } from "react";
 import { resolveCollisions } from "./bubble-collision";
 
 interface PanelData {
-  dialog?: string;
-  speaker?: string;
+  dialog?: string; // Legacy: single dialog
+  speaker?: string; // Legacy: single speaker
+  dialogs?: Array<{ speaker: string; text: string }>; // NEW: multi-bubble support
   nummer: number;
   bubble_type?: "speech" | "caption" | "shout" | "thought" | "whisper" | null;
 }
@@ -244,15 +245,20 @@ function initBubbleSize(dialog: string, speaker: string): { w: number; h: number
   return { w, h };
 }
 
+// ── Compute bubble sizes for multi-bubble panels ──────────────────────────────
+function initMultiBubbleSizes(dialogs: Array<{ speaker: string; text: string }>): Array<{ w: number; h: number }> {
+  return dialogs.map(d => initBubbleSize(d.text, d.speaker));
+}
+
 // ── Main PanelView ────────────────────────────────────────────────────────────
 export default function PanelView({ imageUrl, title, panels = [], panelPositions, pageNumber, pageId, onPositionsChange }: PanelViewProps) {
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
-  const [editedDialogs, setEditedDialogs] = useState<Record<number, string>>({});
-  const [hiddenBubbles, setHiddenBubbles] = useState<Set<number>>(new Set());
+  const [editedDialogs, setEditedDialogs] = useState<Record<string, string>>({}); // Changed to string keys for bubbleId
+  const [hiddenBubbles, setHiddenBubbles] = useState<Set<string>>(new Set()); // Changed to string for bubbleId
   const [extraBubbles, setExtraBubbles] = useState<Array<{ id: number; top: number; left: number; dialog: string; speaker: string }>>([]);
   const [editingExtra, setEditingExtra] = useState<number | null>(null);
-  const [dragPositions, setDragPositions] = useState<Record<number, { top: number; left: number }>>({});
-  const [dragging, setDragging] = useState<{ type: "panel" | "extra"; index: number } | null>(null);
+  const [dragPositions, setDragPositions] = useState<Record<string, { top: number; left: number }>>({}); // Changed to string keys
+  const [dragging, setDragging] = useState<{ type: "panel" | "extra"; index: string | number } | null>(null); // index can be string (bubbleId) or number (extraId)
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const [addMode, setAddMode] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -261,31 +267,78 @@ export default function PanelView({ imageUrl, title, panels = [], panelPositions
   const isValidDialog = (d?: string | null) =>
     d && d.trim().length > 0 && d.trim().toLowerCase() !== "null";
 
+  // Check if panel has any dialog (legacy single or new multi-bubble format)
+  const hasAnyDialog = (panel: PanelData) => {
+    if (panel.dialogs && panel.dialogs.length > 0) {
+      return panel.dialogs.some(d => isValidDialog(d.text));
+    }
+    return isValidDialog(panel.dialog);
+  };
+
   const getDialog = (panel: PanelData, i: number) => {
     const edited = editedDialogs[i];
     if (edited !== undefined) return edited;
     return isValidDialog(panel.dialog) ? panel.dialog! : "";
   };
 
-  const dialogPanels = panels
-    .map((p, i) => ({ ...p, originalIndex: i }))
-    .filter((p) => isValidDialog(p.dialog) && !hiddenBubbles.has(p.originalIndex ?? 0));
+  // Flatten multi-bubble panels into individual bubbles
+  // Each bubble gets a unique ID: panelIndex-bubbleIndex (e.g., "3-0", "3-1", "3-2")
+  const dialogPanels = panels.flatMap((p, panelIndex) => {
+    if (p.dialogs && p.dialogs.length > 0) {
+      // Multi-bubble format: create separate entry for each bubble
+      return p.dialogs
+        .filter(d => isValidDialog(d.text))
+        .map((dialogItem, bubbleIndex) => ({
+          ...p,
+          dialog: dialogItem.text,
+          speaker: dialogItem.speaker,
+          originalIndex: panelIndex,
+          bubbleIndex: bubbleIndex,
+          bubbleId: `${panelIndex}-${bubbleIndex}`, // Unique ID for this bubble
+          isMultiBubble: true,
+        }));
+    } else if (isValidDialog(p.dialog)) {
+      // Legacy single bubble format
+      return [{
+        ...p,
+        originalIndex: panelIndex,
+        bubbleIndex: 0,
+        bubbleId: `${panelIndex}-0`,
+        isMultiBubble: false,
+      }];
+    }
+    return [];
+  }).filter((p) => !hiddenBubbles.has(p.bubbleId ?? ""));
 
   const hasDetectedPositions = panelPositions && panelPositions.length > 0;
 
   const resolvedPositions = useMemo(() => {
     const initial = dialogPanels.map((panel) => {
       const i = panel.originalIndex;
+      const bubbleIdx = panel.bubbleIndex ?? 0;
       let top = 5;
       let left = 2;
+      
       if (hasDetectedPositions) {
         const pos = panelPositions!.find(p => p.nummer === i + 1) || panelPositions![i];
-        if (pos) { top = pos.top + 2; left = pos.left + 2; }
+        if (pos) { 
+          top = pos.top + 2; 
+          left = pos.left + 2;
+          // For multi-bubble panels, stack them vertically with offset
+          if (panel.isMultiBubble && bubbleIdx > 0) {
+            top = top + (bubbleIdx * 15); // Stack with 15% vertical offset
+          }
+        }
       } else {
         const style = getFallbackPosition(i, panels.length);
         top  = parseFloat(String(style.top  ?? "5%"));
         left = parseFloat(String(style.left ?? style.right ?? "2%"));
+        // For multi-bubble panels, stack them vertically
+        if (panel.isMultiBubble && bubbleIdx > 0) {
+          top = top + (bubbleIdx * 15);
+        }
       }
+      
       const text = (panel.speaker || "") + (panel.dialog || "");
       const wPx = Math.min(220, Math.max(100, 80 + text.length * 3.2));
       const lines = Math.ceil(text.length / 22);
@@ -301,7 +354,7 @@ export default function PanelView({ imageUrl, title, panels = [], panelPositions
     }));
   }, [dialogPanels.length, hasDetectedPositions, panels.length]); // eslint-disable-line
 
-  const handleMouseDown = (e: React.MouseEvent, type: "panel" | "extra", index: number) => {
+  const handleMouseDown = (e: React.MouseEvent, type: "panel" | "extra", index: string | number) => {
     if (editingIndex !== null || editingExtra !== null) return;
     e.preventDefault();
     setDragging({ type, index });
@@ -319,7 +372,7 @@ export default function PanelView({ imageUrl, title, panels = [], panelPositions
     const clampedTop = Math.max(0, Math.min(90, newTop));
 
     if (dragging.type === "panel") {
-      setDragPositions(prev => ({ ...prev, [dragging.index]: { left: clampedLeft, top: clampedTop } }));
+      setDragPositions(prev => ({ ...prev, [dragging.index as string]: { left: clampedLeft, top: clampedTop } }));
     } else {
       setExtraBubbles(prev => prev.map(b => b.id === dragging.index ? { ...b, left: clampedLeft, top: clampedTop } : b));
     }
@@ -329,12 +382,12 @@ export default function PanelView({ imageUrl, title, panels = [], panelPositions
     // Save positions to store when drag ends
     if (dragging && dragging.type === "panel" && onPositionsChange) {
       const updatedPositions: PanelPosition[] = dialogPanels.map((panel, bubbleIndex) => {
-        const i = panel.originalIndex;
-        const dragPos = dragPositions[i];
+        const bubbleId = panel.bubbleId ?? `${panel.originalIndex}-0`;
+        const dragPos = dragPositions[bubbleId];
         const resolved = resolvedPositions[bubbleIndex];
         
         return {
-          nummer: i + 1,
+          nummer: panel.originalIndex + 1,
           top: dragPos?.top ?? resolved?.top ?? 5,
           left: dragPos?.left ?? resolved?.left ?? 2,
           width: resolved?.w ?? 20,
@@ -359,12 +412,12 @@ export default function PanelView({ imageUrl, title, panels = [], panelPositions
     setAddMode(false);
   };
 
-  const getFinalPosition = (panelIndex: number, bubbleIndex: number): React.CSSProperties => {
-    const dragPos = dragPositions[panelIndex];
+  const getFinalPosition = (bubbleId: string, bubbleIndex: number): React.CSSProperties => {
+    const dragPos = dragPositions[bubbleId];
     if (dragPos) return { position: "absolute", top: `${dragPos.top}%`, left: `${dragPos.left}%`, zIndex: 10 };
     const resolved = resolvedPositions[bubbleIndex];
     if (resolved) return { position: "absolute", top: `${resolved.top}%`, left: `${resolved.left}%`, zIndex: 10 };
-    return getFallbackPosition(panelIndex, panels.length);
+    return { position: "absolute", top: "5%", left: "2%", zIndex: 10 };
   };
 
   return (
@@ -405,29 +458,34 @@ export default function PanelView({ imageUrl, title, panels = [], panelPositions
             </div>
           )}
 
-          {/* Existing bubbles from panels */}
+          {/* Existing bubbles from panels - each bubble is now independent */}
           {dialogPanels.map((panel, bubbleIndex) => {
-            const i = panel.originalIndex;
-            const dialog = getDialog(panel, i);
-            if (!dialog) return null;
-            const isEditing = editingIndex === i;
-            const posStyle = getFinalPosition(i, bubbleIndex);
-            const isDragging = dragging?.type === "panel" && dragging.index === i;
-            const { w: initW, h: initH } = initBubbleSize(dialog, panel.speaker || "");
+            const bubbleId = panel.bubbleId ?? `${panel.originalIndex}-0`;
+            const dialog = getDialog(panel, panel.originalIndex);
+            if (!dialog && !panel.dialog) return null;
+            
+            const displayDialog = panel.dialog || dialog; // Use panel.dialog from flattened structure
+            const isEditing = editingIndex === panel.originalIndex;
+            const posStyle = getFinalPosition(bubbleId, bubbleIndex);
+            const isDragging = dragging?.type === "panel" && dragging.index === bubbleId;
+            const { w: initW, h: initH } = initBubbleSize(displayDialog, panel.speaker || "");
 
             return (
               <div
-                key={i}
+                key={bubbleId}
                 className="group"
                 style={{ ...posStyle, cursor: isDragging ? "grabbing" : "grab" }}
-                onMouseDown={(e) => { e.stopPropagation(); handleMouseDown(e, "panel", i); }}
+                onMouseDown={(e) => { e.stopPropagation(); handleMouseDown(e, "panel", bubbleId); }}
               >
                 {/* Delete button — always visible, red circle with white × */}
                 <button
                   className="absolute z-50 w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full text-sm font-bold flex items-center justify-center shadow-md transition-colors"
                   style={{ position: "absolute", top: -12, right: -12 }}
                   onMouseDown={(e) => e.stopPropagation()}
-                  onClick={(e) => { e.stopPropagation(); setHiddenBubbles(prev => new Set([...prev, i])); }}
+                  onClick={(e) => { 
+                    e.stopPropagation(); 
+                    setHiddenBubbles(prev => new Set([...prev, bubbleId])); 
+                  }}
                 >✕</button>
                 <ResizableBubble initW={initW} initH={initH} style={{}}>
                   {(w, h) => (
@@ -435,8 +493,8 @@ export default function PanelView({ imageUrl, title, panels = [], panelPositions
                       {isEditing ? (
                         <textarea
                           autoFocus
-                          value={dialog}
-                          onChange={(e) => setEditedDialogs({ ...editedDialogs, [i]: e.target.value })}
+                          value={displayDialog}
+                          onChange={(e) => setEditedDialogs({ ...editedDialogs, [bubbleId]: e.target.value })}
                           onBlur={() => setEditingIndex(null)}
                           onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && setEditingIndex(null)}
                           className="w-full h-full bg-transparent outline-none resize-none text-[#1A1410]"
@@ -447,12 +505,12 @@ export default function PanelView({ imageUrl, title, panels = [], panelPositions
                         <p
                           className="text-[#1A1410] leading-snug select-none"
                           style={{ fontFamily: "'Comic Neue', cursive", fontSize: "12px", fontWeight: 500 }}
-                          onDoubleClick={(e) => { e.stopPropagation(); setEditingIndex(i); }}
+                          onDoubleClick={(e) => { e.stopPropagation(); setEditingIndex(panel.originalIndex); }}
                         >
                           {panel.speaker && panel.speaker !== "narrator" && panel.speaker.toLowerCase() !== "null" && (
                             <span className="font-bold">{panel.speaker}: </span>
                           )}
-                          {dialog}
+                          {displayDialog}
                         </p>
                       )}
                     </HanddrawnBubble>

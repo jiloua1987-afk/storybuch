@@ -16,8 +16,9 @@ export interface Character {
 export interface ChapterPanel {
   nummer: number;
   szene?: string;
-  dialog?: string;
-  speaker?: string;
+  dialog?: string;  // Legacy: single dialog
+  speaker?: string; // Legacy: single speaker
+  dialogs?: Array<{ speaker: string; text: string }>; // NEW: multi-bubble support
   bubble_type?: "speech" | "caption" | "shout" | "thought";
 }
 
