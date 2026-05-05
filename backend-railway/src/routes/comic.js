@@ -748,6 +748,30 @@ NO text, NO title, NO letters anywhere in the image.`,
     }
 
     // Fallback: generate without reference
+    // CRITICAL: If user uploaded photos, DO NOT generate cover without reference!
+    // This would create wrong faces that propagate to all pages
+    const hasUserPhotos = (primaryRefUrl || primaryRefBase64) && characters.length > 0;
+    
+    if (hasUserPhotos) {
+      console.error("❌ CRITICAL: Cover generation with user photos failed!");
+      console.error("   → Cannot fall back to generate-only (would create wrong faces)");
+      console.error("   → Returning empty cover - pages will use user photos directly");
+      
+      // Save character refs without cover (pages will use user photos)
+      if (req.body.projectId) {
+        await saveCharacterRefs(req.body.projectId, characters, null, referenceImageUrls);
+      }
+      
+      return res.json({ 
+        coverImageUrl: "", 
+        projectId: req.body.projectId,
+        warning: "Cover generation with photos failed - pages will use photos directly",
+        skipCover: true
+      });
+    }
+    
+    // Only generate without reference if NO user photos were provided
+    console.log("  → No user photos, generating cover without reference");
     const { url: rawUrl } = await generateImage(prompt, null);
     // CRITICAL: projectId MUST come from frontend, no fallback
     if (!req.body.projectId) {
@@ -761,7 +785,40 @@ NO text, NO title, NO letters anywhere in the image.`,
     res.json({ coverImageUrl: coverUrl || rawUrl, projectId: req.body.projectId });
   } catch (err) {
     console.error("Cover error:", err.message);
-    res.status(500).json({ error: err.message, coverImageUrl: "" });
+    
+    // CRITICAL: If user uploaded photos, don't return error - return empty cover
+    // This prevents wrong faces from being generated
+    const hasUserPhotos = (req.body.referenceImageUrls?.length > 0 || req.body.referenceImages?.length > 0);
+    
+    if (hasUserPhotos) {
+      console.error("   → User has photos - returning empty cover instead of error");
+      console.error("   → Pages will use user photos directly");
+      
+      // Save character refs without cover
+      if (req.body.projectId && req.body.characters) {
+        try {
+          await saveCharacterRefs(req.body.projectId, req.body.characters, null, req.body.referenceImageUrls || []);
+        } catch (saveErr) {
+          console.error("   → Failed to save character refs:", saveErr.message);
+        }
+      }
+      
+      return res.json({ 
+        coverImageUrl: "", 
+        projectId: req.body.projectId,
+        warning: "Cover generation failed - pages will use photos directly",
+        skipCover: true,
+        error: err.message
+      });
+    }
+    
+    // No photos: return error as before
+    res.json({ 
+      coverImageUrl: "", 
+      projectId: req.body.projectId,
+      warning: "Cover generation failed",
+      error: err.message 
+    });
   }
 });
 
