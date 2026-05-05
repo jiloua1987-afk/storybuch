@@ -76,7 +76,7 @@ async function createComicPDF(project) {
     } catch (e) {
       console.error('Cover processing error:', e.message);
       // Fallback: Nur Titel
-      doc.rect(0, 0, A4_WIDTH, A4_HEIGHT).fill('#F5EDE0');
+      doc.rect(0, 0, A4_WIDTH, A4_HEIGHT).fill('#FFFFFF');
       doc.fontSize(32)
          .font('Helvetica-Bold')
          .fillColor('#1A1410')
@@ -107,7 +107,7 @@ async function createComicPDF(project) {
     try {
       // Hintergrund
       doc.rect(0, 0, A4_WIDTH, A4_HEIGHT)
-         .fill('#F5EDE0');
+         .fill('#FFFFFF');
       
       // Titel oben mit Hintergrund - schönere Schrift
       doc.rect(0, 0, A4_WIDTH, 70)

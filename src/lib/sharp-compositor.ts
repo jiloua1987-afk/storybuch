@@ -86,8 +86,8 @@ export function buildPageSVG(overlay: PanelTextOverlay): string {
 
   let svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}">`;
 
-  // Cream background
-  svg += `<rect width="${W}" height="${H}" fill="#F5EDE0"/>`;
+  // White background
+  svg += `<rect width="${W}" height="${H}" fill="#FFFFFF"/>`;
 
   // Page title
   svg += `<text x="${W / 2}" y="52" text-anchor="middle"

@@ -255,6 +255,22 @@ export default function Step5Preview() {
         chapters: project.chapters.filter(c => !deletedPages.has(c.id))
       };
       
+      // DEBUG: Log data being sent
+      console.log('📤 PDF Export - Sending data:');
+      console.log(`  → ${projectForExport.chapters.length} chapters`);
+      projectForExport.chapters.forEach((ch, i) => {
+        console.log(`  → Chapter ${i + 1}: "${ch.title}"`);
+        console.log(`     - panels: ${ch.panels?.length || 0}`);
+        console.log(`     - panelPositions: ${ch.panelPositions?.length || 0}`);
+        if (ch.panels && ch.panels.length > 0) {
+          const dialogCount = ch.panels.filter(p => 
+            (p.dialog && p.dialog.trim()) || 
+            (p.dialogs && p.dialogs.length > 0)
+          ).length;
+          console.log(`     - panels with dialog: ${dialogCount}`);
+        }
+      });
+      
       const res = await fetch(fullUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -413,7 +429,7 @@ export default function Step5Preview() {
             ) : page ? (
               <div>
                 {regenerating === page.id ? (
-                  <div className="w-full bg-[#F5EDE0] flex flex-col items-center justify-center gap-3 py-20" style={{ aspectRatio: "1024 / 1536" }}>
+                  <div className="w-full bg-white flex flex-col items-center justify-center gap-3 py-20" style={{ aspectRatio: "1024 / 1536" }}>
                     <div className="text-4xl animate-pulse">🎨</div>
                     <p className="text-[#8B7355] font-medium text-sm">Seite wird neu illustriert…</p>
                   </div>

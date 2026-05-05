@@ -448,7 +448,7 @@ export default function PanelView({ imageUrl, title, panels = [], panelPositions
 
       <div
         ref={containerRef}
-        className={`relative w-full bg-[#F5EDE0] rounded-xl overflow-hidden shadow-xl ${addMode ? "cursor-crosshair" : ""}`}
+        className={`relative w-full bg-white rounded-xl overflow-hidden shadow-xl ${addMode ? "cursor-crosshair" : ""}`}
         style={{ aspectRatio: "1024 / 1536" }}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
@@ -490,7 +490,25 @@ export default function PanelView({ imageUrl, title, panels = [], panelPositions
                   onMouseDown={(e) => e.stopPropagation()}
                   onClick={(e) => { 
                     e.stopPropagation(); 
-                    setHiddenBubbles(prev => new Set([...prev, bubbleId])); 
+                    setHiddenBubbles(prev => new Set([...prev, bubbleId]));
+                    // Save updated positions after hiding bubble
+                    if (onPositionsChange) {
+                      const updatedPositions: PanelPosition[] = dialogPanels
+                        .filter(p => (p.bubbleId ?? `${p.originalIndex}-0`) !== bubbleId)
+                        .map((panel, bubbleIndex) => {
+                          const bid = panel.bubbleId ?? `${panel.originalIndex}-0`;
+                          const dragPos = dragPositions[bid];
+                          const resolved = resolvedPositions[bubbleIndex];
+                          return {
+                            nummer: panel.originalIndex + 1,
+                            top: dragPos?.top ?? resolved?.top ?? 5,
+                            left: dragPos?.left ?? resolved?.left ?? 2,
+                            width: resolved?.w ?? 20,
+                            height: resolved?.h ?? 10,
+                          };
+                        });
+                      onPositionsChange(updatedPositions);
+                    }
                   }}
                 >✕</button>
                 <ResizableBubble initW={initW} initH={initH} style={{}}>

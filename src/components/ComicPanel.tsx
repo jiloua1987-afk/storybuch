@@ -42,11 +42,11 @@ export default function ComicPanel({ imageUrl, title, panels = [] }: ComicPanelP
           color: #1a1410;
           text-align: center;
           padding: 8px 0 4px;
-          background: #F5EDE0;
+          background: white;
         }
       `}</style>
 
-      <div style={{ background: "#F5EDE0" }}>
+      <div style={{ background: "white" }}>
         <div className="comic-title">{title.toUpperCase()}</div>
         <div style={{ position: "relative" }}>
           {imageUrl ? (

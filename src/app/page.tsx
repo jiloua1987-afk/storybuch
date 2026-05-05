@@ -37,7 +37,7 @@ export default function Home() {
   return (
     <>
       <Navbar />
-      <main className="min-h-screen bg-[#F5EDE0]">
+      <main className="min-h-screen bg-white">
         <div className="max-w-5xl mx-auto px-4 py-8 space-y-8">
           <StepIndicator currentStep={currentStep} />
           <AnimatePresence mode="wait">

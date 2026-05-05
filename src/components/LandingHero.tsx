@@ -67,7 +67,7 @@ export default function LandingHero({ onStart }: { onStart: () => void }) {
       </section>
 
       {/* ── COMIC PREVIEW ── */}
-      <section className="bg-[#F5EDE0] py-24">
+      <section className="bg-white py-24">
         <div ref={previewRef} className="fade-up max-w-5xl mx-auto px-6 space-y-10">
           <div className="text-center space-y-3">
             <div className="w-12 h-0.5 bg-brand-500 mx-auto mb-5" />
@@ -114,7 +114,7 @@ export default function LandingHero({ onStart }: { onStart: () => void }) {
       </section>
 
       {/* ── BENEFITS ── */}
-      <section className="bg-[#F5EDE0] py-24">
+      <section className="bg-white py-24">
         <div ref={benefitRef} className="fade-up max-w-5xl mx-auto px-6">
           <div className="grid md:grid-cols-3 gap-10">
             {BENEFITS.map((b) => (
@@ -177,7 +177,7 @@ export default function LandingHero({ onStart }: { onStart: () => void }) {
       </section>
 
       {/* ── CTA ── */}
-      <section className="bg-[#F5EDE0] py-24">
+      <section className="bg-white py-24">
         <div ref={ctaRef} className="fade-up max-w-5xl mx-auto px-6 text-center space-y-6">
           <h2 className="font-display text-3xl md:text-4xl font-medium text-gray-900">
             Bereit für deinen persönlichen Comic?
