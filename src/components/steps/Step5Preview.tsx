@@ -202,12 +202,19 @@ export default function Step5Preview() {
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const result = await res.json();
-      updateProject({ coverImageUrl: result.imageUrl });
-      setCoverRegenNote(""); // Reset nach Erfolg
-      toast.success("Cover neu generiert! 🎨");
+      
+      // Backend gibt coverImageUrl zurück, nicht imageUrl
+      if (result.coverImageUrl) {
+        updateProject({ coverImageUrl: result.coverImageUrl });
+        setCoverRegenNote("");
+        toast.success("Cover neu generiert! 🎨");
+      } else {
+        // Kein neues Cover → altes behalten
+        toast.error("Cover-Generierung fehlgeschlagen - altes Cover beibehalten");
+      }
     } catch (e) {
       console.error("Cover regeneration error:", e);
-      toast.error("Fehler beim Cover-Neu-Generieren");
+      toast.error("Fehler beim Cover-Neu-Generieren - altes Cover beibehalten");
     } finally {
       setRegeneratingCover(false);
     }
