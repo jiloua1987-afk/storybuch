@@ -244,6 +244,31 @@ export default function Step5Preview() {
     console.log(`✓ Saved ${positions.length} bubble positions for page ${currentPage + 1}`);
   }, [currentPage, project?.chapters, updateChapter]);
 
+  const handleDialogChange = useCallback((panelIndex: number, newDialog: string) => {
+    const currentPageData = project.chapters[currentPage];
+    if (!currentPageData) {
+      console.warn(`⚠ Cannot save dialog: no data for page ${currentPage}`);
+      return;
+    }
+    
+    console.log(`💾 Saving edited dialog for panel ${panelIndex}: "${newDialog}"`);
+    
+    // Update the specific panel's dialog
+    const updatedPanels = [...(currentPageData.panels || [])];
+    if (updatedPanels[panelIndex]) {
+      updatedPanels[panelIndex] = {
+        ...updatedPanels[panelIndex],
+        dialog: newDialog
+      };
+      
+      updateChapter(currentPageData.id, {
+        panels: updatedPanels
+      });
+      
+      console.log(`✓ Saved dialog for panel ${panelIndex + 1}`);
+    }
+  }, [currentPage, project?.chapters, updateChapter]);
+
   const handleExportPDF = async () => {
     setExportingPDF(true);
     try {
@@ -448,6 +473,7 @@ export default function Step5Preview() {
                       pageId={page.id}
                       pageNumber={currentPage + 1}
                       onPositionsChange={handlePositionsChange}
+                      onDialogChange={handleDialogChange}
                     />
                   </>
                 )}

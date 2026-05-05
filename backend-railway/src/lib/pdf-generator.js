@@ -122,21 +122,22 @@ async function createComicPDF(project) {
            characterSpacing: 1.2
          });
       
-      // Comic-Bild - größer, füllt mehr Platz
+      // Comic-Bild - maximale Platznutzung
       if (page.imageUrl) {
         const pageBuffer = await fetchImageBuffer(page.imageUrl);
         
-        // Bild mit kleinerem Padding für bessere Platznutzung
-        const padding = 8; // Reduziert von 15px auf 8px für mehr Bildgröße
-        const imgWidth = A4_WIDTH - (padding * 2);
-        const imgHeight = A4_HEIGHT - 110 - (padding * 2); // 70px Titel + 40px Seitenzahl
-        const imgX = padding;
-        const imgY = 70 + padding;
+        // Maximale Bildgröße: kompletter Platz zwischen Titel und Seitenzahl
+        const titleHeight = 70;
+        const footerHeight = 40;
+        const imgWidth = A4_WIDTH; // Volle Breite
+        const imgHeight = A4_HEIGHT - titleHeight - footerHeight; // 842 - 70 - 40 = 732px
+        const imgX = 0;
+        const imgY = titleHeight;
         
         const pageProcessed = await sharp(pageBuffer)
           .resize(Math.round(imgWidth * 2), Math.round(imgHeight * 2), { 
             fit: 'contain',
-            background: { r: 245, g: 237, b: 224 } // Cream background
+            background: { r: 255, g: 255, b: 255 } // White background
           })
           .png()
           .toBuffer();

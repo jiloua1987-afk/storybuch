@@ -1,5 +1,5 @@
 "use client";
-import { useState, useRef, useCallback, useMemo } from "react";
+import { useState, useRef, useCallback, useMemo, useEffect } from "react";
 import { resolveCollisions } from "./bubble-collision";
 
 interface PanelData {
@@ -26,6 +26,7 @@ interface PanelViewProps {
   pageNumber?: number;
   pageId?: string; // NEW: To identify which page we're editing
   onPositionsChange?: (positions: PanelPosition[]) => void; // NEW: Callback to save positions
+  onDialogChange?: (panelIndex: number, newDialog: string) => void; // NEW: Callback to save edited dialogs
 }
 
 // ── Handdrawn SVG bubble border ───────────────────────────────────────────────
@@ -251,7 +252,7 @@ function initMultiBubbleSizes(dialogs: Array<{ speaker: string; text: string }>)
 }
 
 // ── Main PanelView ────────────────────────────────────────────────────────────
-export default function PanelView({ imageUrl, title, panels = [], panelPositions, pageNumber, pageId, onPositionsChange }: PanelViewProps) {
+export default function PanelView({ imageUrl, title, panels = [], panelPositions, pageNumber, pageId, onPositionsChange, onDialogChange }: PanelViewProps) {
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [editedDialogs, setEditedDialogs] = useState<Record<string, string>>({}); // Changed to string keys for bubbleId
   const [hiddenBubbles, setHiddenBubbles] = useState<Set<string>>(new Set()); // Changed to string for bubbleId
@@ -279,6 +280,16 @@ export default function PanelView({ imageUrl, title, panels = [], panelPositions
     const edited = editedDialogs[i];
     if (edited !== undefined) return edited;
     return isValidDialog(panel.dialog) ? panel.dialog! : "";
+  };
+
+  // ── Save edited dialog when editing ends ──────────────────────────────────
+  const handleDialogBlur = (panelIndex: number, bubbleId: string) => {
+    setEditingIndex(null);
+    const newText = editedDialogs[bubbleId];
+    if (newText !== undefined && onDialogChange) {
+      console.log(`💾 Saving edited dialog for panel ${panelIndex}: "${newText}"`);
+      onDialogChange(panelIndex, newText);
+    }
   };
 
   // Flatten multi-bubble panels into individual bubbles
@@ -353,6 +364,25 @@ export default function PanelView({ imageUrl, title, panels = [], panelPositions
       h: initial[idx].h
     }));
   }, [dialogPanels.length, hasDetectedPositions, panels.length]); // eslint-disable-line
+
+  // ── Save initial positions on first render ────────────────────────────────
+  useEffect(() => {
+    if (onPositionsChange && resolvedPositions.length > 0 && !hasDetectedPositions && dialogPanels.length > 0) {
+      console.log('💾 Saving initial bubble positions (first render)');
+      const initialPositions: PanelPosition[] = dialogPanels.map((panel, bubbleIndex) => {
+        const resolved = resolvedPositions[bubbleIndex];
+        return {
+          nummer: panel.originalIndex + 1,
+          top: resolved?.top ?? 5,
+          left: resolved?.left ?? 2,
+          width: resolved?.w ?? 20,
+          height: resolved?.h ?? 10,
+        };
+      });
+      console.log(`  → Saving ${initialPositions.length} initial positions`);
+      onPositionsChange(initialPositions);
+    }
+  }, [dialogPanels.length, hasDetectedPositions]); // Only trigger when these change
 
   const handleMouseDown = (e: React.MouseEvent, type: "panel" | "extra", index: string | number) => {
     if (editingIndex !== null || editingExtra !== null) return;
@@ -519,8 +549,13 @@ export default function PanelView({ imageUrl, title, panels = [], panelPositions
                           autoFocus
                           value={displayDialog}
                           onChange={(e) => setEditedDialogs({ ...editedDialogs, [bubbleId]: e.target.value })}
-                          onBlur={() => setEditingIndex(null)}
-                          onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && setEditingIndex(null)}
+                          onBlur={() => handleDialogBlur(panel.originalIndex, bubbleId)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" && !e.shiftKey) {
+                              e.preventDefault();
+                              handleDialogBlur(panel.originalIndex, bubbleId);
+                            }
+                          }}
                           className="w-full h-full bg-transparent outline-none resize-none text-[#1A1410]"
                           style={{ fontFamily: "'Comic Neue', cursive", fontSize: "12px" }}
                           onClick={(e) => e.stopPropagation()}
