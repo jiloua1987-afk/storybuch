@@ -136,8 +136,8 @@ async function createComicPDF(project) {
         
         const pageProcessed = await sharp(pageBuffer)
           .resize(Math.round(imgWidth * 2), Math.round(imgHeight * 2), { 
-            fit: 'contain',
-            background: { r: 255, g: 255, b: 255 } // White background
+            fit: 'cover',  // Cover statt contain - füllt volle Breite
+            position: 'center'
           })
           .png()
           .toBuffer();
