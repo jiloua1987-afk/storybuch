@@ -265,6 +265,13 @@ export default function PanelView({ imageUrl, title, panels = [], panelPositions
   const containerRef = useRef<HTMLDivElement>(null);
   const nextExtraId = useRef(1000);
 
+  // Reset dragPositions when page changes
+  useEffect(() => {
+    setDragPositions({});
+    setHiddenBubbles(new Set());
+    setExtraBubbles([]);
+  }, [pageId]);
+
   const isValidDialog = (d?: string | null) =>
     d && d.trim().length > 0 && d.trim().toLowerCase() !== "null";
 

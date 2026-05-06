@@ -110,13 +110,14 @@ async function createComicPDF(project) {
          .fill('#FFFFFF');
       
       // Titel oben mit Hintergrund - schönere Schrift
-      doc.rect(0, 0, A4_WIDTH, 70)
+      const titleHeight = 60;
+      doc.rect(0, 0, A4_WIDTH, titleHeight)
          .fill('#FFFFFF');
       
-      doc.fontSize(22)
+      doc.fontSize(20)
          .font('Helvetica-Bold')
          .fillColor('#1A1410')
-         .text(page.title.toUpperCase(), 40, 25, {
+         .text(page.title.toUpperCase(), 40, 20, {
            width: A4_WIDTH - 80,
            align: 'center',
            characterSpacing: 1.2
@@ -127,24 +128,27 @@ async function createComicPDF(project) {
         const pageBuffer = await fetchImageBuffer(page.imageUrl);
         
         // Maximale Bildgröße: kompletter Platz zwischen Titel und Seitenzahl
-        const titleHeight = 70;
-        const footerHeight = 40;
+        const footerHeight = 30;
+        const imgPadding = 8; // Padding oben/unten
         const imgWidth = A4_WIDTH; // Volle Breite
-        const imgHeight = A4_HEIGHT - titleHeight - footerHeight; // 842 - 70 - 40 = 732px
+        const imgHeight = A4_HEIGHT - titleHeight - footerHeight - (imgPadding * 2);
         const imgX = 0;
-        const imgY = titleHeight;
+        const imgY = titleHeight + imgPadding;
         
         const pageProcessed = await sharp(pageBuffer)
           .resize(Math.round(imgWidth * 2), Math.round(imgHeight * 2), { 
-            fit: 'cover',  // Cover statt contain - füllt volle Breite
-            position: 'center'
+            fit: 'contain',  // Contain - zeigt ganzes Bild ohne Abschneiden
+            position: 'center',
+            background: { r: 255, g: 255, b: 255, alpha: 1 }
           })
           .png()
           .toBuffer();
         
         doc.image(pageProcessed, imgX, imgY, { 
           width: imgWidth, 
-          height: imgHeight 
+          height: imgHeight,
+          align: 'center',
+          valign: 'center'
         });
         
         // ── Sprechblasen rendern ──────────────────────────────────────
@@ -185,6 +189,12 @@ async function createComicPDF(project) {
           console.log(`    → Found ${allBubbles.length} bubbles to render`);
           
           allBubbles.forEach((bubble, idx) => {
+            // Text vorbereiten (ZUERST!)
+            const speaker = bubble.speaker && bubble.speaker !== 'narrator' && bubble.speaker.toLowerCase() !== 'null' 
+              ? bubble.speaker + ': ' 
+              : '';
+            const text = speaker + bubble.dialog;
+            
             // Position aus panelPositions oder Fallback
             let bubbleX = imgX + 30;
             let bubbleY = imgY + 30 + (idx * 100);
@@ -203,28 +213,6 @@ async function createComicPDF(project) {
                 }
               }
             }
-            
-            // CRITICAL: Ensure bubble stays within image bounds
-            // Estimate bubble height based on text length
-            const estimatedBubbleHeight = Math.max(60, Math.ceil(text.length / 22) * 25 + 40);
-            
-            // If bubble would go below image bottom, move it up
-            if (bubbleY + estimatedBubbleHeight > imgY + imgHeight) {
-              bubbleY = imgY + imgHeight - estimatedBubbleHeight - 5;
-              console.log(`    ⚠ Bubble ${idx + 1} adjusted: would exceed image bounds`);
-            }
-            
-            // If bubble would go above image top, move it down
-            if (bubbleY < imgY) {
-              bubbleY = imgY + 5;
-              console.log(`    ⚠ Bubble ${idx + 1} adjusted: was above image`);
-            }
-            
-            // Text vorbereiten
-            const speaker = bubble.speaker && bubble.speaker !== 'narrator' && bubble.speaker.toLowerCase() !== 'null' 
-              ? bubble.speaker + ': ' 
-              : '';
-            const text = speaker + bubble.dialog;
             
             // Bubble-Größe berechnen (wie in Vorschau)
             const maxBubbleWidth = 180;
@@ -295,16 +283,13 @@ async function createComicPDF(project) {
         }
       }
       
-      // Seitenzahl unten mit weißem Hintergrund
-      doc.rect(0, A4_HEIGHT - 40, A4_WIDTH, 40)
-         .fill('#FFFFFF');
-      
-      doc.fontSize(11)
+      // Seitenzahl unten rechts (außerhalb des Bildes)
+      doc.fontSize(10)
          .font('Helvetica')
          .fillColor('#8B7355')
-         .text(`Seite ${i + 1} von ${pages.length}`, 50, A4_HEIGHT - 25, {
-           width: A4_WIDTH - 100,
-           align: 'center'
+         .text(`${i + 1}`, A4_WIDTH - 40, A4_HEIGHT - 20, {
+           width: 30,
+           align: 'right'
          });
       
     } catch (e) {
@@ -335,11 +320,11 @@ async function createComicPDF(project) {
        .strokeColor('#C9963A')
        .stroke();
     
-    // "Widmung" Label (ohne '&)
+    // "Widmung" Label
     doc.fontSize(11)
        .font('Helvetica')
        .fillColor('#C9963A')
-       .text('✦  WIDMUNG  ✦', 50, 140, {
+       .text('WIDMUNG', 50, 140, {
          width: A4_WIDTH - 100,
          align: 'center',
          characterSpacing: 3
@@ -386,11 +371,11 @@ async function createComicPDF(project) {
          });
     }
     
-    // "The End" (ohne '&)
+    // "The End"
     doc.fontSize(11)
        .font('Helvetica')
        .fillColor('#C9963A')
-       .text('✦  THE END  ✦', 50, A4_HEIGHT - 120, {
+       .text('THE END', 50, A4_HEIGHT - 120, {
          width: A4_WIDTH - 100,
          align: 'center',
          characterSpacing: 3

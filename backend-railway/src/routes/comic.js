@@ -1017,39 +1017,11 @@ router.post("/page", async (req, res) => {
     const mood = MOOD_MOD[comicStyle] || MOOD_MOD.emotional;
     const outfit = getOutfit(page.location);
     const panelCount = page.panels.length;
-    
-    // ── DYNAMIC LAYOUT BASED ON PANEL SIZES ──────────────────────────────────
-    // Check if panels have size information (new variable panel size feature)
-    const hasSizeInfo = page.panels.some(p => p.size);
-    
-    let layoutDesc;
-    if (hasSizeInfo) {
-      // Build dynamic layout description based on panel sizes
-      const sizeDescriptions = page.panels.map((p, i) => {
-        const size = p.size || "small";
-        const sizeLabel = {
-          small: "standard panel",
-          medium: "larger panel (important moment)",
-          large: "dramatic large panel",
-          splash: "FULL PAGE PANEL (entire page)"
-        }[size];
-        return `Panel ${i + 1}: ${sizeLabel}`;
-      });
-      layoutDesc = sizeDescriptions.join(", ");
-      
-      // Check for splash panel
-      const hasSplash = page.panels.some(p => p.size === "splash");
-      if (hasSplash) {
-        layoutDesc = "SINGLE FULL-PAGE SPLASH PANEL — this panel takes up the entire page with maximum dramatic impact";
-      }
-    } else {
-      // Fallback to old static layouts (backward compatibility)
-      layoutDesc =
-        panelCount <= 2 ? "2 equal panels" :
-        panelCount === 3 ? "1 large panel top, 2 smaller panels bottom" :
-        panelCount === 5 ? "2 panels top, 1 wide panel middle, 2 panels bottom" :
-        "2×2 grid";
-    }
+    const layoutDesc =
+      panelCount <= 2 ? "2 equal panels" :
+      panelCount === 3 ? "1 large panel top, 2 smaller panels bottom" :
+      panelCount === 5 ? "2 panels top, 1 wide panel middle, 2 panels bottom" :
+      "2×2 grid";
 
     const charAnchors = finalCharacters.map(c => `${c.name}: ${c.visual_anchor}`).join(". ");
     const panelDescriptions = page.panels
@@ -1063,22 +1035,17 @@ router.post("/page", async (req, res) => {
 
     const prompt = sanitizePrompt(`${COMIC_STYLE} ${mood}
 
-Comic page — ${panelCount} panels with VARIABLE SIZES: ${layoutDesc}
+Comic page — ${panelCount} panels in ${layoutDesc}. 
 
-CRITICAL PANEL SIZE RULES:
-- RESPECT the panel size specifications above — larger panels get MORE SPACE and DETAIL
-- Small panels: standard size, part of sequence
-- Medium panels: noticeably LARGER, for important moments
-- Large panels: DRAMATICALLY BIGGER, for emotional peaks
-- Splash panels: ENTIRE PAGE, maximum impact
-- Bold black borders between all panels
-
-CRITICAL PANEL BOUNDARY RULES:
+CRITICAL PANEL BORDER RULES:
+- EVERY panel MUST have thick black borders (4-6px) on ALL SIDES
+- Borders must be CONSISTENT thickness across all panels
+- NO gaps between panel borders — borders should touch or have minimal (2-3px) white space
+- Think of a printed comic page: panels are tightly arranged with clear black borders
 - Each panel is a SEPARATE CONTAINED SPACE with thick black borders
 - Characters and objects MUST stay COMPLETELY INSIDE their panel borders
 - NO body parts (hands, feet, heads) may cross into adjacent panels
 - NO objects may extend beyond panel boundaries
-- Think of each panel as a separate photograph — nothing bleeds between them
 
 CHARACTERS — draw identically across all panels:
 ${charAnchors}
@@ -1607,80 +1574,9 @@ NATURAL SCENE BEHAVIOR:
       }
     }
 
-    // ── Quality Score Check ─────────────────────────────────────────────────
-    // Check if generated image matches Bande Dessinée style
-    // If wrong style detected → retry once with stronger anti-manga prompt
-    let qualityScore = 100; // Default: assume good
-    let styleCheckPassed = true;
-
-    if (rawUrl) {
-      try {
-        const styleCheck = await openai.chat.completions.create({
-          model: "gpt-4.1",
-          messages: [{ role: "user", content: [
-            { type: "image_url", image_url: { url: rawUrl, detail: "low" } },
-            { type: "text", text: `Is this image in European Bande Dessinée / Franco-Belgian comic book style?
-(Bold ink outlines, flat cel-shaded colors, like Blacksad, Tintin, Bastien Vivès)
-
-Or does it look like:
-- Manga / anime (big eyes, speed lines, Japanese style)
-- Photorealistic / photograph
-- Watercolor / soft painting
-- CGI render
-
-Answer with ONE word only: "ok" (if Bande Dessinée) or "wrong" (if not)` }
-          ]}],
-          max_tokens: 5,
-          temperature: 0.1,
-        });
-
-        const response = (styleCheck.choices[0].message.content || "").toLowerCase().trim();
-        styleCheckPassed = response.includes("ok");
-
-        if (!styleCheckPassed) {
-          console.log(`  → Quality check FAILED (style: ${response}), retrying with stronger prompt`);
-          qualityScore = 30; // Low score for failed check
-
-          // Retry with ultra-strong anti-manga prompt
-          const strongerPrompt = `${COMIC_STYLE}
-
-ULTRA-CRITICAL STYLE ENFORCEMENT:
-This image MUST be European Bande Dessinée / Franco-Belgian comic book style.
-Think: Blacksad, Tintin, Bastien Vivès, Spirou, Lucky Luke.
-
-MANDATORY FEATURES:
-- Bold black ink outlines on EVERY figure and object
-- Flat cel-shaded color areas (NOT gradients, NOT soft shading)
-- Western comic book anatomy and proportions
-- Expressive stylized faces (NOT photorealistic, NOT anime)
-
-ABSOLUTE PROHIBITIONS:
-- NOT manga (no speed lines, no big anime eyes, no Japanese style)
-- NOT anime (no sparkles, no sweat drops, no chibi)
-- NOT photorealistic (no photo-like skin, no realistic lighting)
-- NOT watercolor (no soft edges, no paint texture)
-
-${mood}
-
-${prompt}`;
-
-          try {
-            const retry = await generateImage(strongerPrompt, reference);
-            rawUrl = retry.url;
-            qualityScore = 70; // Better score after retry
-            console.log(`  → Retry completed with stronger prompt`);
-          } catch (retryErr) {
-            console.error(`  → Retry failed:`, retryErr.message);
-            // Keep original image
-          }
-        } else {
-          console.log(`  → Quality check PASSED`);
-        }
-      } catch (checkErr) {
-        console.warn(`  → Quality check error:`, checkErr.message);
-        // Continue without check
-      }
-    }
+    // ── Quality Score Check DISABLED ────────────────────────────────────────
+    // Disabled because it causes style inconsistency between pages
+    const qualityScore = 100; // Default: assume good
 
     // Save image with projectId in path to prevent cache issues
     // Path: projectId/page-1.png (unique per comic generation)

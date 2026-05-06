@@ -235,11 +235,19 @@ export default function Step5Preview() {
     
     console.log(`💾 Saving ${positions.length} bubble positions for page "${currentPageData.title}"`);
     console.log('Positions:', positions);
+    console.log('Current chapter ID:', currentPageData.id);
     
     // Update chapter with new positions
     updateChapter(currentPageData.id, {
       panelPositions: positions
     });
+    
+    // Verify save
+    setTimeout(() => {
+      const updatedProject = useBookStore.getState().project;
+      const updatedChapter = updatedProject?.chapters.find(c => c.id === currentPageData.id);
+      console.log(`✓ Verified: ${updatedChapter?.panelPositions?.length || 0} positions in store for "${currentPageData.title}"`);
+    }, 100);
     
     console.log(`✓ Saved ${positions.length} bubble positions for page ${currentPage + 1}`);
   }, [currentPage, project?.chapters, updateChapter]);
