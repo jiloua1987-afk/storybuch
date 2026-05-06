@@ -11,6 +11,7 @@ export interface PanelTextOverlay {
     speaker?: string;
     position: "top-left" | "top-right" | "bottom-left" | "bottom-right";
     layout: PanelLayout;
+    size?: "small" | "medium" | "large" | "splash"; // NEW: Panel size
   }[];
   imageWidth: number;
   imageHeight: number;
@@ -77,6 +78,63 @@ export function getPanelLayouts(
     default:
       return getPanelLayouts(4, imgW, imgH);
   }
+}
+
+// ── NEW: Dynamic Panel Layouts based on sizes ─────────────────────────────────
+export function getDynamicPanelLayouts(
+  panels: Array<{ size?: "small" | "medium" | "large" | "splash" }>,
+  imgW: number,
+  imgH: number
+): PanelLayout[] {
+  const border = 12;
+  const titleH = 80;
+  const usableH = imgH - titleH - border;
+  const usableW = imgW - border * 2;
+
+  // Check if there's a splash panel (full page)
+  const hasSplash = panels.some(p => p.size === "splash");
+  if (hasSplash) {
+    // Splash panel takes entire page
+    return panels.map((p, i) => {
+      if (p.size === "splash") {
+        return { x: border, y: titleH, width: usableW, height: usableH };
+      }
+      // Other panels get small space (shouldn't happen, but fallback)
+      return { x: border, y: titleH, width: usableW / 4, height: usableH / 4 };
+    });
+  }
+
+  // Calculate total "weight" of panels
+  const weights = panels.map(p => {
+    switch (p.size) {
+      case "large": return 3;
+      case "medium": return 2;
+      case "small":
+      default: return 1;
+    }
+  });
+  const totalWeight = weights.reduce((sum, w) => sum + w, 0);
+
+  // Simple vertical stacking based on weights
+  const layouts: PanelLayout[] = [];
+  let currentY = titleH;
+
+  panels.forEach((panel, i) => {
+    const weight = weights[i];
+    const heightRatio = weight / totalWeight;
+    const panelHeight = usableH * heightRatio - border;
+
+    layouts.push({
+      x: border,
+      y: currentY,
+      width: usableW,
+      height: panelHeight
+    });
+
+    currentY += panelHeight + border;
+  });
+
+  return layouts;
 }
 
 // ── SVG für komplette Comic-Seite ─────────────────────────────────────────────

@@ -413,6 +413,60 @@ Each panel MUST show a DIFFERENT angle/moment/action of the scene.
 Think cinematically: wide shot → close-up → reaction shot → detail shot.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PANEL SIZES — VISUAL DRAMATURGY:
+
+CRITICAL: Each panel MUST specify a size based on its emotional importance.
+
+PANEL SIZE OPTIONS:
+
+1. SMALL (Standard):
+   - Normal panel, part of sequence
+   - Use: Setup, transitions, dialogue
+   - Example: Character walking, talking, small actions
+   - Frequency: 50-60% of panels
+
+2. MEDIUM (Important):
+   - Larger panel for important moments
+   - Use: Key actions, reveals, reactions
+   - Example: First meeting, surprise moment, important decision
+   - Frequency: 30-40% of panels
+
+3. LARGE (Dramatic):
+   - Big panel for dramatic moments
+   - Use: Emotional peaks, climax, important reveals
+   - Example: First kiss, big surprise, emotional breakdown
+   - Frequency: 10-15% of panels
+
+4. SPLASH (Full Page):
+   - Entire page for THE most important moment
+   - Use: Only for absolute peak of the scene
+   - Example: Wedding kiss, birth of child, major revelation
+   - Frequency: 0-5% of panels (max 1 per page!)
+
+SIZE RULES:
+- Most panels should be SMALL (standard)
+- Use MEDIUM for important beats
+- Use LARGE sparingly for dramatic moments
+- Use SPLASH only for THE climax (max 1 per page)
+- Vary sizes for visual rhythm
+
+GOOD EXAMPLE (varied sizes):
+Panel 1: small - Hassan and Elyas arrive at park
+Panel 2: medium - Hassan helps Elyas climb ladder (important moment)
+Panel 3: large - Elyas at top of slide, arms raised in triumph (emotional peak)
+Panel 4: small - Hassan catches Elyas at bottom
+
+BAD EXAMPLE (no variation):
+Panel 1: small - Hassan and Elyas at park
+Panel 2: small - Hassan and Elyas at slide
+Panel 3: small - Hassan and Elyas playing
+Panel 4: small - Hassan and Elyas laughing
+→ All same size, no visual emphasis
+
+FORMAT: Add "size" field to each panel:
+"size": "small" | "medium" | "large" | "splash"
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 SHOT VARIATION — THINK CINEMATICALLY:
 
 CRITICAL: Each panel MUST specify a shot type at the START of the "szene" description.
@@ -469,10 +523,10 @@ CRITICAL VARIETY RULES:
 - If Panel 1 shows "character does X" → NO other panel may show "character does X"
 
 GOOD EXAMPLE (varied actions):
-Panel 1: Wide shot - Thomas enters with tall cake, family watches
-Panel 2: Close-up - Thomas' worried face, sweat on forehead
-Panel 3: Medium shot - Felix laughing, pointing at cake
-Panel 4: Close-up - Oma's surprised expression, hands on cheeks
+Panel 1: Wide shot, small - Thomas enters with tall cake, family watches
+Panel 2: Close-up, medium - Thomas' worried face, sweat on forehead
+Panel 3: Medium shot, medium - Felix laughing, pointing at cake
+Panel 4: Close-up, large - Oma's surprised expression, hands on cheeks (emotional peak)
 
 BAD EXAMPLE (repeated action):
 Panel 1: Thomas carries cake
@@ -571,12 +625,13 @@ CRITICAL — ONLY SHOW CHARACTERS PRESENT IN THIS SCENE:
 - A character can only be "speaker" if they appear in that panel's szene.
 
 Respond ONLY with JSON:
-{"id":"page${i + 1}","pageNumber":${i + 1},"title":"Short title in ${lang}","location":"English location description","timeOfDay":"daytime","panels":[{"nummer":1,"szene":"Shot type: Specific English scene — what characters DO and FEEL","dialogs":[{"speaker":"Name","text":"${lang} dialog 10-25 words"}],"bubble_type":"speech"}]}
+{"id":"page${i + 1}","pageNumber":${i + 1},"title":"Short title in ${lang}","location":"English location description","timeOfDay":"daytime","panels":[{"nummer":1,"size":"small","szene":"Shot type: Specific English scene — what characters DO and FEEL","dialogs":[{"speaker":"Name","text":"${lang} dialog 10-25 words"}],"bubble_type":"speech"}]}
 
 IMPORTANT: 
 - Use "dialogs" array for conversations (2+ people talking)
 - Only use single "dialog" + "speaker" for silent panels or monologues
-- ALWAYS start "szene" with shot type: "Wide shot:", "Medium shot:", or "Close-up:"`
+- ALWAYS start "szene" with shot type: "Wide shot:", "Medium shot:", or "Close-up:"
+- ALWAYS include "size" field: "small", "medium", "large", or "splash"`
           }, {
             role: "user",
             content: `Scene to illustrate: ${moment}\n\nStory context: ${storyCtx}${mustHaveSentences ? `\nInclude somewhere: ${mustHaveSentences}` : ""}`,
@@ -962,11 +1017,39 @@ router.post("/page", async (req, res) => {
     const mood = MOOD_MOD[comicStyle] || MOOD_MOD.emotional;
     const outfit = getOutfit(page.location);
     const panelCount = page.panels.length;
-    const layoutDesc =
-      panelCount <= 2 ? "2 equal panels" :
-      panelCount === 3 ? "1 large panel top, 2 smaller panels bottom" :
-      panelCount === 5 ? "2 panels top, 1 wide panel middle, 2 panels bottom" :
-      "2×2 grid";
+    
+    // ── DYNAMIC LAYOUT BASED ON PANEL SIZES ──────────────────────────────────
+    // Check if panels have size information (new variable panel size feature)
+    const hasSizeInfo = page.panels.some(p => p.size);
+    
+    let layoutDesc;
+    if (hasSizeInfo) {
+      // Build dynamic layout description based on panel sizes
+      const sizeDescriptions = page.panels.map((p, i) => {
+        const size = p.size || "small";
+        const sizeLabel = {
+          small: "standard panel",
+          medium: "larger panel (important moment)",
+          large: "dramatic large panel",
+          splash: "FULL PAGE PANEL (entire page)"
+        }[size];
+        return `Panel ${i + 1}: ${sizeLabel}`;
+      });
+      layoutDesc = sizeDescriptions.join(", ");
+      
+      // Check for splash panel
+      const hasSplash = page.panels.some(p => p.size === "splash");
+      if (hasSplash) {
+        layoutDesc = "SINGLE FULL-PAGE SPLASH PANEL — this panel takes up the entire page with maximum dramatic impact";
+      }
+    } else {
+      // Fallback to old static layouts (backward compatibility)
+      layoutDesc =
+        panelCount <= 2 ? "2 equal panels" :
+        panelCount === 3 ? "1 large panel top, 2 smaller panels bottom" :
+        panelCount === 5 ? "2 panels top, 1 wide panel middle, 2 panels bottom" :
+        "2×2 grid";
+    }
 
     const charAnchors = finalCharacters.map(c => `${c.name}: ${c.visual_anchor}`).join(". ");
     const panelDescriptions = page.panels
@@ -980,9 +1063,17 @@ router.post("/page", async (req, res) => {
 
     const prompt = sanitizePrompt(`${COMIC_STYLE} ${mood}
 
-Comic page — ${panelCount} panels in ${layoutDesc}. Bold black borders between panels.
+Comic page — ${panelCount} panels with VARIABLE SIZES: ${layoutDesc}
 
-CRITICAL PANEL RULES:
+CRITICAL PANEL SIZE RULES:
+- RESPECT the panel size specifications above — larger panels get MORE SPACE and DETAIL
+- Small panels: standard size, part of sequence
+- Medium panels: noticeably LARGER, for important moments
+- Large panels: DRAMATICALLY BIGGER, for emotional peaks
+- Splash panels: ENTIRE PAGE, maximum impact
+- Bold black borders between all panels
+
+CRITICAL PANEL BOUNDARY RULES:
 - Each panel is a SEPARATE CONTAINED SPACE with thick black borders
 - Characters and objects MUST stay COMPLETELY INSIDE their panel borders
 - NO body parts (hands, feet, heads) may cross into adjacent panels
