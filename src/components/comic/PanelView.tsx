@@ -367,8 +367,21 @@ export default function PanelView({ imageUrl, title, panels = [], panelPositions
 
   // ── Save initial positions on first render ────────────────────────────────
   useEffect(() => {
-    if (onPositionsChange && resolvedPositions.length > 0 && !hasDetectedPositions && dialogPanels.length > 0) {
-      console.log('💾 Saving initial bubble positions (first render)');
+    // Check if we've already initialized this page in this session
+    const storageKey = `bubble-init-${pageId}`;
+    const alreadyInitialized = sessionStorage.getItem(storageKey);
+    
+    // Only save initial positions if:
+    // 1. No positions exist yet (!hasDetectedPositions)
+    // 2. We have resolved positions
+    // 3. We haven't initialized this page yet (not in sessionStorage)
+    if (onPositionsChange && 
+        resolvedPositions.length > 0 && 
+        !hasDetectedPositions && 
+        dialogPanels.length > 0 &&
+        !alreadyInitialized) {
+      
+      console.log(`💾 Saving initial bubble positions for page ${pageId}`);
       const initialPositions: PanelPosition[] = dialogPanels.map((panel, bubbleIndex) => {
         const resolved = resolvedPositions[bubbleIndex];
         return {
@@ -381,8 +394,11 @@ export default function PanelView({ imageUrl, title, panels = [], panelPositions
       });
       console.log(`  → Saving ${initialPositions.length} initial positions`);
       onPositionsChange(initialPositions);
+      
+      // Mark this page as initialized in sessionStorage
+      sessionStorage.setItem(storageKey, 'true');
     }
-  }, [dialogPanels.length, hasDetectedPositions]); // Only trigger when these change
+  }, [pageId, hasDetectedPositions, resolvedPositions.length, dialogPanels.length]); // Trigger when page or data changes
 
   const handleMouseDown = (e: React.MouseEvent | React.TouchEvent, type: "panel" | "extra", index: string | number) => {
     if (editingIndex !== null || editingExtra !== null) return;
