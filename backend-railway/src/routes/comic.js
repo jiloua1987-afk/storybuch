@@ -412,6 +412,57 @@ Do NOT always choose 4. Match the panel count to the scene complexity.
 Each panel MUST show a DIFFERENT angle/moment/action of the scene.
 Think cinematically: wide shot → close-up → reaction shot → detail shot.
 
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SHOT VARIATION — THINK CINEMATICALLY:
+
+CRITICAL: Each panel MUST specify a shot type at the START of the "szene" description.
+
+SHOT TYPES:
+
+1. WIDE SHOT (Establishing):
+   - Shows location, context, atmosphere
+   - Use: Start of scenes, show environment
+   - Example: "Wide shot: Family gathered around dinner table in cozy kitchen"
+   - Frequency: 10-20% of panels
+
+2. MEDIUM SHOT (Standard):
+   - Shows characters + some environment
+   - Use: Most dialogue, interactions
+   - Example: "Medium shot: Maria and Marc walking hand in hand on beach"
+   - Frequency: 60-70% of panels
+
+3. CLOSE-UP (Emotional):
+   - Focus on face, hands, or important detail
+   - Use: Emotional moments, reactions, emphasis
+   - Example: "Close-up: Maria's face, tears of joy in her eyes"
+   - Frequency: 10-20% of panels
+
+VARIATION RULES:
+- Do NOT use same shot type 3 times in a row
+- Start scenes with WIDE shot for context
+- Use CLOSE-UP for emotional peaks
+- Default to MEDIUM for dialogue
+
+GOOD EXAMPLE (varied shots):
+Panel 1: Wide shot - Park playground, children playing, Hassan and Elyas arrive
+Panel 2: Medium shot - Hassan helps Elyas climb ladder
+Panel 3: Close-up - Elyas' excited face at top of slide
+Panel 4: Medium shot - Elyas sliding down, Hassan catching him
+
+BAD EXAMPLE (no variation):
+Panel 1: Medium shot - Hassan and Elyas at playground
+Panel 2: Medium shot - Hassan and Elyas at slide
+Panel 3: Medium shot - Hassan and Elyas playing
+Panel 4: Medium shot - Hassan and Elyas laughing
+→ All medium shots, no visual variety
+
+FORMAT: Always start "szene" with shot type:
+"Wide shot: [description]"
+"Medium shot: [description]"
+"Close-up: [description]"
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
 CRITICAL VARIETY RULES:
 - Every panel = NEW camera angle + NEW story beat
 - NEVER repeat the same ACTION in multiple panels
@@ -420,8 +471,8 @@ CRITICAL VARIETY RULES:
 GOOD EXAMPLE (varied actions):
 Panel 1: Wide shot - Thomas enters with tall cake, family watches
 Panel 2: Close-up - Thomas' worried face, sweat on forehead
-Panel 3: Reaction - Felix laughing, pointing at cake
-Panel 4: Detail - Oma's surprised expression, hands on cheeks
+Panel 3: Medium shot - Felix laughing, pointing at cake
+Panel 4: Close-up - Oma's surprised expression, hands on cheeks
 
 BAD EXAMPLE (repeated action):
 Panel 1: Thomas carries cake
@@ -465,7 +516,7 @@ WHEN TO USE single "dialog" + "speaker" (ONLY):
 CORRECT FORMAT (use this for conversations):
 {
   "nummer": 1,
-  "szene": "Maria and Marc discover something amazing",
+  "szene": "Wide shot: Maria and Marc discover something amazing at the beach",
   "dialogs": [
     {"speaker": "Maria", "text": "Schau mal, wie schön!"},
     {"speaker": "Marc", "text": "Wow, das ist ja unglaublich!"}
@@ -520,9 +571,12 @@ CRITICAL — ONLY SHOW CHARACTERS PRESENT IN THIS SCENE:
 - A character can only be "speaker" if they appear in that panel's szene.
 
 Respond ONLY with JSON:
-{"id":"page${i + 1}","pageNumber":${i + 1},"title":"Short title in ${lang}","location":"English location description","timeOfDay":"daytime","panels":[{"nummer":1,"szene":"Specific English scene — what characters DO and FEEL","dialogs":[{"speaker":"Name","text":"${lang} dialog 10-25 words"}],"bubble_type":"speech"}]}
+{"id":"page${i + 1}","pageNumber":${i + 1},"title":"Short title in ${lang}","location":"English location description","timeOfDay":"daytime","panels":[{"nummer":1,"szene":"Shot type: Specific English scene — what characters DO and FEEL","dialogs":[{"speaker":"Name","text":"${lang} dialog 10-25 words"}],"bubble_type":"speech"}]}
 
-IMPORTANT: Use "dialogs" array for conversations (2+ people talking). Only use single "dialog" + "speaker" for silent panels or monologues.`
+IMPORTANT: 
+- Use "dialogs" array for conversations (2+ people talking)
+- Only use single "dialog" + "speaker" for silent panels or monologues
+- ALWAYS start "szene" with shot type: "Wide shot:", "Medium shot:", or "Close-up:"`
           }, {
             role: "user",
             content: `Scene to illustrate: ${moment}\n\nStory context: ${storyCtx}${mustHaveSentences ? `\nInclude somewhere: ${mustHaveSentences}` : ""}`,
