@@ -384,20 +384,28 @@ export default function PanelView({ imageUrl, title, panels = [], panelPositions
     }
   }, [dialogPanels.length, hasDetectedPositions]); // Only trigger when these change
 
-  const handleMouseDown = (e: React.MouseEvent, type: "panel" | "extra", index: string | number) => {
+  const handleMouseDown = (e: React.MouseEvent | React.TouchEvent, type: "panel" | "extra", index: string | number) => {
     if (editingIndex !== null || editingExtra !== null) return;
     e.preventDefault();
+    
+    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+    
     setDragging({ type, index });
     const rect = e.currentTarget.getBoundingClientRect();
-    setDragOffset({ x: e.clientX - rect.left, y: e.clientY - rect.top });
+    setDragOffset({ x: clientX - rect.left, y: clientY - rect.top });
   };
 
-  const handleMouseMove = (e: React.MouseEvent) => {
+  const handleMouseMove = (e: React.MouseEvent | React.TouchEvent) => {
     if (!dragging || !containerRef.current) return;
     e.preventDefault();
+    
+    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+    
     const containerRect = containerRef.current.getBoundingClientRect();
-    const newLeft = ((e.clientX - containerRect.left - dragOffset.x) / containerRect.width) * 100;
-    const newTop = ((e.clientY - containerRect.top - dragOffset.y) / containerRect.height) * 100;
+    const newLeft = ((clientX - containerRect.left - dragOffset.x) / containerRect.width) * 100;
+    const newTop = ((clientY - containerRect.top - dragOffset.y) / containerRect.height) * 100;
     const clampedLeft = Math.max(0, Math.min(75, newLeft));
     const clampedTop = Math.max(0, Math.min(90, newTop));
 
@@ -483,6 +491,8 @@ export default function PanelView({ imageUrl, title, panels = [], panelPositions
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseUp}
+        onTouchMove={handleMouseMove}
+        onTouchEnd={handleMouseUp}
         onClick={handleImageClick}
       >
         <div className="relative w-full h-full">
@@ -512,6 +522,7 @@ export default function PanelView({ imageUrl, title, panels = [], panelPositions
                 className="group"
                 style={{ ...posStyle, cursor: isDragging ? "grabbing" : "grab" }}
                 onMouseDown={(e) => { e.stopPropagation(); handleMouseDown(e, "panel", bubbleId); }}
+                onTouchStart={(e) => { e.stopPropagation(); handleMouseDown(e, "panel", bubbleId); }}
               >
                 {/* Delete button — always visible, red circle with white × */}
                 <button
@@ -589,6 +600,7 @@ export default function PanelView({ imageUrl, title, panels = [], panelPositions
                 className="group"
                 style={{ position: "absolute", top: `${bubble.top}%`, left: `${bubble.left}%`, zIndex: 15, cursor: "grab" }}
                 onMouseDown={(e) => { e.stopPropagation(); handleMouseDown(e, "extra", bubble.id); }}
+                onTouchStart={(e) => { e.stopPropagation(); handleMouseDown(e, "extra", bubble.id); }}
               >
                 {/* Delete button — always visible */}
                 <button

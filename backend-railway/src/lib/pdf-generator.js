@@ -43,7 +43,7 @@ async function createComicPDF(project) {
       
       const coverProcessed = await sharp(coverBuffer)
         .resize(Math.round(coverWidth * 2), Math.round(coverHeight * 2), { 
-          fit: 'cover',
+          fit: 'cover',  // Cover statt contain - füllt volle Breite
           position: 'center'
         })
         .png()
@@ -202,6 +202,22 @@ async function createComicPDF(project) {
                   bubbleY += (bubble.bubbleIndex * (imgHeight * 0.15)); // 15% offset per bubble
                 }
               }
+            }
+            
+            // CRITICAL: Ensure bubble stays within image bounds
+            // Estimate bubble height based on text length
+            const estimatedBubbleHeight = Math.max(60, Math.ceil(text.length / 22) * 25 + 40);
+            
+            // If bubble would go below image bottom, move it up
+            if (bubbleY + estimatedBubbleHeight > imgY + imgHeight) {
+              bubbleY = imgY + imgHeight - estimatedBubbleHeight - 5;
+              console.log(`    ⚠ Bubble ${idx + 1} adjusted: would exceed image bounds`);
+            }
+            
+            // If bubble would go above image top, move it down
+            if (bubbleY < imgY) {
+              bubbleY = imgY + 5;
+              console.log(`    ⚠ Bubble ${idx + 1} adjusted: was above image`);
             }
             
             // Text vorbereiten
