@@ -745,7 +745,7 @@ router.post("/cover", async (req, res) => {
     // User override via coverRegenNote
     if (coverRegenNote && coverRegenNote.trim()) {
       console.log(`  → User requested cover change: "${coverRegenNote}"`);
-      coverLocation = coverRegenNote; // Direkt verwenden
+      coverLocation = sanitizePrompt(coverRegenNote); // Sanitize user input
     }
     
     console.log(`  → Cover location: "${coverLocation}"`);
@@ -811,7 +811,7 @@ NO text, NO title, NO letters anywhere in the image.`);
         const blob = new Blob([compositeBuffer], { type: "image/jpeg" });
         const refFile = new File([blob], "composite.jpg", { type: "image/jpeg" });
         
-        const multiPhotoPrompt = `${COMIC_STYLE}
+        const multiPhotoPrompt = sanitizePrompt(`${COMIC_STYLE}
 
 REDRAW both people in this photo as hand-drawn comic book characters standing together.
 This must look like a page from a printed comic book, NOT a photograph.
@@ -822,7 +822,7 @@ Right person is ${referenceImageUrls[1].label}: ${characters.find(c => c.name ==
 
 Draw BOTH characters together in ${coverLocation}.
 Composition: dynamic group shot, both characters prominently visible, vivid illustrated background.
-NO text, NO title, NO letters anywhere in the image.`;
+NO text, NO title, NO letters anywhere in the image.`);
 
         const res2 = await openai.images.edit({
           model: "gpt-image-2",
@@ -869,7 +869,7 @@ NO text, NO title, NO letters anywhere in the image.`;
         const res2 = await openai.images.edit({
           model: "gpt-image-2",
           image: refFile,
-          prompt: `${COMIC_STYLE}
+          prompt: sanitizePrompt(`${COMIC_STYLE}
 
 REDRAW everyone in this photo as hand-drawn comic book characters. This must look like a page from a printed comic book, NOT a photograph or photo-manipulation.
 Bold ink outlines on every person. Flat cel-shaded colors. Expressive cartoon faces. NO photographic lighting, NO realistic skin textures, NO photo-realistic details.
@@ -878,7 +878,7 @@ For characters not in the photo, draw them from their description.
 Setting: ${coverLocation}.
 Character descriptions: ${charDesc}
 Composition: dynamic group shot, characters in foreground, vivid illustrated background.
-NO text, NO title, NO letters anywhere in the image.`,
+NO text, NO title, NO letters anywhere in the image.`),
           size: "1024x1536",
           quality: "high",
         });
