@@ -1052,6 +1052,11 @@ router.post("/page", async (req, res) => {
     // Detect if this is a historical/young scene or current age scene
     const ageContext = getAgeContext(page.title, panelDescriptions);
     console.log(`  → Age context: ${ageContext.ageContext} (useReference: ${ageContext.useReference})`);
+    
+    // Log reillustration note if present
+    if (reillustrationNote) {
+      console.log(`  → 🎨 RE-ILLUSTRATION requested: "${reillustrationNote}"`);
+    }
 
     const prompt = sanitizePrompt(`${COMIC_STYLE} ${mood}
 
