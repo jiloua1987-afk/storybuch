@@ -123,21 +123,27 @@ async function createComicPDF(project) {
            characterSpacing: 1.2
          });
       
-      // Comic-Bild - maximale Platznutzung
+      // Comic-Bild - VOLLE BREITE, Höhe angepasst
       if (page.imageUrl) {
         const pageBuffer = await fetchImageBuffer(page.imageUrl);
         
-        // Maximale Bildgröße: kompletter Platz zwischen Titel und Seitenzahl
+        // VOLLE BREITE nutzen, Höhe basierend auf Bild-Ratio (2:3 wie 1024×1536)
         const footerHeight = 30;
         const imgPadding = 8; // Padding oben/unten
-        const imgWidth = A4_WIDTH; // Volle Breite
-        const imgHeight = A4_HEIGHT - titleHeight - footerHeight - (imgPadding * 2);
+        const imgWidth = A4_WIDTH; // VOLLE BREITE ohne Rand
+        const imgRatio = 1536 / 1024; // Original Ratio (Höhe / Breite)
+        const imgHeight = imgWidth * imgRatio; // Höhe basierend auf Ratio
         const imgX = 0;
         const imgY = titleHeight + imgPadding;
         
+        // Prüfen ob Bild in verfügbaren Platz passt
+        const availableHeight = A4_HEIGHT - titleHeight - footerHeight - (imgPadding * 2);
+        const finalImgHeight = Math.min(imgHeight, availableHeight);
+        const finalImgWidth = imgWidth;
+        
         const pageProcessed = await sharp(pageBuffer)
-          .resize(Math.round(imgWidth * 2), Math.round(imgHeight * 2), { 
-            fit: 'contain',  // Contain - zeigt ganzes Bild ohne Abschneiden
+          .resize(Math.round(finalImgWidth * 2), Math.round(finalImgHeight * 2), { 
+            fit: 'cover',  // Cover - füllt volle Breite, schneidet Höhe wenn nötig
             position: 'center',
             background: { r: 255, g: 255, b: 255, alpha: 1 }
           })
@@ -145,10 +151,8 @@ async function createComicPDF(project) {
           .toBuffer();
         
         doc.image(pageProcessed, imgX, imgY, { 
-          width: imgWidth, 
-          height: imgHeight,
-          align: 'center',
-          valign: 'center'
+          width: finalImgWidth, 
+          height: finalImgHeight
         });
         
         // ── Sprechblasen rendern ──────────────────────────────────────
@@ -203,13 +207,13 @@ async function createComicPDF(project) {
               // Find position for this panel number
               const pos = page.panelPositions.find(p => p.nummer === bubble.nummer) || page.panelPositions[idx];
               if (pos) {
-                // Konvertiere Prozent zu Pixel-Koordinaten
-                bubbleX = imgX + (pos.left / 100) * imgWidth;
-                bubbleY = imgY + (pos.top / 100) * imgHeight;
+                // Konvertiere Prozent zu Pixel-Koordinaten basierend auf TATSÄCHLICHER Bildgröße
+                bubbleX = imgX + (pos.left / 100) * finalImgWidth;
+                bubbleY = imgY + (pos.top / 100) * finalImgHeight;
                 
                 // For multi-bubble panels, stack them vertically
                 if (bubble.isMultiBubble && bubble.bubbleIndex > 0) {
-                  bubbleY += (bubble.bubbleIndex * (imgHeight * 0.15)); // 15% offset per bubble
+                  bubbleY += (bubble.bubbleIndex * (finalImgHeight * 0.15)); // 15% offset per bubble
                 }
               }
             }
@@ -225,14 +229,14 @@ async function createComicPDF(project) {
             const bubbleHeight = textHeight + (padding * 2) + 4;
             
             // Ensure bubble stays within image bounds
-            if (bubbleY + bubbleHeight > imgY + imgHeight) {
-              bubbleY = imgY + imgHeight - bubbleHeight - 5;
+            if (bubbleY + bubbleHeight > imgY + finalImgHeight) {
+              bubbleY = imgY + finalImgHeight - bubbleHeight - 5;
             }
             if (bubbleY < imgY) {
               bubbleY = imgY + 5;
             }
-            if (bubbleX + bubbleWidth > imgX + imgWidth) {
-              bubbleX = imgX + imgWidth - bubbleWidth - 5;
+            if (bubbleX + bubbleWidth > imgX + finalImgWidth) {
+              bubbleX = imgX + finalImgWidth - bubbleWidth - 5;
             }
             
             // Bubble-Hintergrund (weiß mit dünnem schwarzem Rand wie in Vorschau)

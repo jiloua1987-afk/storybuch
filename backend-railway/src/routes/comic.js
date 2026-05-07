@@ -624,8 +624,28 @@ CRITICAL — ONLY SHOW CHARACTERS PRESENT IN THIS SCENE:
 - Each panel's "szene" must only reference characters who are physically present in that scene.
 - A character can only be "speaker" if they appear in that panel's szene.
 
+CRITICAL — LOCATION CONTEXT IN EVERY PANEL:
+- ALWAYS include the location/setting in the "szene" description
+- Make it clear WHERE the scene takes place
+- Example: "Wide shot: Maria and Mama at hair salon, stylist cutting Maria's hair" (NOT "Mama cutting Maria's hair")
+- Example: "Medium shot: At the restaurant, family eating dinner together" (NOT just "family eating dinner")
+- If the scene is "at the hair salon" → ALL panels must show they are AT THE SALON (chairs, mirrors, products visible)
+- If the scene is "at the park" → ALL panels must show park elements (trees, playground, benches)
+- Do NOT confuse WHO is doing the action with WHERE it's happening
+- "At hair salon" means a PROFESSIONAL STYLIST is cutting hair, NOT a family member
+- "At restaurant" means WAITERS serve food, NOT family members cooking
+
+BAD EXAMPLES (missing location context):
+❌ "Mama cuts Maria's hair" → WRONG! Doesn't specify WHERE (could be at home)
+❌ "Family eats dinner" → WRONG! Doesn't specify WHERE (home vs restaurant)
+
+GOOD EXAMPLES (clear location context):
+✅ "Wide shot: At professional hair salon, stylist cutting Maria's hair while Mama watches from salon chair nearby"
+✅ "Medium shot: In restaurant dining room, waiter bringing food to family's table"
+✅ "Close-up: Maria's happy face at hair salon, new haircut visible, salon mirrors in background"
+
 Respond ONLY with JSON:
-{"id":"page${i + 1}","pageNumber":${i + 1},"title":"Short title in ${lang}","location":"English location description","timeOfDay":"daytime","panels":[{"nummer":1,"size":"small","szene":"Shot type: Specific English scene — what characters DO and FEEL","dialogs":[{"speaker":"Name","text":"${lang} dialog 10-25 words"}],"bubble_type":"speech"}]}
+{"id":"page${i + 1}","pageNumber":${i + 1},"title":"Short title in ${lang}","location":"English location description","timeOfDay":"daytime","panels":[{"nummer":1,"size":"small","szene":"Shot type: Specific English scene WITH LOCATION CONTEXT — what characters DO and FEEL and WHERE","dialogs":[{"speaker":"Name","text":"${lang} dialog 10-25 words"}],"bubble_type":"speech"}]}
 
 IMPORTANT: 
 - Use "dialogs" array for conversations (2+ people talking)
@@ -1062,12 +1082,19 @@ CRITICAL SIZE RULES — enforce in every panel:
 
 CLOTHING — characters wear ${outfit} OVERRIDE any clothing visible in the reference photo.
 
-${reillustrationNote ? `USER REQUESTED SCENE CHANGE:
+PANELS:
+${panelDescriptions}
+
+${reillustrationNote ? `
+USER FEEDBACK FOR RE-ILLUSTRATION:
 ${reillustrationNote}
 
-Create 3 panels showing this new scene with the same characters.
-Each panel must show a different moment/angle of this scene.` : `PANELS:
-${panelDescriptions}`}
+IMPORTANT: Keep the same panel structure and story beats as described above.
+Only adjust the visual details based on the user feedback.
+Example: If user says "Opa more in foreground" → keep the same scene but adjust composition.
+Example: If user says "at hair salon not at home" → keep the same actions but change location.
+DO NOT create completely new panels - adjust the existing ones based on feedback.
+` : ''}
 
 RULES:
 - CRITICAL: Each panel MUST show a COMPLETELY DIFFERENT moment in time
