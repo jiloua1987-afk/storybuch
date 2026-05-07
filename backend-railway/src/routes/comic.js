@@ -1070,7 +1070,12 @@ Each panel must show a different moment/angle of this scene.` : `PANELS:
 ${panelDescriptions}`}
 
 RULES:
-- Each panel shows a DIFFERENT scene/angle/moment
+- CRITICAL: Each panel MUST show a COMPLETELY DIFFERENT moment in time
+- Panel 1: First action/moment
+- Panel 2: Second action/moment (DIFFERENT from panel 1)
+- Panel 3: Third action/moment (DIFFERENT from panels 1 and 2)
+- Panel 4: Fourth action/moment (DIFFERENT from all previous)
+- NEVER repeat the same scene with different angles - each panel = NEW moment
 - Each character appears ONLY ONCE per panel — no duplicates
 - Show CORRECT emotions per scene (sad=tears, funny=laughter, reunion=joy)
 - Sharp detailed faces — eyes, nose, mouth clearly visible, front or 3/4 view
@@ -1379,7 +1384,10 @@ NATURAL SCENE BEHAVIOR:
         console.log(`  → Safety block on first attempt`);
         console.log(`  → Creating safe alternative scene with same characters`);
         
-        // Generate safe alternative: same characters, safer context
+        // Sanitize panel descriptions to reduce safety triggers
+        const sanitizedPanelDesc = sanitizePrompt(panelDescriptions);
+        
+        // Generate safe alternative: same characters, safer context, SAME PANEL DESCRIPTIONS
         const safeAlternativePrompt = `${COMIC_STYLE} ${mood}
 
 Comic page: "${page.title}" (safe family-friendly version)
@@ -1388,15 +1396,22 @@ ${panelCount} panels in ${layoutDesc}. Bold black borders between panels.
 CHARACTERS (draw EXACTLY as described):
 ${charAnchors}
 
-SAFE ALTERNATIVE SCENE:
-Create a family-friendly version of this scene with the same emotional tone.
-- If beach/strand → show boardwalk/promenade with ice cream, NOT beach activities
-- If party/club → show restaurant dinner with conversation, NOT dancing
-- If action/danger → show planning or aftermath, NOT the action itself
-- Keep all characters present and interacting naturally
+${ageContext.modifier ? `AGE MODIFIER: ${ageContext.modifier}\n` : ""}
+CRITICAL: Draw characters EXACTLY as described above. Do NOT add features not mentioned.
 
-Same story beat, same emotions, just safer context.
-Appropriate clothing for the setting, warm atmosphere.
+CLOTHING — characters wear ${outfit}
+
+SAFE ALTERNATIVE SCENE - DRAW ALL PANELS AS DESCRIBED:
+${sanitizedPanelDesc}
+
+CRITICAL RULES:
+- Each panel MUST show a COMPLETELY DIFFERENT moment as described above
+- Panel 1: First moment (as described)
+- Panel 2: Second moment (DIFFERENT from panel 1, as described)
+- Panel 3: Third moment (DIFFERENT from panels 1-2, as described)
+- Panel 4: Fourth moment (DIFFERENT from all previous, as described)
+- NEVER repeat the same scene - each panel = NEW moment
+- Show CORRECT emotions per scene
 
 NATURAL SCENE BEHAVIOR:
 - Characters interact naturally with each other
@@ -1417,7 +1432,10 @@ NO text, NO speech bubbles anywhere in image.`;
       console.log(`  → This would show WRONG FACES - attempting safe alternative with reference`);
       
       try {
-        // Generate safe alternative scene WITH reference
+        // Sanitize panel descriptions to reduce safety triggers
+        const sanitizedPanelDesc = sanitizePrompt(panelDescriptions);
+        
+        // Generate safe alternative scene WITH reference AND detailed panel descriptions
         const safeScenePrompt = `${refNote}${COMIC_STYLE} ${mood}
 
 Comic page: "${page.title}" (safe version with reference faces)
@@ -1427,11 +1445,22 @@ CRITICAL - USE REFERENCE FACES:
 Draw the EXACT SAME faces as shown in the reference image.
 ${charAnchors}
 
-SAFE SCENE ALTERNATIVE:
-- Same characters, same emotional moment
-- Family-friendly setting (if beach → promenade, if party → restaurant)
-- All characters present, warm atmosphere
-- Appropriate clothing for safe context
+${ageContext.modifier ? `AGE MODIFIER: ${ageContext.modifier}\n` : ""}
+CRITICAL: Draw characters EXACTLY as described above.
+
+CLOTHING — characters wear ${outfit}
+
+SAFE SCENE - DRAW ALL PANELS AS DESCRIBED:
+${sanitizedPanelDesc}
+
+CRITICAL RULES:
+- Each panel MUST show a COMPLETELY DIFFERENT moment as described above
+- Panel 1: First moment (as described)
+- Panel 2: Second moment (DIFFERENT from panel 1, as described)
+- Panel 3: Third moment (DIFFERENT from panels 1-2, as described)
+- Panel 4: Fourth moment (DIFFERENT from all previous, as described)
+- NEVER repeat the same scene - each panel = NEW moment
+- Show CORRECT emotions per scene
 
 NATURAL SCENE BEHAVIOR:
 - Characters interact naturally

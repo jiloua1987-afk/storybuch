@@ -214,15 +214,26 @@ async function createComicPDF(project) {
               }
             }
             
-            // Bubble-Größe berechnen (wie in Vorschau)
-            const maxBubbleWidth = 180;
-            const padding = 10;
+            // Bubble-Größe berechnen (kompakter)
+            const maxBubbleWidth = 140; // Reduziert von 180
+            const padding = 8; // Reduziert von 10
             
             // Text-Höhe messen
-            doc.fontSize(12).font('Helvetica');
+            doc.fontSize(11).font('Helvetica'); // Kleinere Schrift
             const textHeight = doc.heightOfString(text, { width: maxBubbleWidth - (padding * 2) });
-            const bubbleWidth = Math.min(maxBubbleWidth, Math.max(100, text.length * 3));
-            const bubbleHeight = textHeight + (padding * 2) + 8;
+            const bubbleWidth = Math.min(maxBubbleWidth, Math.max(80, text.length * 2.5));
+            const bubbleHeight = textHeight + (padding * 2) + 6;
+            
+            // Ensure bubble stays within image bounds
+            if (bubbleY + bubbleHeight > imgY + imgHeight) {
+              bubbleY = imgY + imgHeight - bubbleHeight - 5;
+            }
+            if (bubbleY < imgY) {
+              bubbleY = imgY + 5;
+            }
+            if (bubbleX + bubbleWidth > imgX + imgWidth) {
+              bubbleX = imgX + imgWidth - bubbleWidth - 5;
+            }
             
             // Bubble-Hintergrund (weiß mit dünnem schwarzem Rand wie in Vorschau)
             const isCaption = bubble.bubble_type === 'caption';
@@ -283,12 +294,12 @@ async function createComicPDF(project) {
         }
       }
       
-      // Seitenzahl unten rechts (außerhalb des Bildes)
-      doc.fontSize(10)
+      // Seitenzahl klein rechts unten (außerhalb des Bildes)
+      doc.fontSize(9)
          .font('Helvetica')
-         .fillColor('#8B7355')
-         .text(`${i + 1}`, A4_WIDTH - 40, A4_HEIGHT - 20, {
-           width: 30,
+         .fillColor('#999999')
+         .text(`${i + 1}`, A4_WIDTH - 30, A4_HEIGHT - 15, {
+           width: 20,
            align: 'right'
          });
       

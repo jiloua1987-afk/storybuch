@@ -265,12 +265,14 @@ export default function PanelView({ imageUrl, title, panels = [], panelPositions
   const containerRef = useRef<HTMLDivElement>(null);
   const nextExtraId = useRef(1000);
 
-  // Reset dragPositions when page changes
+  // Reset local state when page changes, but keep saved positions
   useEffect(() => {
-    setDragPositions({});
+    setDragPositions({}); // Clear temporary drag positions
     setHiddenBubbles(new Set());
     setExtraBubbles([]);
-  }, [pageId]);
+    setEditingIndex(null);
+    setEditingExtra(null);
+  }, [pageId, imageUrl]); // Also reset when image changes
 
   const isValidDialog = (d?: string | null) =>
     d && d.trim().length > 0 && d.trim().toLowerCase() !== "null";
