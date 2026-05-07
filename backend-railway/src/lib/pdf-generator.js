@@ -218,15 +218,15 @@ async function createComicPDF(project) {
               }
             }
             
-            // Bubble-Größe berechnen (sehr kompakt für PDF)
-            const maxBubbleWidth = 110; // Sehr klein für PDF
-            const padding = 6; // Minimales Padding
+            // Bubble-Größe berechnen (EXTREM kompakt für PDF)
+            const maxBubbleWidth = 90; // SEHR klein
+            const padding = 4; // SEHR wenig Padding
             
             // Text-Höhe messen
-            doc.fontSize(9).font('Helvetica'); // Sehr kleine Schrift für PDF
+            doc.fontSize(8).font('Helvetica'); // SEHR kleine Schrift
             const textHeight = doc.heightOfString(text, { width: maxBubbleWidth - (padding * 2) });
-            const bubbleWidth = Math.min(maxBubbleWidth, Math.max(70, text.length * 2));
-            const bubbleHeight = textHeight + (padding * 2) + 4;
+            const bubbleWidth = Math.min(maxBubbleWidth, Math.max(60, text.length * 1.8));
+            const bubbleHeight = textHeight + (padding * 2) + 3;
             
             // Ensure bubble stays within image bounds
             if (bubbleY + bubbleHeight > imgY + finalImgHeight) {
@@ -260,13 +260,13 @@ async function createComicPDF(project) {
                  .fillAndStroke(bgColor, '#1A1410');
             }
             
-            // Text in Bubble - Speaker fett, Rest normal (wie in Vorschau)
+            // Text in Bubble - Speaker fett, Rest normal
             if (speaker) {
               // Speaker fett
-              doc.fontSize(9) // Kleinere Schrift
+              doc.fontSize(8) // SEHR kleine Schrift
                  .font('Helvetica-Bold')
                  .fillColor(textColor)
-                 .text(speaker, bubbleX + padding, bubbleY + padding + 2, {
+                 .text(speaker, bubbleX + padding, bubbleY + padding + 1, {
                    width: bubbleWidth - (padding * 2),
                    continued: true
                  })
@@ -275,17 +275,17 @@ async function createComicPDF(project) {
                  .text(bubble.dialog, {
                    width: bubbleWidth - (padding * 2),
                    align: 'left',
-                   lineGap: 1
+                   lineGap: 0.5
                  });
             } else {
               // Nur Dialog, normal
-              doc.fontSize(9) // Kleinere Schrift
+              doc.fontSize(8) // SEHR kleine Schrift
                  .font('Helvetica')
                  .fillColor(textColor)
-                 .text(text, bubbleX + padding, bubbleY + padding + 2, {
+                 .text(text, bubbleX + padding, bubbleY + padding + 1, {
                    width: bubbleWidth - (padding * 2),
                    align: 'left',
-                   lineGap: 1
+                   lineGap: 0.5
                  });
             }
             
