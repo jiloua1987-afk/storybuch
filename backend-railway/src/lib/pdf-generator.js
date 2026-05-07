@@ -214,15 +214,15 @@ async function createComicPDF(project) {
               }
             }
             
-            // Bubble-Größe berechnen (kompakter)
-            const maxBubbleWidth = 140; // Reduziert von 180
-            const padding = 8; // Reduziert von 10
+            // Bubble-Größe berechnen (sehr kompakt für PDF)
+            const maxBubbleWidth = 110; // Sehr klein für PDF
+            const padding = 6; // Minimales Padding
             
             // Text-Höhe messen
-            doc.fontSize(11).font('Helvetica'); // Kleinere Schrift
+            doc.fontSize(9).font('Helvetica'); // Sehr kleine Schrift für PDF
             const textHeight = doc.heightOfString(text, { width: maxBubbleWidth - (padding * 2) });
-            const bubbleWidth = Math.min(maxBubbleWidth, Math.max(80, text.length * 2.5));
-            const bubbleHeight = textHeight + (padding * 2) + 6;
+            const bubbleWidth = Math.min(maxBubbleWidth, Math.max(70, text.length * 2));
+            const bubbleHeight = textHeight + (padding * 2) + 4;
             
             // Ensure bubble stays within image bounds
             if (bubbleY + bubbleHeight > imgY + imgHeight) {
@@ -259,10 +259,10 @@ async function createComicPDF(project) {
             // Text in Bubble - Speaker fett, Rest normal (wie in Vorschau)
             if (speaker) {
               // Speaker fett
-              doc.fontSize(12)
+              doc.fontSize(9) // Kleinere Schrift
                  .font('Helvetica-Bold')
                  .fillColor(textColor)
-                 .text(speaker, bubbleX + padding, bubbleY + padding + 3, {
+                 .text(speaker, bubbleX + padding, bubbleY + padding + 2, {
                    width: bubbleWidth - (padding * 2),
                    continued: true
                  })
@@ -271,17 +271,17 @@ async function createComicPDF(project) {
                  .text(bubble.dialog, {
                    width: bubbleWidth - (padding * 2),
                    align: 'left',
-                   lineGap: 2
+                   lineGap: 1
                  });
             } else {
               // Nur Dialog, normal
-              doc.fontSize(12)
+              doc.fontSize(9) // Kleinere Schrift
                  .font('Helvetica')
                  .fillColor(textColor)
-                 .text(text, bubbleX + padding, bubbleY + padding + 3, {
+                 .text(text, bubbleX + padding, bubbleY + padding + 2, {
                    width: bubbleWidth - (padding * 2),
                    align: 'left',
-                   lineGap: 2
+                   lineGap: 1
                  });
             }
             

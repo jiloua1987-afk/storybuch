@@ -26,7 +26,7 @@ interface PanelViewProps {
   pageNumber?: number;
   pageId?: string; // NEW: To identify which page we're editing
   onPositionsChange?: (positions: PanelPosition[]) => void; // NEW: Callback to save positions
-  onDialogChange?: (panelIndex: number, newDialog: string) => void; // NEW: Callback to save edited dialogs
+  onDialogChange?: (panelIndex: number, newDialog: string, bubbleIndex?: number) => void; // NEW: Callback to save edited dialogs with bubble index
 }
 
 // ── Handdrawn SVG bubble border ───────────────────────────────────────────────
@@ -253,7 +253,7 @@ function initMultiBubbleSizes(dialogs: Array<{ speaker: string; text: string }>)
 
 // ── Main PanelView ────────────────────────────────────────────────────────────
 export default function PanelView({ imageUrl, title, panels = [], panelPositions, pageNumber, pageId, onPositionsChange, onDialogChange }: PanelViewProps) {
-  const [editingIndex, setEditingIndex] = useState<number | null>(null);
+  const [editingBubbleId, setEditingBubbleId] = useState<string | null>(null); // Changed: track by bubbleId instead of panelIndex
   const [editedDialogs, setEditedDialogs] = useState<Record<string, string>>({}); // Changed to string keys for bubbleId
   const [hiddenBubbles, setHiddenBubbles] = useState<Set<string>>(new Set()); // Changed to string for bubbleId
   const [extraBubbles, setExtraBubbles] = useState<Array<{ id: number; top: number; left: number; dialog: string; speaker: string }>>([]);
@@ -270,7 +270,7 @@ export default function PanelView({ imageUrl, title, panels = [], panelPositions
     setDragPositions({}); // Clear temporary drag positions
     setHiddenBubbles(new Set());
     setExtraBubbles([]);
-    setEditingIndex(null);
+    setEditingBubbleId(null); // Changed from setEditingIndex
     setEditingExtra(null);
   }, [pageId, imageUrl]); // Also reset when image changes
 
@@ -292,12 +292,12 @@ export default function PanelView({ imageUrl, title, panels = [], panelPositions
   };
 
   // ── Save edited dialog when editing ends ──────────────────────────────────
-  const handleDialogBlur = (panelIndex: number, bubbleId: string) => {
-    setEditingIndex(null);
+  const handleDialogBlur = (panelIndex: number, bubbleId: string, bubbleIndex: number) => {
+    setEditingBubbleId(null); // Changed from setEditingIndex
     const newText = editedDialogs[bubbleId];
     if (newText !== undefined && onDialogChange) {
-      console.log(`💾 Saving edited dialog for panel ${panelIndex}: "${newText}"`);
-      onDialogChange(panelIndex, newText);
+      console.log(`💾 Saving edited dialog for panel ${panelIndex}, bubble ${bubbleIndex}: "${newText}"`);
+      onDialogChange(panelIndex, newText, bubbleIndex);
     }
   };
 
@@ -410,7 +410,7 @@ export default function PanelView({ imageUrl, title, panels = [], panelPositions
   }, [pageId, hasDetectedPositions, resolvedPositions.length, dialogPanels.length]); // Trigger when page or data changes
 
   const handleMouseDown = (e: React.MouseEvent | React.TouchEvent, type: "panel" | "extra", index: string | number) => {
-    if (editingIndex !== null || editingExtra !== null) return;
+    if (editingBubbleId !== null || editingExtra !== null) return; // Changed from editingIndex
     e.preventDefault();
     
     const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
@@ -536,7 +536,7 @@ export default function PanelView({ imageUrl, title, panels = [], panelPositions
             if (!dialog && !panel.dialog) return null;
             
             const displayDialog = panel.dialog || dialog; // Use panel.dialog from flattened structure
-            const isEditing = editingIndex === panel.originalIndex;
+            const isEditing = editingBubbleId === bubbleId; // Changed: check by bubbleId instead of panelIndex
             const posStyle = getFinalPosition(bubbleId, bubbleIndex);
             const isDragging = dragging?.type === "panel" && dragging.index === bubbleId;
             const { w: initW, h: initH } = initBubbleSize(displayDialog, panel.speaker || "");
@@ -585,11 +585,11 @@ export default function PanelView({ imageUrl, title, panels = [], panelPositions
                           autoFocus
                           value={displayDialog}
                           onChange={(e) => setEditedDialogs({ ...editedDialogs, [bubbleId]: e.target.value })}
-                          onBlur={() => handleDialogBlur(panel.originalIndex, bubbleId)}
+                          onBlur={() => handleDialogBlur(panel.originalIndex, bubbleId, panel.bubbleIndex ?? 0)}
                           onKeyDown={(e) => {
                             if (e.key === "Enter" && !e.shiftKey) {
                               e.preventDefault();
-                              handleDialogBlur(panel.originalIndex, bubbleId);
+                              handleDialogBlur(panel.originalIndex, bubbleId, panel.bubbleIndex ?? 0);
                             }
                           }}
                           className="w-full h-full bg-transparent outline-none resize-none text-[#1A1410]"
@@ -600,7 +600,7 @@ export default function PanelView({ imageUrl, title, panels = [], panelPositions
                         <p
                           className="text-[#1A1410] leading-snug select-none"
                           style={{ fontFamily: "'Comic Neue', cursive", fontSize: "12px", fontWeight: 500 }}
-                          onDoubleClick={(e) => { e.stopPropagation(); setEditingIndex(panel.originalIndex); }}
+                          onDoubleClick={(e) => { e.stopPropagation(); setEditingBubbleId(bubbleId); }} // Changed: set bubbleId instead of panelIndex
                         >
                           {panel.speaker && panel.speaker !== "narrator" && panel.speaker.toLowerCase() !== "null" && (
                             <span className="font-bold">{panel.speaker}: </span>

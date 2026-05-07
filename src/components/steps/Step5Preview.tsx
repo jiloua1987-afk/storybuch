@@ -252,28 +252,47 @@ export default function Step5Preview() {
     console.log(`✓ Saved ${positions.length} bubble positions for page ${currentPage + 1}`);
   }, [currentPage, project?.chapters, updateChapter]);
 
-  const handleDialogChange = useCallback((panelIndex: number, newDialog: string) => {
+  const handleDialogChange = useCallback((panelIndex: number, newDialog: string, bubbleIndex?: number) => {
     const currentPageData = project.chapters[currentPage];
     if (!currentPageData) {
       console.warn(`⚠ Cannot save dialog: no data for page ${currentPage}`);
       return;
     }
     
-    console.log(`💾 Saving edited dialog for panel ${panelIndex}: "${newDialog}"`);
+    console.log(`💾 Saving edited dialog for panel ${panelIndex}, bubble ${bubbleIndex ?? 0}: "${newDialog}"`);
     
     // Update the specific panel's dialog
     const updatedPanels = [...(currentPageData.panels || [])];
     if (updatedPanels[panelIndex]) {
-      updatedPanels[panelIndex] = {
-        ...updatedPanels[panelIndex],
-        dialog: newDialog
-      };
+      const panel = updatedPanels[panelIndex];
+      
+      // Check if this is a multi-bubble panel
+      if (panel.dialogs && Array.isArray(panel.dialogs) && bubbleIndex !== undefined) {
+        // Update specific bubble in dialogs array
+        const updatedDialogs = [...panel.dialogs];
+        if (updatedDialogs[bubbleIndex]) {
+          updatedDialogs[bubbleIndex] = {
+            ...updatedDialogs[bubbleIndex],
+            text: newDialog
+          };
+          updatedPanels[panelIndex] = {
+            ...panel,
+            dialogs: updatedDialogs
+          };
+        }
+      } else {
+        // Legacy single dialog format
+        updatedPanels[panelIndex] = {
+          ...panel,
+          dialog: newDialog
+        };
+      }
       
       updateChapter(currentPageData.id, {
         panels: updatedPanels
       });
       
-      console.log(`✓ Saved dialog for panel ${panelIndex + 1}`);
+      console.log(`✓ Saved dialog for panel ${panelIndex + 1}, bubble ${bubbleIndex ?? 0}`);
     }
   }, [currentPage, project?.chapters, updateChapter]);
 
