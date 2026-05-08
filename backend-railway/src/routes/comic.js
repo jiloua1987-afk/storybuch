@@ -87,7 +87,9 @@ function getOutfit(location = "") {
     return "swimwear, swim shorts, light summer dresses, sandals. NO jeans, NO dark shirts.";
   if (["airport", "gate", "terminal", "departure", "arrival", "flight"].some(k => loc.includes(k)))
     return "comfortable travel clothes — casual shirts, jeans, sneakers, light jackets.";
-  if (["restaurant", "wedding", "celebration", "party", "dinner", "theater"].some(k => loc.includes(k)))
+  if (["wedding", "hochzeit", "heirat", "marriage", "bride", "groom", "ceremony"].some(k => loc.includes(k)))
+    return "WEDDING ATTIRE — bride in white wedding dress with veil, groom in dark formal suit with tie. NO casual clothes, NO everyday outfits.";
+  if (["restaurant", "celebration", "party", "dinner", "theater"].some(k => loc.includes(k)))
     return "smart casual — dress shirts, blouses, nice trousers.";
   if (["courtyard", "garden", "yard", "terrace", "patio", "outdoor", "backyard"].some(k => loc.includes(k)))
     return "casual outdoor clothes — t-shirts, shorts, light trousers for warm weather.";
@@ -1085,7 +1087,11 @@ CRITICAL SIZE RULES — enforce in every panel:
 - Never draw a young child as tall as an older child or adult
 - Size ratios from character descriptions MUST be respected
 
-CLOTHING — characters wear ${outfit} OVERRIDE any clothing visible in the reference photo.
+CRITICAL CLOTHING RULES:
+Characters MUST wear: ${outfit}
+DO NOT copy clothing from the reference photo.
+The reference photo is ONLY for facial features and body proportions.
+IGNORE any clothing visible in the reference photo — draw the clothing specified above instead.
 
 PANELS:
 ${panelDescriptions}
@@ -1264,6 +1270,10 @@ MANDATORY:
 - Draw ${finalCharacters.map(c => c.name).join(" and ")} so they are recognizable as the SAME people from the cover, just younger
 - Match the art style and color palette of the cover exactly
 
+CRITICAL: IGNORE the clothing from the cover photo.
+The cover shows everyday clothing, but this scene requires different attire.
+Draw the clothing specified in the CRITICAL CLOTHING RULES section instead.
+
 NATURAL SCENE BEHAVIOR:
 - Characters are IN THE SCENE, not posing for a photo
 - They interact with each other and their environment
@@ -1289,6 +1299,10 @@ ABSOLUTE REQUIREMENTS:
 - EXACT SAME: hair color, hair style, hair length, hair texture
 - EXACT SAME: skin tone, facial features, overall appearance
 - Match the art style and color palette of the cover EXACTLY
+
+CRITICAL: IGNORE the clothing from the cover photo.
+The cover shows everyday clothing, but this scene requires different attire.
+Draw the clothing specified in the CRITICAL CLOTHING RULES section instead.
 
 NATURAL SCENE BEHAVIOR:
 - Characters are IN THE SCENE, not posing for a photo
@@ -1355,6 +1369,10 @@ MANDATORY:
 - Same overall appearance
 - Match the art style and color palette of the cover exactly
 ${hasManyPeople ? "- Add background guests/crowd as faceless silhouettes or simple figures\n" : ""}
+CRITICAL: IGNORE the clothing from the cover photo.
+The cover shows everyday clothing, but this scene requires different attire.
+Draw the clothing specified in the CRITICAL CLOTHING RULES section instead.
+
 NATURAL SCENE BEHAVIOR:
 - Characters are IN THE SCENE, not posing for a photo
 - They interact with each other and their environment
