@@ -81,8 +81,15 @@ function sanitizePrompt(text) {
 }
 
 // ── Outfit context from English location string ───────────────────────────────
-function getOutfit(location = "") {
+function getOutfit(location = "", panelDescriptions = "") {
   const loc = location.toLowerCase();
+  const desc = panelDescriptions.toLowerCase();
+  const combined = `${loc} ${desc}`;
+  
+  // Check for winter/cold weather keywords
+  const isWinter = ["winter", "schnee", "snow", "kalt", "cold", "weihnachten", "christmas", "skiing", "ski"].some(k => combined.includes(k));
+  const isCold = ["herbst", "autumn", "fall", "regen", "rain", "windig", "windy"].some(k => combined.includes(k));
+  
   if (["beach", "sea", "pool", "shore", "coast", "swimming", "water"].some(k => loc.includes(k)))
     return "swimwear, swim shorts, light summer dresses, sandals. NO jeans, NO dark shirts.";
   if (["airport", "gate", "terminal", "departure", "arrival", "flight"].some(k => loc.includes(k)))
@@ -97,7 +104,17 @@ function getOutfit(location = "") {
     return "relaxed home clothes — t-shirts, comfortable trousers.";
   if (["bike", "bicycle", "playground", "sport", "race", "riding"].some(k => loc.includes(k)))
     return "casual sporty clothes — t-shirts, shorts, sneakers.";
-  return "casual everyday clothes appropriate for the scene and warm weather.";
+  
+  // Season-based fallback
+  if (isWinter) {
+    return "warm winter clothes — coats, jackets, sweaters, scarves, long trousers. NO t-shirts, NO shorts.";
+  }
+  if (isCold) {
+    return "autumn/fall clothes — light jackets, long sleeves, jeans, comfortable shoes.";
+  }
+  
+  // Default: warm weather
+  return "casual everyday clothes appropriate for the scene — t-shirts, light shirts, comfortable trousers or shorts for warm weather.";
 }
 
 // ── Age modifier detection for biographical stories ───────────────────────────
@@ -842,6 +859,10 @@ Bold ink outlines on every person. Flat cel-shaded colors. Expressive cartoon fa
 Left person is ${referenceImageUrls[0].label}: ${characters.find(c => c.name === referenceImageUrls[0].label)?.visual_anchor || ""}
 Right person is ${referenceImageUrls[1].label}: ${characters.find(c => c.name === referenceImageUrls[1].label)?.visual_anchor || ""}
 
+CLOTHING: Draw characters in casual everyday clothes appropriate for a cover photo.
+IGNORE the specific clothing from the photo — use stylish casual attire instead.
+Examples: nice shirts, blouses, jeans, casual dresses. Make it look good for a comic book cover.
+
 Draw BOTH characters together in ${coverLocation}.
 Composition: dynamic group shot, both characters prominently visible, vivid illustrated background.
 NO text, NO title, NO letters anywhere in the image.`);
@@ -899,6 +920,11 @@ Draw ALL characters: ${charNames}.
 For characters not in the photo, draw them from their description.
 Setting: ${coverLocation}.
 Character descriptions: ${charDesc}
+
+CLOTHING: Draw characters in casual everyday clothes appropriate for a cover photo.
+IGNORE the specific clothing from the photo — use stylish casual attire instead.
+Examples: nice shirts, blouses, jeans, casual dresses. Make it look good for a comic book cover.
+
 Composition: dynamic group shot, characters in foreground, vivid illustrated background.
 NO text, NO title, NO letters anywhere in the image.`),
           size: "1024x1536",
@@ -1037,8 +1063,11 @@ router.post("/page", async (req, res) => {
     const primaryRefBase64 = referenceImages[0] || null;
 
     const mood = MOOD_MOD[comicStyle] || MOOD_MOD.emotional;
-    const outfit = getOutfit(page.location);
     const panelCount = page.panels.length;
+    const panelDescriptions = page.panels
+      .map(p => `Panel ${p.nummer}: ${p.szene}`)
+      .join("\n");
+    const outfit = getOutfit(page.location, panelDescriptions);
     const layoutDesc =
       panelCount <= 2 ? "2 equal panels" :
       panelCount === 3 ? "1 large panel top, 2 smaller panels bottom" :
@@ -1046,9 +1075,6 @@ router.post("/page", async (req, res) => {
       "2×2 grid";
 
     const charAnchors = finalCharacters.map(c => `${c.name}: ${c.visual_anchor}`).join(". ");
-    const panelDescriptions = page.panels
-      .map(p => `Panel ${p.nummer}: ${p.szene}`)
-      .join("\n");
 
     // ── AGE CONTEXT DETECTION ─────────────────────────────────────────────────
     // Detect if this is a historical/young scene or current age scene
