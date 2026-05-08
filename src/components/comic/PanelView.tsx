@@ -12,6 +12,7 @@ interface PanelData {
 
 interface PanelPosition {
   nummer: number;
+  bubbleIndex?: number; // Optional: for multi-bubble panels to distinguish bubbles
   top: number;
   left: number;
   width: number;
@@ -340,13 +341,24 @@ export default function PanelView({ imageUrl, title, panels = [], panelPositions
       let left = 2;
       
       if (hasDetectedPositions) {
-        const pos = panelPositions!.find(p => p.nummer === i + 1) || panelPositions![i];
+        // Find position by nummer AND bubbleIndex for multi-bubble support
+        const pos = panelPositions!.find(p => 
+          p.nummer === i + 1 && 
+          (p.bubbleIndex === undefined || p.bubbleIndex === bubbleIdx)
+        );
+        
         if (pos) { 
           top = pos.top + 2; 
           left = pos.left + 2;
+          // No offset needed - position is already correct from saved data
+        } else {
+          // Fallback: use slot system if no saved position found
+          const style = getFallbackPosition(i, panels.length);
+          top  = parseFloat(String(style.top  ?? "5%"));
+          left = parseFloat(String(style.left ?? style.right ?? "2%"));
           // For multi-bubble panels, stack them vertically with offset
           if (panel.isMultiBubble && bubbleIdx > 0) {
-            top = top + (bubbleIdx * 15); // Stack with 15% vertical offset
+            top = top + (bubbleIdx * 15);
           }
         }
       } else {
@@ -372,7 +384,7 @@ export default function PanelView({ imageUrl, title, panels = [], panelPositions
       w: initial[idx].w,
       h: initial[idx].h
     }));
-  }, [dialogPanels.length, hasDetectedPositions, panels.length]); // eslint-disable-line
+  }, [dialogPanels.length, hasDetectedPositions, panels.length, panelPositions]); // eslint-disable-line
 
   // ── Save initial positions on first render ────────────────────────────────
   useEffect(() => {
@@ -395,6 +407,7 @@ export default function PanelView({ imageUrl, title, panels = [], panelPositions
         const resolved = resolvedPositions[bubbleIndex];
         return {
           nummer: panel.originalIndex + 1,
+          bubbleIndex: panel.bubbleIndex ?? 0, // Add bubbleIndex for multi-bubble support
           top: resolved?.top ?? 5,
           left: resolved?.left ?? 2,
           width: resolved?.w ?? 20,
@@ -453,6 +466,7 @@ export default function PanelView({ imageUrl, title, panels = [], panelPositions
         
         const position = {
           nummer: panel.originalIndex + 1,
+          bubbleIndex: panel.bubbleIndex ?? 0, // Add bubbleIndex for multi-bubble support
           top: dragPos?.top ?? resolved?.top ?? 5,
           left: dragPos?.left ?? resolved?.left ?? 2,
           width: resolved?.w ?? 20,
@@ -567,6 +581,7 @@ export default function PanelView({ imageUrl, title, panels = [], panelPositions
                           const resolved = resolvedPositions[bubbleIndex];
                           return {
                             nummer: panel.originalIndex + 1,
+                            bubbleIndex: panel.bubbleIndex ?? 0, // Add bubbleIndex for multi-bubble support
                             top: dragPos?.top ?? resolved?.top ?? 5,
                             left: dragPos?.left ?? resolved?.left ?? 2,
                             width: resolved?.w ?? 20,
