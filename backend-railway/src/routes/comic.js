@@ -1015,6 +1015,20 @@ NO text, NO title, NO letters anywhere in the image.`),
         }
       } catch (e) {
         console.warn("  → Cover with photo failed:", e.message);
+        
+        // Check if it's a safety system rejection
+        if (e.message && (e.message.includes('safety') || e.message.includes('rejected'))) {
+          console.error("❌ SAFETY SYSTEM REJECTION: Photo was blocked by OpenAI");
+          console.error("   → User must upload a different photo");
+          
+          return res.status(400).json({ 
+            error: "SAFETY_REJECTION",
+            message: "Dieses Foto wurde vom System blockiert. Bitte verwenden Sie ein anderes Foto.",
+            userMessage: "Das hochgeladene Foto konnte nicht verarbeitet werden. Bitte versuchen Sie es mit einem anderen Foto.",
+            coverImageUrl: "",
+            projectId: req.body.projectId
+          });
+        }
       }
     }
 
