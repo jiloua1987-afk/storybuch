@@ -268,6 +268,7 @@ export default function Step5Preview() {
       const newImageUrl = result.imageUrl || pageData.imageUrl;
       updateChapter(pageId, {
         imageUrl: newImageUrl,
+        panels: result.panels || pageData.panels, // ← WICHTIG: Neue panels vom Backend übernehmen!
         panelPositions: result.panelPositions || pageData.panelPositions,
       });
       setRegenCount(prev => ({ ...prev, [pageId]: (prev[pageId] || 0) + 1 }));

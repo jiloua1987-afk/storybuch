@@ -654,9 +654,10 @@ export default function PanelView({ imageUrl, title, panels = [], panelPositions
                               handleDialogBlur(panel.originalIndex, bubbleId, panel.bubbleIndex);
                             }
                           }}
+                          onMouseDown={(e) => e.stopPropagation()}
+                          onTouchStart={(e) => e.stopPropagation()}
                           className="w-full h-full bg-transparent outline-none resize-none text-[#1A1410]"
                           style={{ fontFamily: "'Comic Neue', cursive", fontSize: "12px" }}
-                          onClick={(e) => e.stopPropagation()}
                         />
                       ) : (
                         <p
