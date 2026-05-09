@@ -40,6 +40,7 @@ export interface Chapter {
   imagePrompt?: string;
   panels?: ChapterPanel[];
   panelPositions?: PanelPosition[] | null;
+  extraBubbles?: Array<{ id: number; top: number; left: number; dialog: string; speaker: string }>; // NEW: User-added bubbles
 }
 
 export type ComicStyle = "action" | "emotional" | "humor";

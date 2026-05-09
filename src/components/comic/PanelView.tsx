@@ -1,6 +1,7 @@
 "use client";
 import { useState, useRef, useCallback, useMemo, useEffect } from "react";
 import { resolveCollisions } from "./bubble-collision";
+import { useBookStore } from "@/store/bookStore";
 
 interface PanelData {
   dialog?: string; // Legacy: single dialog
@@ -270,10 +271,18 @@ export default function PanelView({ imageUrl, title, panels = [], panelPositions
   useEffect(() => {
     setDragPositions({}); // Clear temporary drag positions
     setHiddenBubbles(new Set());
-    setExtraBubbles([]);
+    
+    // Load extra bubbles from chapter data
+    const currentPageData = project?.chapters?.[currentPage];
+    if (currentPageData?.extraBubbles) {
+      setExtraBubbles(currentPageData.extraBubbles);
+    } else {
+      setExtraBubbles([]);
+    }
+    
     setEditingBubbleId(null); // Changed from setEditingIndex
     setEditingExtra(null);
-  }, [pageId, imageUrl]); // Also reset when image changes
+  }, [pageId, imageUrl, currentPage, project?.chapters]); // Also reset when image changes
 
   const isValidDialog = (d?: string | null) =>
     d && d.trim().length > 0 && d.trim().toLowerCase() !== "null";
@@ -499,8 +508,35 @@ export default function PanelView({ imageUrl, title, panels = [], panelPositions
         }
       }, 200);
     }
+    
+    // Save extra bubbles when drag ends
+    if (dragging && dragging.type === "extra" && pageId) {
+      saveExtraBubbles();
+    }
+    
     setDragging(null);
   };
+
+  // Save extra bubbles to chapter
+  const saveExtraBubbles = useCallback(() => {
+    if (!pageId || !project?.chapters) return;
+    
+    const currentPageData = project.chapters.find(c => c.id === pageId);
+    if (!currentPageData) return;
+    
+    console.log(`💾 Saving ${extraBubbles.length} extra bubbles for page "${currentPageData.title}"`);
+    
+    // Use updateChapter from parent (Step5Preview)
+    // We need to pass this through props
+    if (onPositionsChange) {
+      // Hack: We'll save extra bubbles by updating the chapter directly through the store
+      const { updateChapter } = useBookStore.getState();
+      updateChapter(pageId, {
+        extraBubbles: extraBubbles
+      });
+      console.log(`✓ Saved ${extraBubbles.length} extra bubbles`);
+    }
+  }, [extraBubbles, pageId, project?.chapters, onPositionsChange]);
 
   // Click on image to add new bubble
   const handleImageClick = (e: React.MouseEvent) => {
@@ -510,9 +546,13 @@ export default function PanelView({ imageUrl, title, panels = [], panelPositions
     const left = ((e.clientX - containerRect.left) / containerRect.width) * 100;
     const top = ((e.clientY - containerRect.top) / containerRect.height) * 100;
     const id = nextExtraId.current++;
-    setExtraBubbles(prev => [...prev, { id, top: Math.max(2, top - 5), left: Math.max(2, left - 10), dialog: "Neuer Text", speaker: "" }]);
+    const newBubbles = [...extraBubbles, { id, top: Math.max(2, top - 5), left: Math.max(2, left - 10), dialog: "Neuer Text", speaker: "" }];
+    setExtraBubbles(newBubbles);
     setEditingExtra(id);
     setAddMode(false);
+    
+    // Save immediately
+    setTimeout(() => saveExtraBubbles(), 100);
   };
 
   const getFinalPosition = (bubbleId: string, bubbleIndex: number): React.CSSProperties => {
@@ -695,7 +735,12 @@ export default function PanelView({ imageUrl, title, panels = [], panelPositions
                   className="absolute z-50 w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full text-sm font-bold flex items-center justify-center shadow-md transition-colors"
                   style={{ position: "absolute", top: -12, right: -12 }}
                   onMouseDown={(e) => e.stopPropagation()}
-                  onClick={(e) => { e.stopPropagation(); setExtraBubbles(prev => prev.filter(b => b.id !== bubble.id)); }}
+                  onClick={(e) => { 
+                    e.stopPropagation(); 
+                    setExtraBubbles(prev => prev.filter(b => b.id !== bubble.id));
+                    // Save after deletion
+                    setTimeout(() => saveExtraBubbles(), 100);
+                  }}
                 >✕</button>
                 <ResizableBubble initW={initW} initH={initH} style={{}}>
                   {(w, h) => (
@@ -718,7 +763,13 @@ export default function PanelView({ imageUrl, title, panels = [], panelPositions
                           <textarea
                             value={bubble.dialog}
                             onChange={(e) => setExtraBubbles(prev => prev.map(b => b.id === bubble.id ? { ...b, dialog: e.target.value } : b))}
-                            onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && setEditingExtra(null)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter" && !e.shiftKey) {
+                                setEditingExtra(null);
+                                // Save after editing
+                                setTimeout(() => saveExtraBubbles(), 100);
+                              }
+                            }}
                             className="w-full flex-1 bg-transparent outline-none resize-none text-[#1A1410]"
                             style={{ fontFamily: "'Comic Neue', cursive", fontSize: "12px" }}
                             onClick={(e) => e.stopPropagation()}
@@ -726,7 +777,12 @@ export default function PanelView({ imageUrl, title, panels = [], panelPositions
                           />
                           <button
                             className="text-xs text-[#C9963A] font-semibold text-right"
-                            onMouseDown={(e) => { e.stopPropagation(); setEditingExtra(null); }}
+                            onMouseDown={(e) => { 
+                              e.stopPropagation(); 
+                              setEditingExtra(null);
+                              // Save after editing
+                              setTimeout(() => saveExtraBubbles(), 100);
+                            }}
                           >Fertig ✓</button>
                         </div>
                       ) : (
