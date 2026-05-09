@@ -33,32 +33,26 @@ async function createComicPDF(project) {
     try {
       const coverBuffer = await fetchImageBuffer(project.coverImageUrl);
       
-      // Cover im Portrait-Format (2:3 Ratio wie Original 1024×1536)
-      // Maximale Höhe nutzen mit kleinem Rand
-      const margin = 30;
-      const coverHeight = A4_HEIGHT - (margin * 2);
-      const coverWidth = coverHeight * (2/3); // 2:3 Ratio beibehalten
-      const coverX = (A4_WIDTH - coverWidth) / 2;
-      const coverY = margin;
-      
+      // Cover VOLLBILD - kein Rand, füllt komplette Seite (wie Kinderbuch)
       const coverProcessed = await sharp(coverBuffer)
-        .resize(Math.round(coverWidth * 2), Math.round(coverHeight * 2), { 
-          fit: 'cover',  // Cover statt contain - füllt volle Breite
+        .resize(Math.round(A4_WIDTH * 2), Math.round(A4_HEIGHT * 2), { 
+          fit: 'cover',  // Cover - füllt komplette Seite
           position: 'center'
         })
         .png()
         .toBuffer();
       
-      doc.image(coverProcessed, coverX, coverY, { 
-        width: coverWidth, 
-        height: coverHeight 
+      // Bild füllt komplette Seite - kein Rand
+      doc.image(coverProcessed, 0, 0, { 
+        width: A4_WIDTH, 
+        height: A4_HEIGHT 
       });
       
-      // Titel als Overlay unten auf dem Bild mit schönerer Schrift
-      const overlayY = coverY + coverHeight - 120;
+      // Titel als Overlay unten auf dem Bild
+      const overlayY = A4_HEIGHT - 150;
       
       // Dunkler Hintergrund für bessere Lesbarkeit
-      doc.rect(coverX, overlayY - 10, coverWidth, 110)
+      doc.rect(0, overlayY - 10, A4_WIDTH, 140)
          .fillOpacity(0.88)
          .fill('#1A1410');
       
@@ -66,8 +60,8 @@ async function createComicPDF(project) {
          .fontSize(32)
          .font('Helvetica-Bold')
          .fillColor('#FFFFFF')
-         .text(project.title.toUpperCase(), coverX + 20, overlayY + 15, {
-           width: coverWidth - 40,
+         .text(project.title.toUpperCase(), 40, overlayY + 20, {
+           width: A4_WIDTH - 80,
            align: 'center',
            characterSpacing: 1.5,
            lineGap: 5
