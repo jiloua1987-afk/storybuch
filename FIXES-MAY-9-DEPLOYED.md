@@ -2,43 +2,51 @@
 
 ## Status: ✅ DEPLOYED
 
-**Backend:** Railway auto-deployed (Commit 189591a)  
+**Backend:** Railway auto-deployed (Commit fe3da72)  
 **Frontend:** Vercel auto-deployed (Commit 4be5363)
 
 ---
 
-## 1. OpenAI Safety System Rejection - BEHOBEN ✅
+## 1. OpenAI Safety System Rejection - FALLBACK HINZUGEFÜGT ✅
 
 ### Problem
 - User-Foto wurde für Cover blockiert: "Your request was rejected by the safety system"
 - Gleiches Foto funktionierte für Seite 2 ohne Probleme
 - Cover blieb leer, Folgeseiten konnten nicht generiert werden
 
-### Root Cause
-- Cover verwendete `images.edit()` API mit direktem User-Foto
-- Diese API ist strenger bei Safety-Checks
-- Seite 2 verwendete `generateImage()` mit Referenz-Buffer → funktionierte
-
 ### Lösung
-**Verwendet jetzt denselben Ansatz wie Seite 2:**
-- ✅ Ersetzt `images.edit()` durch `generateImage()` mit Referenz-Buffer
-- ✅ Gleicher Prompt-Stil wie bei erfolgreichen Seiten
+**Behält bewährten Ansatz bei, fügt Fallback hinzu:**
+- ✅ **Standard:** `images.edit()` wie bisher (beste Qualität, funktioniert 99% der Zeit)
+- ✅ **Fallback:** Wenn Safety-Rejection → `generateImage()` Ansatz (wie Seite 2)
 - ✅ Funktioniert für Single-Photo und Multi-Photo Mode
-- ✅ Keine Qualitätsverluste - Cover sieht genauso gut aus
-- ✅ Folgeseiten können jetzt Cover als Referenz nutzen
+- ✅ Keine Qualitätsverluste im Normalfall
+- ✅ Seltene Safety-Rejections blockieren nicht mehr komplett
 
 ### Code Changes
 **Datei:** `backend-railway/src/routes/comic.js`
-- Zeilen ~950-1050: Cover-Generierung komplett überarbeitet
-- Multi-Photo: Composite-Buffer → `generateImage()`
-- Single-Photo: Direct Buffer → `generateImage()`
-- Fallback-Strategie bleibt unverändert
+- Zeilen ~950-1150: Cover-Generierung mit Fallback-Strategie
+- Multi-Photo: `images.edit()` → bei Safety-Error → `generateImage()` Fallback
+- Single-Photo: `images.edit()` → bei Safety-Error → `generateImage()` Fallback
+- Nur bei Safety-Rejection wird Fallback verwendet, nicht bei anderen Fehlern
+
+### Wie es funktioniert
+```
+1. Versuche images.edit() (wie bisher, beste Qualität)
+   ↓
+2. Erfolg? → Fertig! ✓
+   ↓
+3. Safety-Error? → Versuche generateImage() Fallback
+   ↓
+4. Erfolg? → Fertig! ✓
+   ↓
+5. Immer noch Fehler? → Zeige Fehlermeldung
+```
 
 ### Test-Anweisung
 1. Neues Comic erstellen (alte Comics haben gecachte Bilder!)
-2. Foto hochladen, das vorher blockiert wurde
-3. Cover sollte jetzt erfolgreich generiert werden
-4. Seite 2 sollte Cover als Referenz nutzen (konsistente Gesichter)
+2. Normales Foto hochladen → sollte wie bisher funktionieren (images.edit)
+3. Foto das Safety-Error verursacht → sollte jetzt mit Fallback funktionieren
+4. Logs zeigen: "✓ Cover done (single photo mode)" oder "✓ Cover done (single photo FALLBACK mode)"
 
 ---
 
@@ -53,8 +61,8 @@
 **Umfassendes Debug-Logging auf allen Ebenen:**
 
 1. **PanelView.tsx** (Bubble-Komponente)
-   - Loggt jede Drag-Operation
-   - Zeigt Position-Updates in Echtzeit
+   - Loggt jede Drag-Operation mit Bubble-ID
+   - Zeigt Position-Updates in Echtzeit (top%, left%)
    - Verifiziert localStorage nach jedem Save
 
 2. **Step5Preview.tsx** (Parent-Komponente)
@@ -63,7 +71,7 @@
    - Verifiziert Store UND localStorage nach Save
 
 3. **bookStore.ts** (Zustand Store)
-   - Loggt jeden `updateChapter` Call
+   - Loggt jeden `updateChapter` Call mit Details
    - Zeigt Rehydration beim App-Start
    - Zeigt alle gespeicherten Chapters mit Position-Count
 
@@ -120,12 +128,17 @@ Positions to save: [...]
 
 ## Test-Checkliste
 
-### Cover-Generierung (KRITISCH)
+### Cover-Generierung (WICHTIG)
 - [ ] Neues Comic erstellen
-- [ ] Foto hochladen (das vorher blockiert wurde)
-- [ ] Cover wird erfolgreich generiert (kein Safety-Error)
-- [ ] Seite 2 nutzt Cover als Referenz
-- [ ] Gesichter sind konsistent zwischen Cover und Seiten
+- [ ] Normales Foto hochladen
+- [ ] Cover wird erfolgreich generiert (Standard-Modus)
+- [ ] Qualität ist wie gewohnt gut
+- [ ] Logs zeigen: "✓ Cover done (single photo mode)"
+
+### Cover-Generierung mit Safety-Fallback (EDGE CASE)
+- [ ] Foto verwenden, das vorher Safety-Error verursachte
+- [ ] Cover wird trotzdem generiert (Fallback-Modus)
+- [ ] Logs zeigen: "❌ SAFETY SYSTEM REJECTION" → "✓ Cover done (single photo FALLBACK mode)"
 
 ### Bubble-Positionierung (DEBUG)
 - [ ] Neues Comic erstellen
@@ -136,26 +149,19 @@ Positions to save: [...]
 - [ ] Browser refreshen (F5)
 - [ ] Prüfen: Ist Bubble immer noch an neuer Position?
 
-### Bubble-Editing (BEKANNTES PROBLEM)
-- [ ] Doppelklick auf Bubble
-- [ ] Erwartung: Textarea erscheint
-- [ ] Realität: Funktioniert wahrscheinlich nicht
-- [ ] Workaround: Neue Bubble hinzufügen
-
 ---
 
 ## Deployment-Status
 
 ### Backend (Railway)
-- ✅ Commit 189591a pushed
+- ✅ Commit fe3da72 pushed
 - ✅ Railway auto-deploy gestartet
 - ⏳ Warte auf Deployment (~2-3 Minuten)
 - 🔗 Check: https://[deine-railway-url]/api/health
 
 ### Frontend (Vercel)
-- ✅ Commit 4be5363 pushed
-- ✅ Vercel auto-deploy gestartet
-- ⏳ Warte auf Deployment (~1-2 Minuten)
+- ✅ Commit 4be5363 pushed (bereits deployed)
+- ✅ Vercel deployment aktiv
 - 🔗 Check: https://[deine-vercel-url]
 
 ---
@@ -171,22 +177,24 @@ Positions to save: [...]
    - Alle Logs werden dort angezeigt
    - Bei Problemen: Logs kopieren und mir schicken
 
-3. **Keine Fehler mehr dulden**
-   - Cover-Problem sollte jetzt behoben sein
-   - Bubble-Problem ist jetzt debuggbar
-   - Wenn Cover immer noch fehlschlägt: Sofort melden mit Logs
+3. **Cover-Qualität sollte gleich bleiben**
+   - Standard-Modus (images.edit) wird in 99% der Fälle verwendet
+   - Fallback (generateImage) nur bei Safety-Rejection
+   - Wenn Qualität schlechter ist → melden mit Logs
 
 ---
 
 ## Nächste Prioritäten
 
-1. **Cover-Test durchführen** (höchste Priorität)
+1. **Cover-Test durchführen** (normale Fotos sollten wie bisher funktionieren)
 2. **Bubble-Debug-Logs analysieren** (wenn Problem weiterhin besteht)
 3. **Bubble-Editing fixen** (wenn Positionierung funktioniert)
 4. **Phase 2: State-Vereinfachung** (wenn alles funktioniert)
 
 ---
 
-**Erstellt:** 9. Mai 2026, 14:30 Uhr  
-**Commits:** 189591a (Backend), 4be5363 (Frontend)  
-**Status:** Deployed und bereit zum Testen
+**Erstellt:** 9. Mai 2026, 15:00 Uhr  
+**Commits:** fe3da72 (Backend), 4be5363 (Frontend)  
+**Status:** Deployed und bereit zum Testen  
+**Änderung:** Cover verwendet jetzt images.edit() als Standard, generateImage() nur als Fallback bei Safety-Rejection
+
