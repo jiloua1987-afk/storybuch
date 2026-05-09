@@ -736,46 +736,81 @@ router.post("/cover", async (req, res) => {
     const charDesc = characters.map(c => `${c.name}: ${c.visual_anchor}`).join("\n");
     const charNames = characters.map(c => c.name).join(", ");
 
-    // Extract location from story context
+    // Extract location from story context using GPT (more reliable than keyword matching)
     let coverLocation = location || "";
     if (!coverLocation && (storyInput || guidedAnswers.location || guidedAnswers.specialMoments)) {
-      // Try to extract location from story
-      const storyText = `${storyInput} ${guidedAnswers.location || ""} ${guidedAnswers.specialMoments || ""}`.toLowerCase();
+      const storyText = `${storyInput} ${guidedAnswers.location || ""} ${guidedAnswers.specialMoments || ""}`;
       console.log(`  → Extracting location from story text (length: ${storyText.length} chars)`);
       console.log(`  → Story text preview: ${storyText.substring(0, 200)}...`);
       
-      // German cities
-      if (storyText.includes("frankfurt")) coverLocation = "Frankfurt cityscape with modern skyscrapers and Main river";
-      else if (storyText.includes("berlin")) coverLocation = "Berlin cityscape with Brandenburg Gate";
-      else if (storyText.includes("münchen") || storyText.includes("munich")) coverLocation = "Munich with Alps in background";
-      else if (storyText.includes("hamburg")) coverLocation = "Hamburg harbor with Elbe river";
-      else if (storyText.includes("köln") || storyText.includes("cologne")) coverLocation = "Cologne with cathedral";
-      
-      // International cities
-      else if (storyText.includes("barcelona")) coverLocation = "Barcelona with Sagrada Familia and beach";
-      else if (storyText.includes("paris")) coverLocation = "Paris with Eiffel Tower";
-      else if (storyText.includes("london")) coverLocation = "London with Big Ben";
-      else if (storyText.includes("new york")) coverLocation = "New York City skyline";
-      else if (storyText.includes("madrid")) coverLocation = "Madrid with Royal Palace";
-      else if (storyText.includes("lissabon") || storyText.includes("lisbon")) coverLocation = "Lisbon with colorful buildings";
-      else if (storyText.includes("amsterdam")) coverLocation = "Amsterdam with canals";
-      else if (storyText.includes("prag") || storyText.includes("prague")) coverLocation = "Prague with Charles Bridge";
-      else if (storyText.includes("wien") || storyText.includes("vienna")) coverLocation = "Vienna with St. Stephen's Cathedral";
-      
-      // IMPORTANT: Check for "rom" AFTER "barcelona" to avoid false match
-      else if (storyText.includes("rom ") || storyText.includes("rome")) coverLocation = "Rome with Colosseum";
-      
-      // Generic locations
-      else if (storyText.includes("strand") || storyText.includes("beach") || storyText.includes("meer") || storyText.includes("sea")) 
-        coverLocation = "beautiful beach with ocean";
-      else if (storyText.includes("berg") || storyText.includes("mountain") || storyText.includes("alpen") || storyText.includes("alps")) 
-        coverLocation = "mountain landscape";
-      else if (storyText.includes("wald") || storyText.includes("forest")) 
-        coverLocation = "forest setting";
-      else if (storyText.includes("park") || storyText.includes("garten") || storyText.includes("garden")) 
-        coverLocation = "park with trees and flowers";
-      else 
+      try {
+        // Use GPT-4o-mini to extract location (avoids false matches like "schrebergarten" → "berg")
+        const locationPrompt = `Extract the main location/setting from this story. Return ONLY a short English description (2-5 words), nothing else.
+
+Story: ${storyText.substring(0, 500)}
+
+Examples of good responses:
+- "indoor playground"
+- "allotment garden"
+- "beach"
+- "home living room"
+- "park"
+- "mountain landscape"
+- "city street"
+
+Location:`;
+
+        const locationRes = await openai.chat.completions.create({
+          model: "gpt-4o-mini",
+          messages: [{ role: "user", content: locationPrompt }],
+          temperature: 0.3,
+          max_tokens: 20,
+        });
+
+        const extractedLocation = (locationRes.choices[0].message.content || "").trim().toLowerCase();
+        console.log(`  → GPT extracted location: "${extractedLocation}"`);
+
+        // Map extracted location to detailed description
+        const locationMap = {
+          "indoor playground": "colorful indoor playground with slides, ball pit, and play equipment",
+          "indoorspielplatz": "colorful indoor playground with slides, ball pit, and play equipment",
+          "playground": "outdoor playground with swings, slides, and sandbox",
+          "spielplatz": "outdoor playground with swings, slides, and sandbox",
+          "allotment garden": "cozy allotment garden with small garden house, vegetable beds, and flowers",
+          "schrebergarten": "cozy allotment garden with small garden house, vegetable beds, and flowers",
+          "garden": "beautiful garden with flowers, trees, and green grass",
+          "garten": "beautiful garden with flowers, trees, and green grass",
+          "park": "park with trees, flowers, and green grass",
+          "beach": "beautiful beach with ocean and sand",
+          "strand": "beautiful beach with ocean and sand",
+          "mountain": "mountain landscape with peaks and nature",
+          "berg": "mountain landscape with peaks and nature",
+          "forest": "forest setting with trees and nature",
+          "wald": "forest setting with trees and nature",
+          "home": "cozy home interior",
+          "living room": "cozy living room interior",
+          "zoo": "zoo with animals and nature",
+          "museum": "museum interior with exhibits",
+          "swimming pool": "swimming pool area",
+          "schwimmbad": "swimming pool area",
+        };
+
+        // Try to find match in map
+        for (const [key, value] of Object.entries(locationMap)) {
+          if (extractedLocation.includes(key)) {
+            coverLocation = value;
+            break;
+          }
+        }
+
+        // If no match, use extracted location directly
+        if (!coverLocation) {
+          coverLocation = extractedLocation;
+        }
+      } catch (e) {
+        console.warn(`  → GPT location extraction failed: ${e.message}, using fallback`);
         coverLocation = "beautiful park with trees and flowers";
+      }
     }
     
     // Final fallback if still empty
@@ -789,13 +824,39 @@ router.post("/cover", async (req, res) => {
     
     console.log(`  → Cover location: "${coverLocation}"`);
 
+    // Generate character-specific clothing for cover
+    const coverCharClothing = characters.map(c => {
+      const name = c.name;
+      const age = c.age || 25;
+      const role = (c.role || name).toLowerCase();
+      
+      let charOutfit = "";
+      if (age < 12 || role.includes("kind") || role.includes("child")) {
+        charOutfit = "colorful casual kids' outfit";
+      } else if (role.includes("mutter") || role.includes("mother") || role.includes("mama")) {
+        charOutfit = "stylish casual blouse or nice top";
+      } else if (role.includes("vater") || role.includes("father") || role.includes("papa")) {
+        charOutfit = "casual button-up shirt or polo";
+      } else {
+        charOutfit = "stylish casual attire";
+      }
+      
+      return `${name}: ${charOutfit}`;
+    }).join(", ");
+
     const prompt = sanitizePrompt(`${COMIC_STYLE}
+
+🚨 CRITICAL CLOTHING RULES (READ FIRST):
+DO NOT copy clothing from any reference photos.
+Reference photos are ONLY for facial features.
+Each character must wear DIFFERENT, DISTINCT clothing:
+${coverCharClothing}
 
 Comic book COVER illustration.
 ALL of these characters MUST be visible: ${charNames}.
 Show them together in ${coverLocation}.
 
-Characters (draw each one accurately):
+Characters (draw faces accurately, IGNORE clothing from photos):
 ${charDesc}
 
 Composition: dynamic group shot, characters prominently in foreground, vivid illustrated background showing the story world. Some looking at viewer, some interacting with each other.
@@ -852,6 +913,12 @@ NO text, NO title, NO letters anywhere in the image.`);
         
         const multiPhotoPrompt = sanitizePrompt(`${COMIC_STYLE}
 
+🚨 CRITICAL CLOTHING RULES (HIGHEST PRIORITY):
+DO NOT copy ANY clothing from this photo.
+Use the photo ONLY for facial features and body proportions.
+COMPLETELY IGNORE all clothing visible in the photo.
+Draw each character in DIFFERENT, DISTINCT casual attire appropriate for a comic book cover.
+
 REDRAW both people in this photo as hand-drawn comic book characters standing together.
 This must look like a page from a printed comic book, NOT a photograph.
 Bold ink outlines on every person. Flat cel-shaded colors. Expressive cartoon faces.
@@ -859,9 +926,11 @@ Bold ink outlines on every person. Flat cel-shaded colors. Expressive cartoon fa
 Left person is ${referenceImageUrls[0].label}: ${characters.find(c => c.name === referenceImageUrls[0].label)?.visual_anchor || ""}
 Right person is ${referenceImageUrls[1].label}: ${characters.find(c => c.name === referenceImageUrls[1].label)?.visual_anchor || ""}
 
-CLOTHING: Draw characters in casual everyday clothes appropriate for a cover photo.
-IGNORE the specific clothing from the photo — use stylish casual attire instead.
-Examples: nice shirts, blouses, jeans, casual dresses. Make it look good for a comic book cover.
+CLOTHING INSTRUCTIONS:
+- Left person (${referenceImageUrls[0].label}): ${characters.find(c => c.name === referenceImageUrls[0].label)?.age < 12 ? "colorful kids' casual outfit" : "stylish casual adult attire"}
+- Right person (${referenceImageUrls[1].label}): ${characters.find(c => c.name === referenceImageUrls[1].label)?.age < 12 ? "colorful kids' casual outfit (DIFFERENT from left person)" : "stylish casual adult attire (DIFFERENT from left person)"}
+- Each character MUST have DISTINCT, DIFFERENT clothing
+- NO matching outfits, NO similar colors
 
 Draw BOTH characters together in ${coverLocation}.
 Composition: dynamic group shot, both characters prominently visible, vivid illustrated background.
@@ -1086,7 +1155,45 @@ router.post("/page", async (req, res) => {
       console.log(`  → 🎨 RE-ILLUSTRATION requested: "${reillustrationNote}"`);
     }
 
+    // Generate character-specific clothing to ensure variety
+    const charClothingDesc = finalCharacters.map(c => {
+      const name = c.name;
+      const age = c.age || 25;
+      const role = (c.role || name).toLowerCase();
+      
+      // Determine character-specific outfit based on age and role
+      let charOutfit = "";
+      if (age < 12 || role.includes("kind") || role.includes("child")) {
+        charOutfit = "child's outfit — colorful t-shirt or playful top with comfortable pants or shorts, sneakers";
+      } else if (role.includes("mutter") || role.includes("mother") || role.includes("mama") || role.includes("mom")) {
+        charOutfit = "adult woman's outfit — casual blouse or nice shirt with trousers or jeans, comfortable shoes";
+      } else if (role.includes("vater") || role.includes("father") || role.includes("papa") || role.includes("dad")) {
+        charOutfit = "adult man's outfit — casual button-up shirt or polo with jeans or chinos, casual shoes";
+      } else if (age > 60 || role.includes("oma") || role.includes("opa") || role.includes("grand")) {
+        charOutfit = "elderly person's outfit — comfortable casual clothes, cardigan or light jacket";
+      } else {
+        charOutfit = outfit; // Use scene-based outfit for other characters
+      }
+      
+      return `${name}: ${charOutfit}`;
+    }).join("\n");
+
     const prompt = sanitizePrompt(`${COMIC_STYLE} ${mood}
+
+🚨 CRITICAL CLOTHING RULES (HIGHEST PRIORITY — READ THIS FIRST):
+Each character MUST wear DIFFERENT clothing appropriate for their age and role.
+DO NOT copy ANY clothing from reference photos.
+Reference photos are ONLY for facial features — COMPLETELY IGNORE all clothing in photos.
+
+CHARACTER-SPECIFIC CLOTHING (draw exactly as specified):
+${charClothingDesc}
+
+Scene-appropriate clothing: ${outfit}
+
+CRITICAL: Each character must have DISTINCT, DIFFERENT clothing from each other.
+Children's clothing must look different from adults' clothing.
+Mother's clothing must look different from father's clothing.
+NO matching outfits, NO similar colors for family members.
 
 Comic page — ${panelCount} panels in ${layoutDesc}. 
 
@@ -1100,7 +1207,7 @@ CRITICAL PANEL BORDER RULES:
 - NO body parts (hands, feet, heads) may cross into adjacent panels
 - NO objects may extend beyond panel boundaries
 
-CHARACTERS — draw identically across all panels:
+CHARACTERS — draw identically across all panels (FACES ONLY, NOT CLOTHING):
 ${charAnchors}
 
 ${ageContext.modifier ? `AGE MODIFIER: ${ageContext.modifier}\n` : ""}
@@ -1112,12 +1219,6 @@ CRITICAL SIZE RULES — enforce in every panel:
 - A 3-year-old is approximately half the height of an adult — always visibly much smaller
 - Never draw a young child as tall as an older child or adult
 - Size ratios from character descriptions MUST be respected
-
-CRITICAL CLOTHING RULES:
-Characters MUST wear: ${outfit}
-DO NOT copy clothing from the reference photo.
-The reference photo is ONLY for facial features and body proportions.
-IGNORE any clothing visible in the reference photo — draw the clothing specified above instead.
 
 PANELS:
 ${panelDescriptions}
