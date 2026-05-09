@@ -79,6 +79,76 @@ function EndingView({ endingText, dedication, dedicationFrom }: { endingText: st
   );
 }
 
+// ── Back Cover — professional back page with summary ──────────────────────────
+function BackCoverView({ coverImageUrl, title, summary }: { coverImageUrl?: string; title: string; summary: string }) {
+  return (
+    <div className="w-full max-w-sm mx-auto bg-[#FDF8F2] rounded-xl overflow-hidden border border-[#E8D9C0] shadow-lg"
+      style={{ aspectRatio: "1024/1536" }}>
+      <div className="flex flex-col items-center h-full px-8 py-12">
+        {/* Cover Thumbnail */}
+        {coverImageUrl && (
+          <div className="mb-8">
+            <div className="relative">
+              <div className="absolute inset-0 -m-[3px] rounded-lg border-[3px] border-[#C9963A]" />
+              <img 
+                src={coverImageUrl} 
+                alt="Cover" 
+                className="w-[180px] h-[180px] object-cover rounded-lg"
+              />
+            </div>
+          </div>
+        )}
+        
+        {/* Story Summary */}
+        <div className="flex-1 flex flex-col justify-center text-center px-4">
+          <p className="text-[#1A1410] text-sm leading-relaxed italic mb-8"
+            style={{ fontFamily: "'Playfair Display', Georgia, serif" }}>
+            {summary}
+          </p>
+          
+          {/* Decorative line */}
+          <div className="w-16 h-[2px] bg-[#C9963A] rounded mx-auto mb-8" />
+        </div>
+        
+        {/* ComicStyle.de Branding */}
+        <div className="text-center space-y-3">
+          {/* Logo */}
+          <img 
+            src="/Logo 1.png" 
+            alt="ComicStyle.de" 
+            className="h-12 mx-auto object-contain"
+          />
+          
+          <p className="text-[#8B7355] text-xs"
+            style={{ fontFamily: "'Playfair Display', Georgia, serif" }}>
+            Deine Geschichte als personalisiertes Comic-Buch
+          </p>
+          
+          {/* Barcode */}
+          <div className="flex flex-col items-center pt-4">
+            <div className="relative w-[120px] h-[40px] border border-[#1A1410] rounded flex items-center justify-center overflow-hidden">
+              {/* Barcode stripes */}
+              {[...Array(15)].map((_, i) => (
+                <div 
+                  key={i}
+                  className="bg-[#1A1410] mx-[1px]"
+                  style={{ 
+                    width: Math.random() > 0.5 ? '3px' : '2px',
+                    height: '30px'
+                  }}
+                />
+              ))}
+            </div>
+            <p className="text-[#1A1410] text-[8px] mt-1 font-mono">
+              ISBN 978-3-XXXXX-XXX-X
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 
 export default function Step5Preview() {
   const { project, setStep, updateProject, updateChapter } = useBookStore();
@@ -111,10 +181,39 @@ export default function Step5Preview() {
     .filter((c) => !deletedPages.has(c.id)); // Gelöschte Seiten ausblenden
   const total = comicPages.length;
   const hasEnding = !!project.endingData?.endingText;
-  const maxPage = hasEnding ? total : total - 1;
+  const maxPage = hasEnding ? total + 1 : total; // +1 for back cover after ending
   const isCover = currentPage === -1;
   const isEnding = currentPage === total && hasEnding;
-  const page = (!isCover && !isEnding) ? comicPages[currentPage] : null;
+  const isBackCover = currentPage === total + 1 && hasEnding; // Back cover is after ending
+  const page = (!isCover && !isEnding && !isBackCover) ? comicPages[currentPage] : null;
+
+  // Generate story summary for back cover
+  const generateStorySummary = () => {
+    if (project.storyInput && project.storyInput.length > 20) {
+      // Use first 150 characters of story input
+      const summary = project.storyInput.substring(0, 150);
+      return project.storyInput.length > 150 ? summary + '...' : summary;
+    } else if (project.guidedAnswers?.specialMoments) {
+      // Create a nice summary from special moments
+      const moments = project.guidedAnswers.specialMoments
+        .split('|')
+        .map(m => m.trim())
+        .filter(m => m.length > 0)
+        .slice(0, 3);
+      
+      if (moments.length === 0) {
+        return `Eine personalisierte Comic-Geschichte über ${project.title}.`;
+      } else if (moments.length === 1) {
+        return `Eine Geschichte über ${moments[0]}.`;
+      } else if (moments.length === 2) {
+        return `Eine Geschichte über ${moments[0]} und ${moments[1]}.`;
+      } else {
+        return `Eine Geschichte über ${moments.slice(0, -1).join(', ')} und ${moments[moments.length - 1]}.`;
+      }
+    } else {
+      return `Eine personalisierte Comic-Geschichte über ${project.title}.`;
+    }
+  };
 
   const goNext = () => {
     if (currentPage < maxPage) { setDirection(1); setCurrentPage((p) => p + 1); }
@@ -361,7 +460,7 @@ export default function Step5Preview() {
     }
   };
 
-  const pageLabel = isCover ? "Cover" : isEnding ? "Abschluss" : `Seite ${currentPage + 1} von ${total}`;
+  const pageLabel = isCover ? "Cover" : isEnding ? "Abschluss" : isBackCover ? "Rückseite" : `Seite ${currentPage + 1} von ${total}`;
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="max-w-3xl mx-auto space-y-6">
@@ -488,6 +587,12 @@ export default function Step5Preview() {
                   </div>
                 )}
               </div>
+            ) : isBackCover ? (
+              <BackCoverView
+                coverImageUrl={project.coverImageUrl}
+                title={project.title}
+                summary={generateStorySummary()}
+              />
             ) : page ? (
               <div>
                 {regenerating === page.id ? (
@@ -568,10 +673,16 @@ export default function Step5Preview() {
             />
           ))}
           {hasEnding && (
-            <button
-              onClick={() => setCurrentPage(total)}
-              className={`rounded-full transition-all ${isEnding ? "w-6 h-2.5 bg-[#C9963A]" : "w-2.5 h-2.5 bg-[#E8D9C0]"}`}
-            />
+            <>
+              <button
+                onClick={() => setCurrentPage(total)}
+                className={`rounded-full transition-all ${isEnding ? "w-6 h-2.5 bg-[#C9963A]" : "w-2.5 h-2.5 bg-[#E8D9C0]"}`}
+              />
+              <button
+                onClick={() => setCurrentPage(total + 1)}
+                className={`rounded-full transition-all ${isBackCover ? "w-6 h-2.5 bg-[#C9963A]" : "w-2.5 h-2.5 bg-[#E8D9C0]"}`}
+              />
+            </>
           )}
         </div>
         <Button variant="secondary" onClick={goNext} disabled={currentPage === maxPage} size="sm">Nächste →</Button>
@@ -615,15 +726,27 @@ export default function Step5Preview() {
           ))}
 
           {hasEnding && (
-            <button
-              onClick={() => setCurrentPage(total)}
-              className={`relative rounded-xl overflow-hidden border-2 transition-all ${isEnding ? "border-[#C9963A] shadow-md" : "border-transparent hover:border-[#E8D9C0]"}`}
-              style={{ aspectRatio: "2/3" }}
-            >
-              <div className="absolute inset-0 bg-[#FDF8F2] flex items-center justify-center">
-                <span className="text-[#C9963A] text-xs font-bold">Ende</span>
-              </div>
-            </button>
+            <>
+              <button
+                onClick={() => setCurrentPage(total)}
+                className={`relative rounded-xl overflow-hidden border-2 transition-all ${isEnding ? "border-[#C9963A] shadow-md" : "border-transparent hover:border-[#E8D9C0]"}`}
+                style={{ aspectRatio: "2/3" }}
+              >
+                <div className="absolute inset-0 bg-[#FDF8F2] flex items-center justify-center">
+                  <span className="text-[#C9963A] text-xs font-bold">Ende</span>
+                </div>
+              </button>
+              
+              <button
+                onClick={() => setCurrentPage(total + 1)}
+                className={`relative rounded-xl overflow-hidden border-2 transition-all ${isBackCover ? "border-[#C9963A] shadow-md" : "border-transparent hover:border-[#E8D9C0]"}`}
+                style={{ aspectRatio: "2/3" }}
+              >
+                <div className="absolute inset-0 bg-[#FDF8F2] flex items-center justify-center">
+                  <span className="text-[#C9963A] text-xs font-bold">Rückseite</span>
+                </div>
+              </button>
+            </>
           )}
         </div>
       </div>

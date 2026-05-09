@@ -1,5 +1,7 @@
 const PDFDocument = require('pdfkit');
 const sharp = require('sharp');
+const fs = require('fs');
+const path = require('path');
 
 /**
  * Erstellt PDF mit Cover + Seiten + Ending im A4-Format
@@ -448,18 +450,32 @@ async function createComicPDF(project) {
   // Story Zusammenfassung
   const summaryY = 300;
   
-  // Erstelle kurze Zusammenfassung aus Story
+  // Erstelle schöne Zusammenfassung aus Story
   let summary = '';
-  if (project.storyInput && project.storyInput.length > 0) {
+  if (project.storyInput && project.storyInput.length > 20) {
     // Nimm ersten Satz oder erste 150 Zeichen
     summary = project.storyInput.substring(0, 150);
     if (project.storyInput.length > 150) {
       summary += '...';
     }
   } else if (project.guidedAnswers?.specialMoments) {
-    // Fallback: Nutze special moments
-    const moments = project.guidedAnswers.specialMoments.split('|').slice(0, 2);
-    summary = `Eine Geschichte über ${moments.join(' und ')}.`;
+    // Erstelle schöne Zusammenfassung aus special moments
+    const moments = project.guidedAnswers.specialMoments
+      .split('|')
+      .map(m => m.trim())
+      .filter(m => m.length > 0)
+      .slice(0, 3);
+    
+    if (moments.length === 0) {
+      summary = `Eine personalisierte Comic-Geschichte über ${project.title}.`;
+    } else if (moments.length === 1) {
+      summary = `Eine Geschichte über ${moments[0]}.`;
+    } else if (moments.length === 2) {
+      summary = `Eine Geschichte über ${moments[0]} und ${moments[1]}.`;
+    } else {
+      // 3 oder mehr Momente
+      summary = `Eine Geschichte über ${moments.slice(0, -1).join(', ')} und ${moments[moments.length - 1]}.`;
+    }
   } else {
     summary = `Eine personalisierte Comic-Geschichte über ${project.title}.`;
   }
@@ -484,19 +500,38 @@ async function createComicPDF(project) {
   // ComicStyle.de Branding unten
   const brandingY = A4_HEIGHT - 180;
   
-  doc.fontSize(24)
-     .font('Helvetica-Bold')
-     .fillColor('#C9963A')
-     .text('ComicStyle.de', 50, brandingY, {
-       width: A4_WIDTH - 100,
-       align: 'center',
-       characterSpacing: 1
-     });
+  // Logo laden und einfügen
+  try {
+    const logoPath = path.join(process.cwd(), 'public', 'Logo 1.png');
+    const logoBuffer = fs.readFileSync(logoPath);
+    
+    // Logo zentriert über dem Text
+    const logoHeight = 40;
+    const logoWidth = 120; // Wird automatisch skaliert
+    const logoX = (A4_WIDTH - logoWidth) / 2;
+    
+    doc.image(logoBuffer, logoX, brandingY - 10, {
+      width: logoWidth,
+      fit: [logoWidth, logoHeight],
+      align: 'center'
+    });
+  } catch (e) {
+    console.error('Logo loading error:', e.message);
+    // Fallback: Text-basiertes Branding
+    doc.fontSize(24)
+       .font('Helvetica-Bold')
+       .fillColor('#C9963A')
+       .text('ComicStyle.de', 50, brandingY, {
+         width: A4_WIDTH - 100,
+         align: 'center',
+         characterSpacing: 1
+       });
+  }
   
   doc.fontSize(11)
      .font('Helvetica')
      .fillColor('#8B7355')
-     .text('Deine Geschichte als personalisiertes Comic-Buch', 50, brandingY + 40, {
+     .text('Deine Geschichte als personalisiertes Comic-Buch', 50, brandingY + 50, {
        width: A4_WIDTH - 100,
        align: 'center'
      });
