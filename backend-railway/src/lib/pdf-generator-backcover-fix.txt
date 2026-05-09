@@ -1,0 +1,163 @@
+  // ── 4. BACK COVER ───────────────────────────────────────────────────────────
+  doc.addPage();
+  
+  // Hintergrund - elegantes Beige wie Ending
+  doc.rect(0, 0, A4_WIDTH, A4_HEIGHT)
+     .fill('#FDF8F2');
+  
+  // Story Zusammenfassung - ZENTRIERT (kein Cover Thumbnail mehr)
+  const summaryY = 200;
+  
+  // Erstelle 2-3 schöne Sätze im Fließtext aus Story
+  let summary = '';
+  if (project.storyInput && project.storyInput.length > 20) {
+    // Nimm ersten Satz oder erste 200 Zeichen
+    summary = project.storyInput.substring(0, 200);
+    if (project.storyInput.length > 200) {
+      summary += '...';
+    }
+  } else if (project.guidedAnswers?.specialMoments) {
+    // Erstelle 2-3 schöne Sätze aus special moments
+    const moments = project.guidedAnswers.specialMoments
+      .split('|')
+      .map(m => m.trim())
+      .filter(m => m.length > 0);
+    
+    const characters = project.guidedAnswers?.characters || project.title;
+    const location = project.guidedAnswers?.location || '';
+    
+    if (moments.length === 0) {
+      summary = `Eine personalisierte Comic-Geschichte über ${characters}.`;
+    } else {
+      // Erster Satz: Charaktere und erstes Ereignis
+      if (moments.length >= 1) {
+        summary = `${characters} ${moments[0].toLowerCase().startsWith('die ') || moments[0].toLowerCase().startsWith('der ') ? 'erleben' : 'erleben'} ${moments[0].toLowerCase()}.`;
+      }
+      
+      // Zweiter Satz: Ort und/oder weitere Ereignisse
+      if (moments.length >= 2) {
+        if (location) {
+          summary += ` In ${location} ${moments.length > 2 ? 'genießen sie' : 'genießen sie'} ${moments[1].toLowerCase()}.`;
+        } else {
+          summary += ` Danach ${moments.length > 2 ? 'folgen' : 'folgt'} ${moments[1].toLowerCase()}.`;
+        }
+      }
+      
+      // Dritter Satz: Abschluss
+      if (moments.length >= 3) {
+        summary += ` Zum Abschluss ${moments[2].toLowerCase()}.`;
+      }
+    }
+  } else {
+    summary = `Eine personalisierte Comic-Geschichte über ${project.title}.`;
+  }
+  
+  doc.fontSize(16)
+     .font('Helvetica')
+     .fillColor('#1A1410')
+     .text(summary, 80, summaryY, {
+       width: A4_WIDTH - 160,
+       align: 'center',
+       lineGap: 10
+     });
+  
+  // Dekorative Linie
+  const lineY = summaryY + doc.heightOfString(summary, { width: A4_WIDTH - 160, lineGap: 10 }) + 50;
+  doc.moveTo(A4_WIDTH / 2 - 80, lineY)
+     .lineTo(A4_WIDTH / 2 + 80, lineY)
+     .lineWidth(2.5)
+     .strokeColor('#C9963A')
+     .stroke();
+  
+  // ComicStyle.de Branding unten - GRÖSSERES LOGO
+  const brandingY = A4_HEIGHT - 200;
+  
+  // Logo laden und einfügen - VIEL GRÖSSER
+  try {
+    // Try multiple possible logo paths for Railway deployment
+    let logoBuffer;
+    const possiblePaths = [
+      path.join(process.cwd(), 'public', 'Logo 1.png'),
+      path.join(__dirname, '..', '..', 'public', 'Logo 1.png'),
+      path.join('/app', 'public', 'Logo 1.png'),
+      '/app/public/Logo 1.png'
+    ];
+    
+    let logoLoaded = false;
+    for (const logoPath of possiblePaths) {
+      try {
+        if (fs.existsSync(logoPath)) {
+          logoBuffer = fs.readFileSync(logoPath);
+          logoLoaded = true;
+          console.log(`✓ Logo loaded from: ${logoPath}`);
+          break;
+        }
+      } catch (e) {
+        // Try next path
+        continue;
+      }
+    }
+    
+    if (!logoLoaded) {
+      throw new Error('Logo file not found in any expected location');
+    }
+    
+    // Logo zentriert über dem Text - VIEL GRÖSSER
+    const logoHeight = 60; // Increased from 40
+    const logoWidth = 180; // Increased from 120
+    const logoX = (A4_WIDTH - logoWidth) / 2;
+    
+    doc.image(logoBuffer, logoX, brandingY - 10, {
+      width: logoWidth,
+      fit: [logoWidth, logoHeight],
+      align: 'center'
+    });
+  } catch (e) {
+    console.error('Logo loading error:', e.message);
+    // Fallback: Text-basiertes Branding - GRÖSSER
+    doc.fontSize(28)
+       .font('Helvetica-Bold')
+       .fillColor('#C9963A')
+       .text('ComicStyle.de', 50, brandingY, {
+         width: A4_WIDTH - 100,
+         align: 'center',
+         characterSpacing: 1.5
+       });
+  }
+  
+  doc.fontSize(12)
+     .font('Helvetica')
+     .fillColor('#8B7355')
+     .text('Deine Geschichte als personalisiertes Comic-Buch', 50, brandingY + 70, {
+       width: A4_WIDTH - 100,
+       align: 'center'
+     });
+  
+  // Barcode-Platzhalter (für professionellen Look) - GRÖSSER
+  const barcodeY = A4_HEIGHT - 90;
+  const barcodeWidth = 140; // Increased from 120
+  const barcodeHeight = 50; // Increased from 40
+  const barcodeX = (A4_WIDTH - barcodeWidth) / 2;
+  
+  // Einfacher Barcode-Look (Streifen)
+  doc.rect(barcodeX, barcodeY, barcodeWidth, barcodeHeight)
+     .lineWidth(1)
+     .strokeColor('#1A1410')
+     .stroke();
+  
+  // Barcode-Streifen (dekorativ) - GRÖSSER
+  for (let i = 0; i < 15; i++) {
+    const x = barcodeX + 5 + (i * 8.5);
+    const width = Math.random() > 0.5 ? 4 : 3;
+    doc.rect(x, barcodeY + 5, width, barcodeHeight - 10)
+       .fill('#1A1410');
+  }
+  
+  // ISBN-ähnliche Nummer (dekorativ)
+  doc.fontSize(9)
+     .font('Helvetica')
+     .fillColor('#1A1410')
+     .text('ISBN 978-3-XXXXX-XXX-X', barcodeX, barcodeY + barcodeHeight + 6, {
+       width: barcodeWidth,
+       align: 'center'
+     });
