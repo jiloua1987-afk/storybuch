@@ -463,11 +463,24 @@ export default function PanelView({ imageUrl, title, panels = [], panelPositions
           height: resolved?.h ?? 10,
         };
         
+        console.log(`  → Bubble ${bubbleId}: top=${position.top.toFixed(1)}%, left=${position.left.toFixed(1)}%`);
         return position;
       });
       
       console.log(`  → Calling onPositionsChange with ${updatedPositions.length} positions`);
       onPositionsChange(updatedPositions);
+      
+      // Force immediate save to localStorage
+      setTimeout(() => {
+        console.log('  → Verifying save in localStorage...');
+        const stored = localStorage.getItem('storybuch-project');
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          console.log(`  ✓ localStorage has ${parsed?.state?.project?.chapters?.length || 0} chapters`);
+        } else {
+          console.warn('  ⚠️ No data in localStorage!');
+        }
+      }, 200);
     }
     setDragging(null);
   };

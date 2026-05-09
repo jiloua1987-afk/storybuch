@@ -152,16 +152,21 @@ export const useBookStore = create<BookStore>()(
         })),
 
       updateChapter: (chapterId, partial) =>
-        set((state) => ({
-          project: state.project
-            ? {
-                ...state.project,
-                chapters: state.project.chapters.map((c) =>
-                  c.id === chapterId ? { ...c, ...partial } : c
-                ),
-              }
-            : null,
-        })),
+        set((state) => {
+          console.log(`📝 Store: updateChapter called for ${chapterId}`, partial);
+          const result = {
+            project: state.project
+              ? {
+                  ...state.project,
+                  chapters: state.project.chapters.map((c) =>
+                    c.id === chapterId ? { ...c, ...partial } : c
+                  ),
+                }
+              : null,
+          };
+          console.log(`  → Updated chapter ${chapterId}, panelPositions: ${result.project?.chapters.find(c => c.id === chapterId)?.panelPositions?.length || 0}`);
+          return result;
+        }),
 
       setGenerationProgress: (progress, status) =>
         set({ generationProgress: progress, generationStatus: status }),
@@ -181,6 +186,23 @@ export const useBookStore = create<BookStore>()(
         project: state.project,
         currentStep: state.currentStep,
       }),
+      onRehydrateStorage: () => {
+        console.log('🔄 Zustand: Starting rehydration from localStorage');
+        return (state, error) => {
+          if (error) {
+            console.error('❌ Zustand: Rehydration failed:', error);
+          } else {
+            console.log('✓ Zustand: Rehydration complete');
+            console.log(`  → Project: ${state?.project?.title || 'none'}`);
+            console.log(`  → Chapters: ${state?.project?.chapters?.length || 0}`);
+            if (state?.project?.chapters) {
+              state.project.chapters.forEach((ch, i) => {
+                console.log(`  → Chapter ${i + 1}: "${ch.title}" - ${ch.panelPositions?.length || 0} positions`);
+              });
+            }
+          }
+        };
+      },
     }
   )
 );

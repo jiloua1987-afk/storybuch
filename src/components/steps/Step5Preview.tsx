@@ -233,8 +233,8 @@ export default function Step5Preview() {
       return;
     }
     
-    console.log(`💾 Saving ${positions.length} bubble positions for page "${currentPageData.title}"`);
-    console.log('Positions:', positions);
+    console.log(`💾 Step5Preview: Saving ${positions.length} bubble positions for page "${currentPageData.title}"`);
+    console.log('Positions to save:', JSON.stringify(positions, null, 2));
     console.log('Current chapter ID:', currentPageData.id);
     
     // Update chapter with new positions
@@ -242,11 +242,21 @@ export default function Step5Preview() {
       panelPositions: positions
     });
     
-    // Verify save
+    // Verify save immediately
     setTimeout(() => {
       const updatedProject = useBookStore.getState().project;
       const updatedChapter = updatedProject?.chapters.find(c => c.id === currentPageData.id);
-      console.log(`✓ Verified: ${updatedChapter?.panelPositions?.length || 0} positions in store for "${currentPageData.title}"`);
+      console.log(`✓ Verified in store: ${updatedChapter?.panelPositions?.length || 0} positions for "${currentPageData.title}"`);
+      
+      // Also verify localStorage
+      const stored = localStorage.getItem('storybuch-project');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        const storedChapter = parsed?.state?.project?.chapters?.find((c: any) => c.id === currentPageData.id);
+        console.log(`✓ Verified in localStorage: ${storedChapter?.panelPositions?.length || 0} positions for "${currentPageData.title}"`);
+      } else {
+        console.warn('⚠️ No data in localStorage after save!');
+      }
     }, 100);
     
     console.log(`✓ Saved ${positions.length} bubble positions for page ${currentPage + 1}`);
