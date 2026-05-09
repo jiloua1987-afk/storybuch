@@ -1393,13 +1393,47 @@ RULES:
         console.log(`  → Historical scene (${ageContext.ageContext}), using cover with age modifier`);
         console.log(`  → This keeps facial features consistent while making characters younger`);
       } catch (e) {
-        console.warn("  → Cover fetch failed, falling back to generate-only:", e.message);
-        refSource = "generate-only-age-modified";
+        console.warn("  → Cover fetch failed, falling back to user photo:", e.message);
+        // FALLBACK: Use user photo instead of generate-only
+        if (primaryRefUrl) {
+          try {
+            reference = await fetchBuffer(primaryRefUrl);
+            refSource = "user-photo-age-fallback";
+            console.log(`  → Using user photo as fallback (characters won't look younger, but faces will be correct)`);
+          } catch (e2) {
+            console.warn("  → User photo fetch also failed:", e2.message);
+            refSource = "generate-only-age-modified";
+          }
+        } else if (primaryRefBase64) {
+          reference = primaryRefBase64;
+          refSource = "user-photo-age-fallback";
+          console.log(`  → Using user photo as fallback (characters won't look younger, but faces will be correct)`);
+        } else {
+          refSource = "generate-only-age-modified";
+        }
       }
     } else if (!ageContext.useReference) {
-      // No cover available - generate from text only (may invent faces)
-      console.log(`  → Historical scene (${ageContext.ageContext}), no cover available - generate-only`);
-      refSource = "generate-only-age-modified";
+      // No cover available - FALLBACK: use user photo instead of generate-only
+      console.log(`  → Historical scene (${ageContext.ageContext}), no cover available`);
+      
+      // FALLBACK: Try user photo instead of generate-only
+      if (primaryRefUrl) {
+        try {
+          reference = await fetchBuffer(primaryRefUrl);
+          refSource = "user-photo-age-fallback";
+          console.log(`  → FALLBACK: Using user photo (characters won't look younger, but faces will be correct)`);
+        } catch (e) {
+          console.warn("  → User photo fetch failed:", e.message);
+          refSource = "generate-only-age-modified";
+        }
+      } else if (primaryRefBase64) {
+        reference = primaryRefBase64;
+        refSource = "user-photo-age-fallback";
+        console.log(`  → FALLBACK: Using user photo (characters won't look younger, but faces will be correct)`);
+      } else {
+        console.log(`  → No user photo available - generate-only (may invent faces)`);
+        refSource = "generate-only-age-modified";
+      }
     } else {
       // ── STRATEGY 1: Individual Photos Mode → Use Cover Reference ──────────────
       // CRITICAL: For individual photos, USE cover as reference (like family photo mode)!
@@ -1515,6 +1549,36 @@ NATURAL SCENE BEHAVIOR:
 - They are LIVING the moment, not posing for it
 
 DO NOT invent new faces. These must be the SAME people from the cover, just at a younger age.\n\n`
+      : refSource === "user-photo-age-fallback"
+      ? `${COMIC_STYLE}
+
+CRITICAL FACE CONSISTENCY RULES (Historical Scene - Fallback Mode):
+This photo shows the characters at their current age.
+Draw them with the SAME faces from this photo.
+
+${finalCharacters.map(c => `${c.name}: ${c.visual_anchor}`).join("\n")}
+
+NOTE: Ideally we would make them look younger for this historical scene, but we're using this photo as fallback to ensure face consistency.
+
+MANDATORY:
+- Draw the EXACT SAME faces as shown in this photo
+- Keep facial features identical: eye shape, nose shape, mouth shape, face proportions
+- Keep hair color and style similar
+- Match skin tone
+
+CRITICAL: IGNORE the clothing from the photo.
+This scene requires different attire.
+Draw the clothing specified in the CRITICAL CLOTHING RULES section instead.
+
+NATURAL SCENE BEHAVIOR:
+- Characters are IN THE SCENE, not posing for a photo
+- They interact with each other and their environment
+- NO direct eye contact with viewer/camera
+- NO portrait-style poses looking at camera
+- Show them from various angles: 3/4 view, profile, back view, action shots
+- They are LIVING the moment, not posing for it
+
+DO NOT invent new faces. Draw the SAME people from this photo.\n\n`
       : refSource === "cover-individual-photos"
       ? `${COMIC_STYLE}
 
