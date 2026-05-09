@@ -80,66 +80,52 @@ function EndingView({ endingText, dedication, dedicationFrom }: { endingText: st
 }
 
 // ── Back Cover — professional back page with summary ──────────────────────────
-function BackCoverView({ coverImageUrl, title, summary }: { coverImageUrl?: string; title: string; summary: string }) {
+function BackCoverView({ title, summary }: { title: string; summary: string }) {
   return (
     <div className="w-full max-w-sm mx-auto bg-[#FDF8F2] rounded-xl overflow-hidden border border-[#E8D9C0] shadow-lg"
       style={{ aspectRatio: "1024/1536" }}>
-      <div className="flex flex-col items-center h-full px-8 py-12">
-        {/* Cover Thumbnail */}
-        {coverImageUrl && (
-          <div className="mb-8">
-            <div className="relative">
-              <div className="absolute inset-0 -m-[3px] rounded-lg border-[3px] border-[#C9963A]" />
-              <img 
-                src={coverImageUrl} 
-                alt="Cover" 
-                className="w-[180px] h-[180px] object-cover rounded-lg"
-              />
-            </div>
-          </div>
-        )}
-        
+      <div className="flex flex-col items-center justify-center h-full px-8 py-12">
         {/* Story Summary */}
-        <div className="flex-1 flex flex-col justify-center text-center px-4">
-          <p className="text-[#1A1410] text-sm leading-relaxed italic mb-8"
+        <div className="flex-1 flex flex-col justify-center text-center px-4 max-w-md">
+          <p className="text-[#1A1410] text-base leading-relaxed mb-12"
             style={{ fontFamily: "'Playfair Display', Georgia, serif" }}>
             {summary}
           </p>
           
           {/* Decorative line */}
-          <div className="w-16 h-[2px] bg-[#C9963A] rounded mx-auto mb-8" />
+          <div className="w-20 h-[2px] bg-[#C9963A] rounded mx-auto mb-12" />
         </div>
         
         {/* ComicStyle.de Branding */}
-        <div className="text-center space-y-3">
-          {/* Logo */}
+        <div className="text-center space-y-4">
+          {/* Logo - MUCH LARGER */}
           <img 
             src="/Logo 1.png" 
             alt="ComicStyle.de" 
-            className="h-12 mx-auto object-contain"
+            className="h-20 mx-auto object-contain"
           />
           
-          <p className="text-[#8B7355] text-xs"
+          <p className="text-[#8B7355] text-sm"
             style={{ fontFamily: "'Playfair Display', Georgia, serif" }}>
             Deine Geschichte als personalisiertes Comic-Buch
           </p>
           
           {/* Barcode */}
-          <div className="flex flex-col items-center pt-4">
-            <div className="relative w-[120px] h-[40px] border border-[#1A1410] rounded flex items-center justify-center overflow-hidden">
+          <div className="flex flex-col items-center pt-6">
+            <div className="relative w-[140px] h-[50px] border border-[#1A1410] rounded flex items-center justify-center overflow-hidden">
               {/* Barcode stripes */}
               {[...Array(15)].map((_, i) => (
                 <div 
                   key={i}
                   className="bg-[#1A1410] mx-[1px]"
                   style={{ 
-                    width: Math.random() > 0.5 ? '3px' : '2px',
-                    height: '30px'
+                    width: Math.random() > 0.5 ? '4px' : '3px',
+                    height: '38px'
                   }}
                 />
               ))}
             </div>
-            <p className="text-[#1A1410] text-[8px] mt-1 font-mono">
+            <p className="text-[#1A1410] text-[9px] mt-2 font-mono">
               ISBN 978-3-XXXXX-XXX-X
             </p>
           </div>
@@ -187,29 +173,49 @@ export default function Step5Preview() {
   const isBackCover = currentPage === total + 1 && hasEnding; // Back cover is after ending
   const page = (!isCover && !isEnding && !isBackCover) ? comicPages[currentPage] : null;
 
-  // Generate story summary for back cover
+  // Generate story summary for back cover - proper flowing sentences
   const generateStorySummary = () => {
     if (project.storyInput && project.storyInput.length > 20) {
-      // Use first 150 characters of story input
-      const summary = project.storyInput.substring(0, 150);
-      return project.storyInput.length > 150 ? summary + '...' : summary;
+      // Use first 200 characters of story input
+      const summary = project.storyInput.substring(0, 200);
+      return project.storyInput.length > 200 ? summary + '...' : summary;
     } else if (project.guidedAnswers?.specialMoments) {
-      // Create a nice summary from special moments
+      // Create 2-3 proper sentences from special moments
       const moments = project.guidedAnswers.specialMoments
         .split('|')
         .map(m => m.trim())
-        .filter(m => m.length > 0)
-        .slice(0, 3);
+        .filter(m => m.length > 0);
+      
+      const characters = project.guidedAnswers?.characters || project.title;
+      const location = project.guidedAnswers?.location || '';
       
       if (moments.length === 0) {
-        return `Eine personalisierte Comic-Geschichte über ${project.title}.`;
-      } else if (moments.length === 1) {
-        return `Eine Geschichte über ${moments[0]}.`;
-      } else if (moments.length === 2) {
-        return `Eine Geschichte über ${moments[0]} und ${moments[1]}.`;
-      } else {
-        return `Eine Geschichte über ${moments.slice(0, -1).join(', ')} und ${moments[moments.length - 1]}.`;
+        return `Eine personalisierte Comic-Geschichte über ${characters}.`;
       }
+      
+      // Build 2-3 flowing sentences
+      let summary = '';
+      
+      // First sentence: introduce characters and first moment
+      if (moments.length >= 1) {
+        summary = `${characters} ${moments[0].toLowerCase().startsWith('die ') || moments[0].toLowerCase().startsWith('der ') ? 'erleben' : 'erleben'} ${moments[0].toLowerCase()}.`;
+      }
+      
+      // Second sentence: add location and/or more moments
+      if (moments.length >= 2) {
+        if (location) {
+          summary += ` In ${location} ${moments.length > 2 ? 'genießen sie' : 'genießen sie'} ${moments[1].toLowerCase()}.`;
+        } else {
+          summary += ` Danach ${moments.length > 2 ? 'folgen' : 'folgt'} ${moments[1].toLowerCase()}.`;
+        }
+      }
+      
+      // Third sentence: add final moment if available
+      if (moments.length >= 3) {
+        summary += ` Zum Abschluss ${moments[2].toLowerCase()}.`;
+      }
+      
+      return summary;
     } else {
       return `Eine personalisierte Comic-Geschichte über ${project.title}.`;
     }
@@ -589,7 +595,6 @@ export default function Step5Preview() {
               </div>
             ) : isBackCover ? (
               <BackCoverView
-                coverImageUrl={project.coverImageUrl}
                 title={project.title}
                 summary={generateStorySummary()}
               />

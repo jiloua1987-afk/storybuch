@@ -1772,98 +1772,16 @@ NO text, NO speech bubbles anywhere in image.`;
       throw err;
     });
 
-    // CRITICAL CHECK: If reference was NOT used but we have photos → Try safe alternative
+    // CRITICAL CHECK: If reference was NOT used but we have photos → ACCEPT IT ANYWAY
+    // The fallback strategy already tried everything possible
     if (!usedReference && hasPhotos && rawUrl) {
       console.warn(`  ⚠️ WARNING: Generated without reference despite having photos!`);
-      console.log(`  → This would show WRONG FACES - attempting safe alternative with reference`);
+      console.log(`  → Accepting result anyway - fallback strategy already exhausted all options`);
+      console.log(`  → Better to have a page with potentially different faces than no page at all`);
       
-      try {
-        // Sanitize panel descriptions to reduce safety triggers
-        const sanitizedPanelDesc = sanitizePrompt(panelDescriptions);
-        
-        // Generate safe alternative scene WITH reference AND detailed panel descriptions
-        const safeScenePrompt = `${refNote}${COMIC_STYLE} ${mood}
-
-Comic page: "${page.title}" (safe version with reference faces)
-${panelCount} panels in ${layoutDesc}. Bold black borders between panels.
-
-CRITICAL - USE REFERENCE FACES:
-Draw the EXACT SAME faces as shown in the reference image.
-${charAnchors}
-
-${ageContext.modifier ? `AGE MODIFIER: ${ageContext.modifier}\n` : ""}
-CRITICAL: Draw characters EXACTLY as described above.
-
-CLOTHING — characters wear ${outfit}
-
-SAFE SCENE - DRAW ALL PANELS AS DESCRIBED:
-${sanitizedPanelDesc}
-
-CRITICAL RULES:
-- Each panel MUST show a COMPLETELY DIFFERENT moment as described above
-- Panel 1: First moment (as described)
-- Panel 2: Second moment (DIFFERENT from panel 1, as described)
-- Panel 3: Third moment (DIFFERENT from panels 1-2, as described)
-- Panel 4: Fourth moment (DIFFERENT from all previous, as described)
-- NEVER repeat the same scene - each panel = NEW moment
-- Show CORRECT emotions per scene
-
-NATURAL SCENE BEHAVIOR:
-- Characters interact naturally
-- NO camera poses, various angles
-
-NO text, NO speech bubbles.`;
-
-        const safeResult = await generateImage(safeScenePrompt, reference);
-        
-        if (safeResult.usedReference) {
-          console.log(`  ✓ Safe alternative generated WITH reference - faces maintained!`);
-          rawUrl = safeResult.url;
-          usedReference = true;
-        } else {
-          // Still no reference → REJECT to prevent wrong faces
-          console.error(`  ❌ CRITICAL: Cannot generate with reference - would show wrong faces`);
-          return res.status(400).json({ 
-            error: "SAFETY_BLOCK_PREVENTED_REFERENCE",
-            message: `Die Seite "${page.title}" konnte nicht mit deinen Fotos erstellt werden (OpenAI Safety System blockiert diese Szene). Bitte formuliere um: z.B. "Strandpromenade" statt "Strand", "Restaurant" statt "Party".`,
-            imageUrl: "",
-            panels: page.panels,
-            skipped: true,
-            suggestion: page.location?.toLowerCase().includes("beach") || page.location?.toLowerCase().includes("strand")
-              ? "Versuche: 'Strandpromenade mit Eis' statt Strand-Aktivitäten"
-              : page.title?.toLowerCase().includes("party")
-              ? "Versuche: 'Abendessen im Restaurant' statt Party"
-              : "Formuliere die Szene familienfreundlicher"
-          });
-        }
-      } catch (altErr) {
-        console.error(`  ❌ Safe alternative failed:`, altErr.message);
-        
-        // LAST RESORT: Generate placeholder page with message
-        console.log(`  → Generating placeholder page with skip message`);
-        try {
-          const placeholderPrompt = `${COMIC_STYLE}
-
-Comic page with ${panelCount} panels in ${layoutDesc}. Bold black borders between panels.
-
-CHARACTERS (draw EXACTLY as described):
-${charAnchors}
-
-SCENE: "${page.title}"
-Show the characters in a VERY SAFE, GENERIC scene:
-- Indoor setting (living room, cafe, park bench)
-- Characters talking, smiling, relaxed
-- NO specific activities, just peaceful interaction
-- Warm, friendly atmosphere
-
-This is a safe placeholder for a scene that couldn't be generated.
-
-NATURAL SCENE BEHAVIOR:
-- Characters interact naturally
-- NO camera poses
-- Various angles
-
-NO text, NO speech bubbles.`;
+      // Don't try safe alternative - just accept the result
+      // The user can regenerate the page if needed
+    }NO text, NO speech bubbles.`;
 
           const placeholderResult = await generateImage(placeholderPrompt, reference);
           
