@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { persist, createJSONStorage } from "zustand/middleware";
 
 export type Tone = "romantisch" | "humorvoll" | "kindgerecht" | "episch" | "biografisch";
 export type BookDesign = "kinderbuch" | "romantisch" | "biografie";
@@ -24,6 +25,7 @@ export interface ChapterPanel {
 
 export interface PanelPosition {
   nummer: number;
+  bubbleIndex: number; // REQUIRED: identifies which bubble in multi-bubble panels
   top: number;
   left: number;
   width: number;
@@ -130,43 +132,55 @@ const defaultOrder: OrderDetails = {
   shippingAddress: { name: "", street: "", city: "", zip: "", country: "Deutschland" },
 };
 
-export const useBookStore = create<BookStore>((set) => ({
-  currentStep: 0,
-  project: null,
-  orderDetails: defaultOrder,
-  generationProgress: 0,
-  generationStatus: "",
-  isGenerating: false,
+export const useBookStore = create<BookStore>()(
+  persist(
+    (set) => ({
+      currentStep: 0,
+      project: null,
+      orderDetails: defaultOrder,
+      generationProgress: 0,
+      generationStatus: "",
+      isGenerating: false,
 
-  setStep: (step) => set({ currentStep: step }),
+      setStep: (step) => set({ currentStep: step }),
 
-  setProject: (project) => set({ project }),
+      setProject: (project) => set({ project }),
 
-  updateProject: (partial) =>
-    set((state) => ({
-      project: state.project ? { ...state.project, ...partial } : null,
-    })),
+      updateProject: (partial) =>
+        set((state) => ({
+          project: state.project ? { ...state.project, ...partial } : null,
+        })),
 
-  updateChapter: (chapterId, partial) =>
-    set((state) => ({
-      project: state.project
-        ? {
-            ...state.project,
-            chapters: state.project.chapters.map((c) =>
-              c.id === chapterId ? { ...c, ...partial } : c
-            ),
-          }
-        : null,
-    })),
+      updateChapter: (chapterId, partial) =>
+        set((state) => ({
+          project: state.project
+            ? {
+                ...state.project,
+                chapters: state.project.chapters.map((c) =>
+                  c.id === chapterId ? { ...c, ...partial } : c
+                ),
+              }
+            : null,
+        })),
 
-  setGenerationProgress: (progress, status) =>
-    set({ generationProgress: progress, generationStatus: status }),
+      setGenerationProgress: (progress, status) =>
+        set({ generationProgress: progress, generationStatus: status }),
 
-  setIsGenerating: (val) => set({ isGenerating: val }),
+      setIsGenerating: (val) => set({ isGenerating: val }),
 
-  setOrderDetails: (details) =>
-    set((state) => ({ orderDetails: { ...state.orderDetails, ...details } })),
+      setOrderDetails: (details) =>
+        set((state) => ({ orderDetails: { ...state.orderDetails, ...details } })),
 
-  resetProject: () =>
-    set({ project: null, currentStep: 0, generationProgress: 0, isGenerating: false }),
-}));
+      resetProject: () =>
+        set({ project: null, currentStep: 0, generationProgress: 0, isGenerating: false }),
+    }),
+    {
+      name: "storybuch-project", // localStorage key
+      storage: createJSONStorage(() => localStorage),
+      partialize: (state) => ({ 
+        project: state.project,
+        currentStep: state.currentStep,
+      }),
+    }
+  )
+);

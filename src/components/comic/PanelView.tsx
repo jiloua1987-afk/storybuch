@@ -12,7 +12,7 @@ interface PanelData {
 
 interface PanelPosition {
   nummer: number;
-  bubbleIndex?: number; // Optional: for multi-bubble panels to distinguish bubbles
+  bubbleIndex: number; // REQUIRED: for multi-bubble panels to distinguish bubbles
   top: number;
   left: number;
   width: number;
@@ -294,7 +294,7 @@ export default function PanelView({ imageUrl, title, panels = [], panelPositions
 
   // ── Save edited dialog when editing ends ──────────────────────────────────
   const handleDialogBlur = (panelIndex: number, bubbleId: string, bubbleIndex: number) => {
-    setEditingBubbleId(null); // Changed from setEditingIndex
+    setEditingBubbleId(null);
     const newText = editedDialogs[bubbleId];
     if (newText !== undefined && onDialogChange) {
       console.log(`💾 Saving edited dialog for panel ${panelIndex}, bubble ${bubbleIndex}: "${newText}"`);
@@ -314,7 +314,7 @@ export default function PanelView({ imageUrl, title, panels = [], panelPositions
           dialog: dialogItem.text,
           speaker: dialogItem.speaker,
           originalIndex: panelIndex,
-          bubbleIndex: bubbleIndex,
+          bubbleIndex: bubbleIndex, // ALWAYS set, never undefined
           bubbleId: `${panelIndex}-${bubbleIndex}`, // Unique ID for this bubble
           isMultiBubble: true,
         }));
@@ -323,7 +323,7 @@ export default function PanelView({ imageUrl, title, panels = [], panelPositions
       return [{
         ...p,
         originalIndex: panelIndex,
-        bubbleIndex: 0,
+        bubbleIndex: 0, // ALWAYS 0 for single bubble
         bubbleId: `${panelIndex}-0`,
         isMultiBubble: false,
       }];
@@ -336,21 +336,19 @@ export default function PanelView({ imageUrl, title, panels = [], panelPositions
   const resolvedPositions = useMemo(() => {
     const initial = dialogPanels.map((panel) => {
       const i = panel.originalIndex;
-      const bubbleIdx = panel.bubbleIndex ?? 0;
+      const bubbleIdx = panel.bubbleIndex; // Always defined now
       let top = 5;
       let left = 2;
       
       if (hasDetectedPositions) {
         // Find position by nummer AND bubbleIndex for multi-bubble support
         const pos = panelPositions!.find(p => 
-          p.nummer === i + 1 && 
-          (p.bubbleIndex === undefined || p.bubbleIndex === bubbleIdx)
+          p.nummer === i + 1 && p.bubbleIndex === bubbleIdx
         );
         
         if (pos) { 
-          top = pos.top + 2; 
-          left = pos.left + 2;
-          // No offset needed - position is already correct from saved data
+          top = pos.top;
+          left = pos.left;
         } else {
           // Fallback: use slot system if no saved position found
           const style = getFallbackPosition(i, panels.length);
@@ -388,26 +386,21 @@ export default function PanelView({ imageUrl, title, panels = [], panelPositions
 
   // ── Save initial positions on first render ────────────────────────────────
   useEffect(() => {
-    // Check if we've already initialized this page in this session
-    const storageKey = `bubble-init-${pageId}`;
-    const alreadyInitialized = sessionStorage.getItem(storageKey);
-    
     // Only save initial positions if:
     // 1. No positions exist yet (!hasDetectedPositions)
     // 2. We have resolved positions
-    // 3. We haven't initialized this page yet (not in sessionStorage)
+    // 3. We have dialog panels
     if (onPositionsChange && 
         resolvedPositions.length > 0 && 
         !hasDetectedPositions && 
-        dialogPanels.length > 0 &&
-        !alreadyInitialized) {
+        dialogPanels.length > 0) {
       
       console.log(`💾 Saving initial bubble positions for page ${pageId}`);
-      const initialPositions: PanelPosition[] = dialogPanels.map((panel, bubbleIndex) => {
-        const resolved = resolvedPositions[bubbleIndex];
+      const initialPositions: PanelPosition[] = dialogPanels.map((panel, idx) => {
+        const resolved = resolvedPositions[idx];
         return {
           nummer: panel.originalIndex + 1,
-          bubbleIndex: panel.bubbleIndex ?? 0, // Add bubbleIndex for multi-bubble support
+          bubbleIndex: panel.bubbleIndex, // Always defined now
           top: resolved?.top ?? 5,
           left: resolved?.left ?? 2,
           width: resolved?.w ?? 20,
@@ -416,11 +409,8 @@ export default function PanelView({ imageUrl, title, panels = [], panelPositions
       });
       console.log(`  → Saving ${initialPositions.length} initial positions`);
       onPositionsChange(initialPositions);
-      
-      // Mark this page as initialized in sessionStorage
-      sessionStorage.setItem(storageKey, 'true');
     }
-  }, [pageId, hasDetectedPositions, resolvedPositions.length, dialogPanels.length]); // Trigger when page or data changes
+  }, [pageId, hasDetectedPositions, resolvedPositions, dialogPanels, onPositionsChange]);
 
   const handleMouseDown = (e: React.MouseEvent | React.TouchEvent, type: "panel" | "extra", index: string | number) => {
     if (editingBubbleId !== null || editingExtra !== null) return; // Changed from editingIndex
@@ -459,14 +449,14 @@ export default function PanelView({ imageUrl, title, panels = [], panelPositions
     if (dragging && dragging.type === "panel" && onPositionsChange) {
       console.log('🎯 Drag ended, saving positions...');
       
-      const updatedPositions: PanelPosition[] = dialogPanels.map((panel, bubbleIndex) => {
+      const updatedPositions: PanelPosition[] = dialogPanels.map((panel, idx) => {
         const bubbleId = panel.bubbleId ?? `${panel.originalIndex}-0`;
         const dragPos = dragPositions[bubbleId];
-        const resolved = resolvedPositions[bubbleIndex];
+        const resolved = resolvedPositions[idx];
         
-        const position = {
+        const position: PanelPosition = {
           nummer: panel.originalIndex + 1,
-          bubbleIndex: panel.bubbleIndex ?? 0, // Add bubbleIndex for multi-bubble support
+          bubbleIndex: panel.bubbleIndex, // Always defined now
           top: dragPos?.top ?? resolved?.top ?? 5,
           left: dragPos?.left ?? resolved?.left ?? 2,
           width: resolved?.w ?? 20,
@@ -575,13 +565,13 @@ export default function PanelView({ imageUrl, title, panels = [], panelPositions
                     if (onPositionsChange) {
                       const updatedPositions: PanelPosition[] = dialogPanels
                         .filter(p => (p.bubbleId ?? `${p.originalIndex}-0`) !== bubbleId)
-                        .map((panel, bubbleIndex) => {
+                        .map((panel, idx) => {
                           const bid = panel.bubbleId ?? `${panel.originalIndex}-0`;
                           const dragPos = dragPositions[bid];
-                          const resolved = resolvedPositions[bubbleIndex];
+                          const resolved = resolvedPositions[idx];
                           return {
                             nummer: panel.originalIndex + 1,
-                            bubbleIndex: panel.bubbleIndex ?? 0, // Add bubbleIndex for multi-bubble support
+                            bubbleIndex: panel.bubbleIndex, // Always defined now
                             top: dragPos?.top ?? resolved?.top ?? 5,
                             left: dragPos?.left ?? resolved?.left ?? 2,
                             width: resolved?.w ?? 20,
@@ -600,11 +590,11 @@ export default function PanelView({ imageUrl, title, panels = [], panelPositions
                           autoFocus
                           value={displayDialog}
                           onChange={(e) => setEditedDialogs({ ...editedDialogs, [bubbleId]: e.target.value })}
-                          onBlur={() => handleDialogBlur(panel.originalIndex, bubbleId, panel.bubbleIndex ?? 0)}
+                          onBlur={() => handleDialogBlur(panel.originalIndex, bubbleId, panel.bubbleIndex)}
                           onKeyDown={(e) => {
                             if (e.key === "Enter" && !e.shiftKey) {
                               e.preventDefault();
-                              handleDialogBlur(panel.originalIndex, bubbleId, panel.bubbleIndex ?? 0);
+                              handleDialogBlur(panel.originalIndex, bubbleId, panel.bubbleIndex);
                             }
                           }}
                           className="w-full h-full bg-transparent outline-none resize-none text-[#1A1410]"
