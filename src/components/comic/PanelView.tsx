@@ -334,39 +334,55 @@ export default function PanelView({ imageUrl, title, panels = [], panelPositions
   const hasDetectedPositions = panelPositions && panelPositions.length > 0;
 
   const resolvedPositions = useMemo(() => {
-    const initial = dialogPanels.map((panel) => {
-      const i = panel.originalIndex;
-      const bubbleIdx = panel.bubbleIndex; // Always defined now
-      let top = 5;
-      let left = 2;
-      
-      if (hasDetectedPositions) {
-        // Find position by nummer AND bubbleIndex for multi-bubble support
-        const pos = panelPositions!.find(p => 
+    // If we have saved positions, use them directly WITHOUT collision resolution
+    // Collision resolution should only run on FIRST load when no positions exist
+    if (hasDetectedPositions && panelPositions && panelPositions.length > 0) {
+      console.log(`📍 Using saved positions for ${dialogPanels.length} bubbles (skipping collision resolution)`);
+      return dialogPanels.map((panel) => {
+        const i = panel.originalIndex;
+        const bubbleIdx = panel.bubbleIndex;
+        
+        // Find saved position by nummer AND bubbleIndex
+        const pos = panelPositions.find(p => 
           p.nummer === i + 1 && p.bubbleIndex === bubbleIdx
         );
         
-        if (pos) { 
-          top = pos.top;
-          left = pos.left;
+        if (pos) {
+          return {
+            top: pos.top,
+            left: pos.left,
+            w: pos.width || 20,
+            h: pos.height || 10
+          };
         } else {
-          // Fallback: use slot system if no saved position found
-          const style = getFallbackPosition(i, panels.length);
-          top  = parseFloat(String(style.top  ?? "5%"));
-          left = parseFloat(String(style.left ?? style.right ?? "2%"));
-          // For multi-bubble panels, stack them vertically with offset
-          if (panel.isMultiBubble && bubbleIdx > 0) {
-            top = top + (bubbleIdx * 15);
-          }
+          // Fallback for missing position (shouldn't happen)
+          const text = (panel.speaker || "") + (panel.dialog || "");
+          const wPx = Math.min(220, Math.max(100, 80 + text.length * 3.2));
+          const lines = Math.ceil(text.length / 22);
+          const hPx = Math.max(48, 28 + lines * 20);
+          return {
+            top: 5 + (bubbleIdx * 15),
+            left: 2,
+            w: (wPx / 400) * 100,
+            h: (hPx / 600) * 100
+          };
         }
-      } else {
-        const style = getFallbackPosition(i, panels.length);
-        top  = parseFloat(String(style.top  ?? "5%"));
-        left = parseFloat(String(style.left ?? style.right ?? "2%"));
-        // For multi-bubble panels, stack them vertically
-        if (panel.isMultiBubble && bubbleIdx > 0) {
-          top = top + (bubbleIdx * 15);
-        }
+      });
+    }
+    
+    // NO saved positions → calculate initial positions and run collision resolution
+    console.log(`📍 No saved positions, calculating initial positions with collision resolution`);
+    const initial = dialogPanels.map((panel) => {
+      const i = panel.originalIndex;
+      const bubbleIdx = panel.bubbleIndex;
+      
+      const style = getFallbackPosition(i, panels.length);
+      let top  = parseFloat(String(style.top  ?? "5%"));
+      let left = parseFloat(String(style.left ?? style.right ?? "2%"));
+      
+      // For multi-bubble panels, stack them vertically
+      if (panel.isMultiBubble && bubbleIdx > 0) {
+        top = top + (bubbleIdx * 15);
       }
       
       const text = (panel.speaker || "") + (panel.dialog || "");
@@ -375,6 +391,7 @@ export default function PanelView({ imageUrl, title, panels = [], panelPositions
       const hPx = Math.max(48, 28 + lines * 20);
       return { top, left, w: (wPx / 400) * 100, h: (hPx / 600) * 100 };
     });
+    
     const resolved = resolveCollisions(initial);
     // Merge resolved positions with original w/h
     return resolved.map((pos, idx) => ({
@@ -595,7 +612,34 @@ export default function PanelView({ imageUrl, title, panels = [], panelPositions
                     }
                   }}
                 >✕</button>
-                <ResizableBubble initW={initW} initH={initH} style={{}}>
+                <ResizableBubble 
+                  initW={initW} 
+                  initH={initH} 
+                  style={{}}
+                  onResize={(w, h) => {
+                    // Save size changes immediately
+                    if (onPositionsChange) {
+                      const updatedPositions: PanelPosition[] = dialogPanels.map((p, idx) => {
+                        const bid = p.bubbleId ?? `${p.originalIndex}-0`;
+                        const dragPos = dragPositions[bid];
+                        const resolved = resolvedPositions[idx];
+                        
+                        // If this is the bubble being resized, use new dimensions
+                        const isCurrentBubble = bid === bubbleId;
+                        
+                        return {
+                          nummer: p.originalIndex + 1,
+                          bubbleIndex: p.bubbleIndex,
+                          top: dragPos?.top ?? resolved?.top ?? 5,
+                          left: dragPos?.left ?? resolved?.left ?? 2,
+                          width: isCurrentBubble ? (w / 400) * 100 : (resolved?.w ?? 20),
+                          height: isCurrentBubble ? (h / 600) * 100 : (resolved?.h ?? 10),
+                        };
+                      });
+                      onPositionsChange(updatedPositions);
+                    }
+                  }}
+                >
                   {(w, h) => (
                     <HanddrawnBubble w={w} h={h} type={panel.bubble_type}>
                       {isEditing ? (
