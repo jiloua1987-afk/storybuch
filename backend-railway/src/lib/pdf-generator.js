@@ -407,6 +407,129 @@ async function createComicPDF(project) {
        .stroke();
   }
   
+  // ── 4. BACK COVER ───────────────────────────────────────────────────────
+  doc.addPage();
+  
+  // Hintergrund - elegantes Beige wie Ending
+  doc.rect(0, 0, A4_WIDTH, A4_HEIGHT)
+     .fill('#FDF8F2');
+  
+  // Cover Thumbnail oben (kleines Vorschaubild)
+  if (project.coverImageUrl) {
+    try {
+      const coverBuffer = await fetchImageBuffer(project.coverImageUrl);
+      const thumbnailSize = 180;
+      const thumbnailX = (A4_WIDTH - thumbnailSize) / 2;
+      const thumbnailY = 80;
+      
+      const thumbnailProcessed = await sharp(coverBuffer)
+        .resize(thumbnailSize * 2, thumbnailSize * 2, { 
+          fit: 'cover',
+          position: 'center'
+        })
+        .png()
+        .toBuffer();
+      
+      // Rahmen um Thumbnail
+      doc.rect(thumbnailX - 3, thumbnailY - 3, thumbnailSize + 6, thumbnailSize + 6)
+         .lineWidth(3)
+         .strokeColor('#C9963A')
+         .stroke();
+      
+      doc.image(thumbnailProcessed, thumbnailX, thumbnailY, { 
+        width: thumbnailSize, 
+        height: thumbnailSize 
+      });
+    } catch (e) {
+      console.error('Back cover thumbnail error:', e.message);
+    }
+  }
+  
+  // Story Zusammenfassung
+  const summaryY = 300;
+  
+  // Erstelle kurze Zusammenfassung aus Story
+  let summary = '';
+  if (project.storyInput && project.storyInput.length > 0) {
+    // Nimm ersten Satz oder erste 150 Zeichen
+    summary = project.storyInput.substring(0, 150);
+    if (project.storyInput.length > 150) {
+      summary += '...';
+    }
+  } else if (project.guidedAnswers?.specialMoments) {
+    // Fallback: Nutze special moments
+    const moments = project.guidedAnswers.specialMoments.split('|').slice(0, 2);
+    summary = `Eine Geschichte über ${moments.join(' und ')}.`;
+  } else {
+    summary = `Eine personalisierte Comic-Geschichte über ${project.title}.`;
+  }
+  
+  doc.fontSize(14)
+     .font('Helvetica-Oblique')
+     .fillColor('#1A1410')
+     .text(summary, 60, summaryY, {
+       width: A4_WIDTH - 120,
+       align: 'center',
+       lineGap: 8
+     });
+  
+  // Dekorative Linie
+  const lineY = summaryY + doc.heightOfString(summary, { width: A4_WIDTH - 120, lineGap: 8 }) + 40;
+  doc.moveTo(A4_WIDTH / 2 - 60, lineY)
+     .lineTo(A4_WIDTH / 2 + 60, lineY)
+     .lineWidth(2)
+     .strokeColor('#C9963A')
+     .stroke();
+  
+  // ComicStyle.de Branding unten
+  const brandingY = A4_HEIGHT - 180;
+  
+  doc.fontSize(24)
+     .font('Helvetica-Bold')
+     .fillColor('#C9963A')
+     .text('ComicStyle.de', 50, brandingY, {
+       width: A4_WIDTH - 100,
+       align: 'center',
+       characterSpacing: 1
+     });
+  
+  doc.fontSize(11)
+     .font('Helvetica')
+     .fillColor('#8B7355')
+     .text('Deine Geschichte als personalisiertes Comic-Buch', 50, brandingY + 40, {
+       width: A4_WIDTH - 100,
+       align: 'center'
+     });
+  
+  // Barcode-Platzhalter (für professionellen Look)
+  const barcodeY = A4_HEIGHT - 80;
+  const barcodeWidth = 120;
+  const barcodeHeight = 40;
+  const barcodeX = (A4_WIDTH - barcodeWidth) / 2;
+  
+  // Einfacher Barcode-Look (Streifen)
+  doc.rect(barcodeX, barcodeY, barcodeWidth, barcodeHeight)
+     .lineWidth(1)
+     .strokeColor('#1A1410')
+     .stroke();
+  
+  // Barcode-Streifen (dekorativ)
+  for (let i = 0; i < 15; i++) {
+    const x = barcodeX + 5 + (i * 7);
+    const width = Math.random() > 0.5 ? 3 : 2;
+    doc.rect(x, barcodeY + 5, width, barcodeHeight - 10)
+       .fill('#1A1410');
+  }
+  
+  // ISBN-ähnliche Nummer (dekorativ)
+  doc.fontSize(8)
+     .font('Helvetica')
+     .fillColor('#1A1410')
+     .text('ISBN 978-3-XXXXX-XXX-X', barcodeX, barcodeY + barcodeHeight + 5, {
+       width: barcodeWidth,
+       align: 'center'
+     });
+  
   doc.end();
   
   return new Promise((resolve, reject) => {
