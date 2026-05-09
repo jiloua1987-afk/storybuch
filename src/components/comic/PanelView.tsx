@@ -272,17 +272,20 @@ export default function PanelView({ imageUrl, title, panels = [], panelPositions
     setDragPositions({}); // Clear temporary drag positions
     setHiddenBubbles(new Set());
     
-    // Load extra bubbles from chapter data
-    const currentPageData = project?.chapters?.[currentPage];
-    if (currentPageData?.extraBubbles) {
-      setExtraBubbles(currentPageData.extraBubbles);
-    } else {
-      setExtraBubbles([]);
+    // Load extra bubbles from store if pageId is available
+    if (pageId) {
+      const project = useBookStore.getState().project;
+      const currentPageData = project?.chapters?.find(c => c.id === pageId);
+      if (currentPageData?.extraBubbles) {
+        setExtraBubbles(currentPageData.extraBubbles);
+      } else {
+        setExtraBubbles([]);
+      }
     }
     
     setEditingBubbleId(null); // Changed from setEditingIndex
     setEditingExtra(null);
-  }, [pageId, imageUrl, currentPage, project?.chapters]); // Also reset when image changes
+  }, [pageId, imageUrl]); // Also reset when image changes
 
   const isValidDialog = (d?: string | null) =>
     d && d.trim().length > 0 && d.trim().toLowerCase() !== "null";
@@ -519,24 +522,21 @@ export default function PanelView({ imageUrl, title, panels = [], panelPositions
 
   // Save extra bubbles to chapter
   const saveExtraBubbles = useCallback(() => {
-    if (!pageId || !project?.chapters) return;
+    if (!pageId) return;
     
-    const currentPageData = project.chapters.find(c => c.id === pageId);
+    const project = useBookStore.getState().project;
+    const currentPageData = project?.chapters?.find(c => c.id === pageId);
     if (!currentPageData) return;
     
     console.log(`💾 Saving ${extraBubbles.length} extra bubbles for page "${currentPageData.title}"`);
     
-    // Use updateChapter from parent (Step5Preview)
-    // We need to pass this through props
-    if (onPositionsChange) {
-      // Hack: We'll save extra bubbles by updating the chapter directly through the store
-      const { updateChapter } = useBookStore.getState();
-      updateChapter(pageId, {
-        extraBubbles: extraBubbles
-      });
-      console.log(`✓ Saved ${extraBubbles.length} extra bubbles`);
-    }
-  }, [extraBubbles, pageId, project?.chapters, onPositionsChange]);
+    // Update chapter directly through the store
+    const { updateChapter } = useBookStore.getState();
+    updateChapter(pageId, {
+      extraBubbles: extraBubbles
+    });
+    console.log(`✓ Saved ${extraBubbles.length} extra bubbles`);
+  }, [extraBubbles, pageId]);
 
   // Click on image to add new bubble
   const handleImageClick = (e: React.MouseEvent) => {
