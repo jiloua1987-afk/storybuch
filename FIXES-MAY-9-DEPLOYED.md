@@ -2,7 +2,7 @@
 
 ## Status: ✅ DEPLOYED
 
-**Backend:** Railway auto-deployed (Commit fe3da72)  
+**Backend:** Railway auto-deployed (Commit 8f7c3ef)  
 **Frontend:** Vercel auto-deployed (Commit 4be5363)
 
 ---
@@ -11,42 +11,88 @@
 
 ### Problem
 - User-Foto wurde für Cover blockiert: "Your request was rejected by the safety system"
-- Gleiches Foto funktionierte für Seite 2 ohne Probleme
-- Cover blieb leer, Folgeseiten konnten nicht generiert werden
+- Cover blieb leer → Seite 1 "Hochzeit" wurde **gar nicht generiert** (leere Seite!)
+- Seite 2 "Honeymoon" funktionierte perfekt
 
-### Lösung
-**Behält bewährten Ansatz bei, fügt Fallback hinzu:**
-- ✅ **Standard:** `images.edit()` wie bisher (beste Qualität, funktioniert 99% der Zeit)
-- ✅ **Fallback:** Wenn Safety-Rejection → `generateImage()` Ansatz (wie Seite 2)
-- ✅ Funktioniert für Single-Photo und Multi-Photo Mode
-- ✅ Keine Qualitätsverluste im Normalfall
-- ✅ Seltene Safety-Rejections blockieren nicht mehr komplett
+### Root Cause - Warum Seite 1 leer blieb
+```
+Cover Safety-Rejection
+    ↓
+Kein Cover verfügbar (coverImageUrl = "")
+    ↓
+Seite 1 = "Hochzeit" (historische Szene, age context: middle)
+    ↓
+Code will Cover nutzen (um Gesichter jünger zu machen)
+    ↓
+Kein Cover da → versucht generate-only (erfindet Gesichter)
+    ↓
+Code erkennt: "Would show WRONG FACES"
+    ↓
+Code blockiert Generierung → ERROR
+    ↓
+Seite wird NICHT gespeichert → LEERE SEITE im PDF
+```
+
+### Warum Seite 2 funktionierte
+```
+Seite 2 = "Honeymoon" (aktuelle Zeit, age context: current)
+    ↓
+Code nutzt User-Foto direkt als Referenz
+    ↓
+✅ Bild wird generiert mit korrekten Gesichtern
+```
+
+### Lösung - Doppelter Fallback
+
+**1. Cover-Fallback (bereits implementiert):**
+- Standard: `images.edit()` (beste Qualität)
+- Bei Safety-Rejection: `generateImage()` Fallback
+- Cover wird trotzdem erstellt
+
+**2. Page-Fallback (NEU):**
+- Wenn Cover trotzdem fehlt UND historische Szene
+- **FALLBACK:** Nutze User-Foto direkt (wie Seite 2)
+- Charaktere sehen nicht jünger aus, aber **Gesichter sind korrekt**
+- **Besser als:** Leere Seite oder erfundene Gesichter
 
 ### Code Changes
 **Datei:** `backend-railway/src/routes/comic.js`
-- Zeilen ~950-1150: Cover-Generierung mit Fallback-Strategie
+
+**Cover-Endpoint (Zeilen ~950-1150):**
 - Multi-Photo: `images.edit()` → bei Safety-Error → `generateImage()` Fallback
 - Single-Photo: `images.edit()` → bei Safety-Error → `generateImage()` Fallback
-- Nur bei Safety-Rejection wird Fallback verwendet, nicht bei anderen Fehlern
 
-### Wie es funktioniert
+**Page-Endpoint (Zeilen ~1390-1450):**
+- Historische Szene + Cover vorhanden → Cover mit Age-Modifier ✓
+- Historische Szene + **Cover fehlt** → **User-Foto als Fallback** (NEU!)
+- Aktuelle Szene → User-Foto wie bisher ✓
+
+### Wie es jetzt funktioniert
 ```
-1. Versuche images.edit() (wie bisher, beste Qualität)
-   ↓
-2. Erfolg? → Fertig! ✓
-   ↓
-3. Safety-Error? → Versuche generateImage() Fallback
-   ↓
-4. Erfolg? → Fertig! ✓
-   ↓
-5. Immer noch Fehler? → Zeige Fehlermeldung
+Cover Safety-Rejection
+    ↓
+Fallback 1: generateImage() versucht Cover zu erstellen
+    ↓
+Erfolg? → Cover verfügbar ✓
+    ↓
+Fehlschlag? → Kein Cover, aber...
+    ↓
+Seite 1 (Hochzeit, historisch)
+    ↓
+Fallback 2: Nutze User-Foto direkt
+    ↓
+✅ Seite wird generiert (Gesichter korrekt, nicht jünger)
 ```
 
 ### Test-Anweisung
-1. Neues Comic erstellen (alte Comics haben gecachte Bilder!)
-2. Normales Foto hochladen → sollte wie bisher funktionieren (images.edit)
-3. Foto das Safety-Error verursacht → sollte jetzt mit Fallback funktionieren
-4. Logs zeigen: "✓ Cover done (single photo mode)" oder "✓ Cover done (single photo FALLBACK mode)"
+1. Neues Comic erstellen
+2. Foto hochladen (auch das, das vorher blockiert wurde)
+3. **Cover:** Sollte jetzt mit Fallback funktionieren
+4. **Seite 1 (Hochzeit):** Sollte jetzt generiert werden (nicht leer!)
+5. **Seite 2 (Honeymoon):** Sollte wie bisher funktionieren
+6. Logs prüfen:
+   - Cover: `✓ Cover done (single photo mode)` oder `✓ Cover done (single photo FALLBACK mode)`
+   - Seite 1: `→ FALLBACK: Using user photo (characters won't look younger, but faces will be correct)`
 
 ---
 
@@ -193,8 +239,10 @@ Positions to save: [...]
 
 ---
 
-**Erstellt:** 9. Mai 2026, 15:00 Uhr  
-**Commits:** fe3da72 (Backend), 4be5363 (Frontend)  
+**Erstellt:** 9. Mai 2026, 15:30 Uhr  
+**Commits:** 8f7c3ef (Backend), 4be5363 (Frontend)  
 **Status:** Deployed und bereit zum Testen  
-**Änderung:** Cover verwendet jetzt images.edit() als Standard, generateImage() nur als Fallback bei Safety-Rejection
+**Änderungen:**
+- Cover: images.edit() als Standard, generateImage() als Fallback bei Safety-Rejection
+- Pages: User-Foto als Fallback für historische Szenen wenn Cover fehlt (verhindert leere Seiten)
 
