@@ -862,14 +862,13 @@ ${charDesc}
 Composition: dynamic group shot, characters prominently in foreground, vivid illustrated background showing the story world. Some looking at viewer, some interacting with each other.
 NO text, NO title, NO letters anywhere in the image.`);
 
-    // ── MULTI-PHOTO STRATEGY ──────────────────────────────────────────────────
-    // Problem: images.edit() can only use ONE photo
-    // Solution: Create composite image from both photos, then use images.edit()
+    // ── MULTI-PHOTO STRATEGY (using same approach as page generation) ─────────
+    // Use generateImage() with composite buffer instead of images.edit()
     const hasMultiplePhotos = referenceImageUrls.length > 1 || referenceImages.length > 1;
     
     if (hasMultiplePhotos && referenceImageUrls.length === 2) {
       console.log(`  → Multi-photo mode: ${referenceImageUrls.length} photos`);
-      console.log(`  → Creating composite image from both photos for images.edit()`);
+      console.log(`  → Creating composite image from both photos`);
       
       try {
         // Fetch both photos
@@ -907,10 +906,7 @@ NO text, NO title, NO letters anywhere in the image.`);
         .jpeg()
         .toBuffer();
         
-        // Now use images.edit() with composite
-        const blob = new Blob([compositeBuffer], { type: "image/jpeg" });
-        const refFile = new File([blob], "composite.jpg", { type: "image/jpeg" });
-        
+        // Use generateImage() with composite buffer (same as page generation)
         const multiPhotoPrompt = sanitizePrompt(`${COMIC_STYLE}
 
 🚨 CRITICAL CLOTHING RULES (HIGHEST PRIORITY):
@@ -919,44 +915,42 @@ Use the photo ONLY for facial features and body proportions.
 COMPLETELY IGNORE all clothing visible in the photo.
 Draw each character in DIFFERENT, DISTINCT casual attire appropriate for a comic book cover.
 
-REDRAW both people in this photo as hand-drawn comic book characters standing together.
-This must look like a page from a printed comic book, NOT a photograph.
-Bold ink outlines on every person. Flat cel-shaded colors. Expressive cartoon faces.
+Comic book COVER illustration showing both people from this photo together in ${coverLocation}.
 
 Left person is ${referenceImageUrls[0].label}: ${characters.find(c => c.name === referenceImageUrls[0].label)?.visual_anchor || ""}
 Right person is ${referenceImageUrls[1].label}: ${characters.find(c => c.name === referenceImageUrls[1].label)?.visual_anchor || ""}
 
-CLOTHING INSTRUCTIONS:
-- Left person (${referenceImageUrls[0].label}): ${characters.find(c => c.name === referenceImageUrls[0].label)?.age < 12 ? "colorful kids' casual outfit" : "stylish casual adult attire"}
-- Right person (${referenceImageUrls[1].label}): ${characters.find(c => c.name === referenceImageUrls[1].label)?.age < 12 ? "colorful kids' casual outfit (DIFFERENT from left person)" : "stylish casual adult attire (DIFFERENT from left person)"}
-- Each character MUST have DISTINCT, DIFFERENT clothing
-- NO matching outfits, NO similar colors
+CHARACTER-SPECIFIC CLOTHING (draw exactly as specified):
+- ${referenceImageUrls[0].label}: ${characters.find(c => c.name === referenceImageUrls[0].label)?.age < 12 ? "colorful kids' casual outfit" : "stylish casual adult attire"}
+- ${referenceImageUrls[1].label}: ${characters.find(c => c.name === referenceImageUrls[1].label)?.age < 12 ? "colorful kids' casual outfit (DIFFERENT from other character)" : "stylish casual adult attire (DIFFERENT from other character)"}
 
-Draw BOTH characters together in ${coverLocation}.
-Composition: dynamic group shot, both characters prominently visible, vivid illustrated background.
+CRITICAL: Each character MUST have DISTINCT, DIFFERENT clothing.
+NO matching outfits, NO similar colors.
+
+COMPOSITION:
+- Dynamic group shot with both characters prominently visible
+- Characters in foreground, vivid illustrated background showing ${coverLocation}
+- This must look like a hand-drawn comic book cover, NOT a photograph
+- Bold ink outlines on every person
+- Flat cel-shaded colors
+- Expressive cartoon faces
+- NO photographic lighting, NO realistic skin textures
+
 NO text, NO title, NO letters anywhere in the image.`);
 
-        const res2 = await openai.images.edit({
-          model: "gpt-image-2",
-          image: refFile,
-          prompt: multiPhotoPrompt,
-          size: "1024x1536",
-          quality: "high",
-        });
+        const { url: rawUrl } = await generateImage(multiPhotoPrompt, compositeBuffer);
         
-        const item = (res2.data || [])[0];
-        const url = item?.url || (item?.b64_json ? `data:image/png;base64,${item.b64_json}` : null);
-        if (url) {
+        if (rawUrl) {
           // CRITICAL: projectId MUST come from frontend, no fallback
           if (!req.body.projectId) {
             console.error("❌ CRITICAL: No projectId provided to cover endpoint!");
             return res.status(400).json({ error: "projectId is required", coverImageUrl: "" });
           }
           // Save with projectId in path to prevent cache issues
-          const coverUrl = await saveImage(url, req.body.projectId, `cover-${Date.now()}`);
-          await saveCharacterRefs(req.body.projectId, characters, coverUrl || url, referenceImageUrls);
-          console.log("✓ Cover done (multi-photo composite mode)");
-          return res.json({ coverImageUrl: coverUrl || url, projectId: req.body.projectId });
+          const coverUrl = await saveImage(rawUrl, req.body.projectId, `cover-${Date.now()}`);
+          await saveCharacterRefs(req.body.projectId, characters, coverUrl || rawUrl, referenceImageUrls);
+          console.log("✓ Cover done (multi-photo with page-style prompt)");
+          return res.json({ coverImageUrl: coverUrl || rawUrl, projectId: req.body.projectId });
         }
       } catch (e) {
         console.warn("  → Cover with multi-photo composite failed:", e.message);
@@ -964,54 +958,66 @@ NO text, NO title, NO letters anywhere in the image.`);
       }
     }
 
-    // ── SINGLE PHOTO STRATEGY (original logic) ────────────────────────────────
+    // ── SINGLE PHOTO STRATEGY (using same approach as page generation) ────────
     const primaryRefUrl = referenceImageUrls[0]?.url || null;
     const primaryRefBase64 = referenceImages[0] || null;
 
     if (primaryRefUrl || primaryRefBase64) {
       try {
-        let refFile;
+        let refBuffer;
         if (primaryRefUrl) {
-          const buf = await fetchBuffer(primaryRefUrl);
-          const blob = new Blob([buf], { type: "image/jpeg" });
-          refFile = new File([blob], "reference.jpg", { type: "image/jpeg" });
+          refBuffer = await fetchBuffer(primaryRefUrl);
         } else {
-          refFile = toFile(primaryRefBase64);
+          // Convert base64 to buffer
+          const base64Data = primaryRefBase64.replace(/^data:image\/\w+;base64,/, "");
+          refBuffer = Buffer.from(base64Data, 'base64');
         }
-        const res2 = await openai.images.edit({
-          model: "gpt-image-2",
-          image: refFile,
-          prompt: sanitizePrompt(`${COMIC_STYLE}
+        
+        // Use the SAME prompt structure that works for page 2
+        const coverPromptWithPhoto = sanitizePrompt(`${COMIC_STYLE}
 
-REDRAW everyone in this photo as hand-drawn comic book characters. This must look like a page from a printed comic book, NOT a photograph or photo-manipulation.
-Bold ink outlines on every person. Flat cel-shaded colors. Expressive cartoon faces. NO photographic lighting, NO realistic skin textures, NO photo-realistic details.
-Draw ALL characters: ${charNames}.
-For characters not in the photo, draw them from their description.
-Setting: ${coverLocation}.
-Character descriptions: ${charDesc}
+🚨 CRITICAL CLOTHING RULES (HIGHEST PRIORITY):
+DO NOT copy ANY clothing from this photo.
+Use the photo ONLY for facial features and body proportions.
+COMPLETELY IGNORE all clothing visible in the photo.
+Draw each character in DIFFERENT, DISTINCT casual attire appropriate for a comic book cover.
 
-CLOTHING: Draw characters in casual everyday clothes appropriate for a cover photo.
-IGNORE the specific clothing from the photo — use stylish casual attire instead.
-Examples: nice shirts, blouses, jeans, casual dresses. Make it look good for a comic book cover.
+Comic book COVER illustration showing these characters together in ${coverLocation}.
 
-Composition: dynamic group shot, characters in foreground, vivid illustrated background.
-NO text, NO title, NO letters anywhere in the image.`),
-          size: "1024x1536",
-          quality: "high",
-        });
-        const item = (res2.data || [])[0];
-        const url = item?.url || (item?.b64_json ? `data:image/png;base64,${item.b64_json}` : null);
-        if (url) {
+CHARACTERS (draw faces accurately from photo, IGNORE clothing):
+${charDesc}
+
+CHARACTER-SPECIFIC CLOTHING (draw exactly as specified):
+${coverCharClothing}
+
+CRITICAL: Each character must have DISTINCT, DIFFERENT clothing from each other.
+NO matching outfits, NO similar colors.
+
+COMPOSITION:
+- Dynamic group shot with all characters prominently visible
+- Characters in foreground, vivid illustrated background showing ${coverLocation}
+- Some looking at viewer, some interacting with each other
+- This must look like a hand-drawn comic book cover, NOT a photograph
+- Bold ink outlines on every person
+- Flat cel-shaded colors
+- Expressive cartoon faces
+- NO photographic lighting, NO realistic skin textures
+
+NO text, NO title, NO letters anywhere in the image.`);
+
+        const { url: rawUrl } = await generateImage(coverPromptWithPhoto, refBuffer);
+        
+        if (rawUrl) {
           // CRITICAL: projectId MUST come from frontend, no fallback
           if (!req.body.projectId) {
             console.error("❌ CRITICAL: No projectId provided to cover endpoint!");
             return res.status(400).json({ error: "projectId is required", coverImageUrl: "" });
           }
           // Save with projectId in path to prevent cache issues
-          const coverUrl = await saveImage(url, req.body.projectId, `cover-${Date.now()}`);
-          await saveCharacterRefs(req.body.projectId, characters, coverUrl || url, referenceImageUrls);
-          console.log("✓ Cover done (multi-photo mode)");
-          return res.json({ coverImageUrl: coverUrl || url, projectId: req.body.projectId });
+          const coverUrl = await saveImage(rawUrl, req.body.projectId, `cover-${Date.now()}`);
+          await saveCharacterRefs(req.body.projectId, characters, coverUrl || rawUrl, referenceImageUrls);
+          console.log("✓ Cover done (single photo with page-style prompt)");
+          return res.json({ coverImageUrl: coverUrl || rawUrl, projectId: req.body.projectId });
         }
       } catch (e) {
         console.warn("  → Cover with photo failed:", e.message);
@@ -1019,15 +1025,13 @@ NO text, NO title, NO letters anywhere in the image.`),
         // Check if it's a safety system rejection
         if (e.message && (e.message.includes('safety') || e.message.includes('rejected'))) {
           console.error("❌ SAFETY SYSTEM REJECTION: Photo was blocked by OpenAI");
-          console.error("   → User must upload a different photo");
+          console.error("   → Trying fallback strategy without images.edit()");
           
-          return res.status(400).json({ 
-            error: "SAFETY_REJECTION",
-            message: "Dieses Foto wurde vom System blockiert. Bitte verwenden Sie ein anderes Foto.",
-            userMessage: "Das hochgeladene Foto konnte nicht verarbeitet werden. Bitte versuchen Sie es mit einem anderen Foto.",
-            coverImageUrl: "",
-            projectId: req.body.projectId
-          });
+          // Don't return error immediately - let it fall through to generate-only
+          // This will use text-only generation which may work
+        } else {
+          // Other errors - fall through to generate-only
+          console.error("   → Non-safety error, falling through to generate-only");
         }
       }
     }
