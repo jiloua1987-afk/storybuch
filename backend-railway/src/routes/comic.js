@@ -1781,35 +1781,6 @@ NO text, NO speech bubbles anywhere in image.`;
       
       // Don't try safe alternative - just accept the result
       // The user can regenerate the page if needed
-    }NO text, NO speech bubbles.`;
-
-          const placeholderResult = await generateImage(placeholderPrompt, reference);
-          
-          if (placeholderResult.url) {
-            console.log(`  ✓ Placeholder page generated - better than empty page`);
-            rawUrl = placeholderResult.url;
-            usedReference = placeholderResult.usedReference;
-          } else {
-            // Absolute last resort: return skip
-            return res.status(400).json({ 
-              error: "SAFETY_BLOCK_PREVENTED_REFERENCE",
-              message: `Die Seite "${page.title}" konnte nicht erstellt werden. Bitte formuliere die Szene um.`,
-              imageUrl: "",
-              panels: page.panels,
-              skipped: true
-            });
-          }
-        } catch (placeholderErr) {
-          console.error(`  ❌ Even placeholder failed:`, placeholderErr.message);
-          return res.status(400).json({ 
-            error: "SAFETY_BLOCK_PREVENTED_REFERENCE",
-            message: `Die Seite "${page.title}" konnte nicht erstellt werden. Bitte formuliere die Szene um.`,
-            imageUrl: "",
-            panels: page.panels,
-            skipped: true
-          });
-        }
-      }
     }
 
     // If reference was blocked by safety filter → sanitize prompt and retry
