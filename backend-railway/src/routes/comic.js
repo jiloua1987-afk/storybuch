@@ -1353,7 +1353,16 @@ RULES:
 - Panel 3: Third action/moment (DIFFERENT from panels 1 and 2)
 - Panel 4: Fourth action/moment (DIFFERENT from all previous)
 - NEVER repeat the same scene with different angles - each panel = NEW moment
-- Each character appears ONLY ONCE per panel — no duplicates
+
+🚨 ULTRA-CRITICAL: NO DUPLICATE CHARACTERS IN SAME PANEL
+- Each character appears EXACTLY ONCE per panel — NEVER show the same person twice
+- If Aymen is in the panel, show him ONCE in ONE position only
+- If Rania is in the panel, show her ONCE in ONE position only
+- NEVER show the same character on the left AND right side of the same panel
+- NEVER show the same character in foreground AND background of the same panel
+- Each person has ONE body, ONE position per panel — this is MANDATORY
+- If you need to show multiple people, use DIFFERENT characters, not the same one twice
+
 - Show CORRECT emotions per scene (sad=tears, funny=laughter, reunion=joy)
 - Sharp detailed faces — eyes, nose, mouth clearly visible, front or 3/4 view
 - Background crowd: faceless silhouettes only
