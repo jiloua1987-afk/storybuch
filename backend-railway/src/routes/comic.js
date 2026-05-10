@@ -1000,24 +1000,21 @@ ${multiPhotoPrompt}`);
       }
     }
 
-    // ── SINGLE PHOTO STRATEGY (original logic) ────────────────────────────────
+    // ── SINGLE PHOTO STRATEGY with RETRY LOGIC ────────────────────────────────
     const primaryRefUrl = referenceImageUrls[0]?.url || null;
     const primaryRefBase64 = referenceImages[0] || null;
 
     if (primaryRefUrl || primaryRefBase64) {
-      try {
-        let refFile;
-        if (primaryRefUrl) {
-          const buf = await fetchBuffer(primaryRefUrl);
-          const blob = new Blob([buf], { type: "image/jpeg" });
-          refFile = new File([blob], "reference.jpg", { type: "image/jpeg" });
-        } else {
-          refFile = toFile(primaryRefBase64);
-        }
-        const res2 = await openai.images.edit({
-          model: "gpt-image-2",
-          image: refFile,
-          prompt: sanitizePrompt(`${COMIC_STYLE}
+      let refFile;
+      if (primaryRefUrl) {
+        const buf = await fetchBuffer(primaryRefUrl);
+        const blob = new Blob([buf], { type: "image/jpeg" });
+        refFile = new File([blob], "reference.jpg", { type: "image/jpeg" });
+      } else {
+        refFile = toFile(primaryRefBase64);
+      }
+      
+      const basePrompt = `${COMIC_STYLE}
 
 REDRAW everyone in this photo as hand-drawn comic book characters. This must look like a page from a printed comic book, NOT a photograph or photo-manipulation.
 Bold ink outlines on every person. Flat cel-shaded colors. Expressive cartoon faces. NO photographic lighting, NO realistic skin textures, NO photo-realistic details.
@@ -1031,31 +1028,84 @@ IGNORE the specific clothing from the photo — use stylish casual attire instea
 Examples: nice shirts, blouses, jeans, casual dresses. Make it look good for a comic book cover.
 
 Composition: dynamic group shot, characters in foreground, vivid illustrated background.
-NO text, NO title, NO letters anywhere in the image.`),
+NO text, NO title, NO letters anywhere in the image.`;
+
+      // ATTEMPT 1: Original prompt
+      try {
+        console.log("  → Cover attempt 1: Original prompt with photo");
+        const res2 = await openai.images.edit({
+          model: "gpt-image-2",
+          image: refFile,
+          prompt: sanitizePrompt(basePrompt),
           size: "1024x1536",
           quality: "high",
         });
         const item = (res2.data || [])[0];
         const url = item?.url || (item?.b64_json ? `data:image/png;base64,${item.b64_json}` : null);
         if (url) {
-          // CRITICAL: projectId MUST come from frontend, no fallback
           if (!req.body.projectId) {
             console.error("❌ CRITICAL: No projectId provided to cover endpoint!");
             return res.status(400).json({ error: "projectId is required", coverImageUrl: "" });
           }
-          // Save with projectId in path to prevent cache issues
           const coverUrl = await saveImage(url, req.body.projectId, `cover-${Date.now()}`);
           await saveCharacterRefs(req.body.projectId, characters, coverUrl || url, referenceImageUrls);
           console.log("✓ Cover done (single photo mode)");
           return res.json({ coverImageUrl: coverUrl || url, projectId: req.body.projectId });
         }
       } catch (e) {
-        console.warn("  → Cover with photo failed:", e.message);
+        console.warn("  → Cover attempt 1 failed:", e.message);
         
-        // Check if it's a safety system rejection
+        // Check if it's a safety rejection
         if (e.message && (e.message.includes('safety') || e.message.includes('rejected'))) {
-          console.error("❌ SAFETY SYSTEM REJECTION: Photo was blocked by OpenAI");
-          console.error("   → Trying FALLBACK: generateImage() approach");
+          console.error("  ⚠️ Safety rejection on attempt 1");
+          
+          // ATTEMPT 2: Sanitized prompt (remove risky keywords)
+          try {
+            console.log("  → Cover attempt 2: Sanitized prompt");
+            await new Promise(resolve => setTimeout(resolve, 3000)); // Wait 3s
+            
+            const { rewriteIfRisky } = require('../lib/safety-rewriter');
+            const safeLocation = await rewriteIfRisky(coverLocation);
+            
+            const sanitizedPrompt = `${COMIC_STYLE}
+
+Family-friendly comic book cover illustration.
+Redraw the people in this photo as cartoon characters.
+Bold comic book style with thick outlines.
+Characters: ${charNames}
+Setting: ${safeLocation}
+Warm, friendly atmosphere.
+Everyone smiling and happy together.
+
+NO text, NO title, NO letters.`;
+
+            const res3 = await openai.images.edit({
+              model: "gpt-image-2",
+              image: refFile,
+              prompt: sanitizePrompt(sanitizedPrompt),
+              size: "1024x1536",
+              quality: "high",
+            });
+            const item = (res3.data || [])[0];
+            const url = item?.url || (item?.b64_json ? `data:image/png;base64,${item.b64_json}` : null);
+            if (url) {
+              if (!req.body.projectId) {
+                return res.status(400).json({ error: "projectId is required", coverImageUrl: "" });
+              }
+              const coverUrl = await saveImage(url, req.body.projectId, `cover-${Date.now()}`);
+              await saveCharacterRefs(req.body.projectId, characters, coverUrl || url, referenceImageUrls);
+              console.log("✓ Cover done (single photo mode - retry 2 succeeded)");
+              return res.json({ coverImageUrl: coverUrl || url, projectId: req.body.projectId });
+            }
+          } catch (e2) {
+            console.error("  → Cover attempt 2 also failed:", e2.message);
+            // Continue to fallback below
+          }
+        }
+        
+        // FALLBACK: generateImage() approach (no photo composite)
+        console.error("❌ All photo-based attempts failed");
+        console.error("   → Trying FALLBACK: generateImage() without photo composite");
           
           // FALLBACK: Try generateImage() approach (like page generation)
           try {
