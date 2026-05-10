@@ -1891,6 +1891,16 @@ NO text, NO speech bubbles anywhere in image.`;
     const folder = projectId || `book-${Date.now()}`;
     const filename = page.id || `page-${Date.now()}`;
     const storedUrl = await saveImage(rawUrl, folder, filename);
+    
+    if (!storedUrl) {
+      console.error(`❌ CRITICAL: Failed to save image to Supabase for page "${page.title}"!`);
+      console.error(`   → projectId: ${projectId}`);
+      console.error(`   → folder: ${folder}`);
+      console.error(`   → filename: ${filename}`);
+    } else {
+      console.log(`✓ Image saved to Supabase: ${folder}/${filename}.png`);
+    }
+    
     const finalUrl = storedUrl || rawUrl;
 
     // Panel position detection
