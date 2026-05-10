@@ -174,6 +174,26 @@ async function createComicPDF(project) {
           const hiddenBubbles = new Set(page.hiddenBubbles || []);
           console.log(`    → Hidden bubbles: ${hiddenBubbles.size}`);
           
+          // Calculate ACTUAL rendered image dimensions (fit: contain may add letterboxing)
+          // Image aspect ratio: 1024x1536 = 2:3
+          const imageAspect = 1024 / 1536; // ~0.667
+          const containerAspect = imgWidth / imgHeight;
+          let actualImgWidth, actualImgHeight, actualImgX, actualImgY;
+          if (imageAspect < containerAspect) {
+            // Image is taller relative to container → letterbox left/right
+            actualImgHeight = imgHeight;
+            actualImgWidth = imgHeight * imageAspect;
+            actualImgX = imgX + (imgWidth - actualImgWidth) / 2;
+            actualImgY = imgY;
+          } else {
+            // Image is wider relative to container → letterbox top/bottom
+            actualImgWidth = imgWidth;
+            actualImgHeight = imgWidth / imageAspect;
+            actualImgX = imgX;
+            actualImgY = imgY + (imgHeight - actualImgHeight) / 2;
+          }
+          console.log(`    → Actual image area: ${actualImgWidth.toFixed(0)}×${actualImgHeight.toFixed(0)}px at (${actualImgX.toFixed(0)}, ${actualImgY.toFixed(0)})`);
+          
           // Flatten multi-bubble panels (dialogs array) into individual bubbles
           const allBubbles = [];
           page.panels.forEach((panel, panelIdx) => {
@@ -219,6 +239,24 @@ async function createComicPDF(project) {
             }
           });
           
+          // ── Extra bubbles (user-added) ──────────────────────────────
+          if (page.extraBubbles && page.extraBubbles.length > 0) {
+            console.log(`    → Extra bubbles: ${page.extraBubbles.length}`);
+            page.extraBubbles.forEach(extra => {
+              allBubbles.push({
+                nummer: -1, // Mark as extra
+                dialog: extra.dialog,
+                speaker: extra.speaker || '',
+                bubble_type: 'speech',
+                bubbleIndex: 0,
+                isMultiBubble: false,
+                isExtra: true,
+                extraTop: extra.top,   // % coordinates
+                extraLeft: extra.left, // % coordinates
+              });
+            });
+          }
+          
           console.log(`    → Found ${allBubbles.length} bubbles to render (after filtering hidden)`);
           
           allBubbles.forEach((bubble, idx) => {
@@ -229,12 +267,17 @@ async function createComicPDF(project) {
             const text = speaker + bubble.dialog;
             
             // Position aus panelPositions oder Fallback
-            let bubbleX = imgX + 30;
-            let bubbleY = imgY + 30 + (idx * 100);
+            // Use ACTUAL image dimensions for correct coordinate mapping
+            let bubbleX = actualImgX + 30;
+            let bubbleY = actualImgY + 30 + (idx * 100);
             let bubbleWidth = 90; // Default
             let bubbleHeight = 40; // Default
             
-            if (page.panelPositions && page.panelPositions.length > 0) {
+            if (bubble.isExtra) {
+              // Extra bubbles use their own % coordinates
+              bubbleX = actualImgX + (bubble.extraLeft / 100) * actualImgWidth;
+              bubbleY = actualImgY + (bubble.extraTop / 100) * actualImgHeight;
+            } else if (page.panelPositions && page.panelPositions.length > 0) {
               // Find position for this panel number AND bubbleIndex (for multi-bubble support)
               const pos = page.panelPositions.find(p => 
                 p.nummer === bubble.nummer && 
@@ -243,30 +286,27 @@ async function createComicPDF(project) {
               
               if (pos) {
                 // Konvertiere Prozent zu Pixel-Koordinaten basierend auf TATSÄCHLICHER Bildgröße
-                bubbleX = imgX + (pos.left / 100) * imgWidth;
-                bubbleY = imgY + (pos.top / 100) * imgHeight;
+                bubbleX = actualImgX + (pos.left / 100) * actualImgWidth;
+                bubbleY = actualImgY + (pos.top / 100) * actualImgHeight;
                 
-                // USE SAVED SIZE from panelPositions, but SCALE DOWN for PDF
+                // USE SAVED SIZE from panelPositions, scale to actual image size
                 if (pos.width && pos.height) {
-                  // Scale down by 70% for PDF (bubbles are too big otherwise)
-                  bubbleWidth = (pos.width / 100) * imgWidth * 0.7;
-                  bubbleHeight = (pos.height / 100) * imgHeight * 0.7;
-                  console.log(`    → Bubble ${bubble.nummer}-${bubble.bubbleIndex}: Using saved size ${pos.width}%×${pos.height}% = ${bubbleWidth.toFixed(0)}×${bubbleHeight.toFixed(0)}px (scaled 70%)`);
+                  bubbleWidth = (pos.width / 100) * actualImgWidth;
+                  bubbleHeight = (pos.height / 100) * actualImgHeight;
+                  console.log(`    → Bubble ${bubble.nummer}-${bubble.bubbleIndex}: Using saved size ${pos.width}%×${pos.height}% = ${bubbleWidth.toFixed(0)}×${bubbleHeight.toFixed(0)}px`);
                 }
               } else {
                 // Fallback: Stack multi-bubble panels vertically
                 if (bubble.isMultiBubble && bubble.bubbleIndex > 0) {
-                  bubbleY += (bubble.bubbleIndex * (imgHeight * 0.15)); // 15% offset per bubble
+                  bubbleY += (bubble.bubbleIndex * (actualImgHeight * 0.15));
                 }
               }
             }
             
             // If no saved size, calculate from text
-            if (!page.panelPositions || !page.panelPositions.find(p => p.nummer === bubble.nummer && p.bubbleIndex === bubble.bubbleIndex)?.width) {
+            if (!bubble.isExtra && (!page.panelPositions || !page.panelPositions.find(p => p.nummer === bubble.nummer && p.bubbleIndex === bubble.bubbleIndex)?.width)) {
               const maxBubbleWidth = 90;
               const padding = 4;
-              
-              // Text-Höhe messen
               doc.fontSize(8).font('Helvetica');
               const textHeight = doc.heightOfString(text, { width: maxBubbleWidth - (padding * 2) });
               bubbleWidth = Math.min(maxBubbleWidth, Math.max(60, text.length * 1.8));
@@ -275,15 +315,18 @@ async function createComicPDF(project) {
             
             const padding = 4;
             
-            // Ensure bubble stays within image bounds
-            if (bubbleY + bubbleHeight > imgY + imgHeight) {
-              bubbleY = imgY + imgHeight - bubbleHeight - 5;
+            // Ensure bubble stays within ACTUAL image bounds
+            if (bubbleY + bubbleHeight > actualImgY + actualImgHeight) {
+              bubbleY = actualImgY + actualImgHeight - bubbleHeight - 5;
             }
-            if (bubbleY < imgY) {
-              bubbleY = imgY + 5;
+            if (bubbleY < actualImgY) {
+              bubbleY = actualImgY + 5;
             }
-            if (bubbleX + bubbleWidth > imgX + imgWidth) {
-              bubbleX = imgX + imgWidth - bubbleWidth - 5;
+            if (bubbleX + bubbleWidth > actualImgX + actualImgWidth) {
+              bubbleX = actualImgX + actualImgWidth - bubbleWidth - 5;
+            }
+            if (bubbleX < actualImgX) {
+              bubbleX = actualImgX + 5;
             }
             
             // Bubble-Hintergrund (weiß mit dünnem schwarzem Rand wie in Vorschau)

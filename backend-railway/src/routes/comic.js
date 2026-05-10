@@ -317,8 +317,10 @@ Respond ONLY with JSON: {"characters":[{"name":"Name","age":30}]}`
               messages: [{ role: "user", content: [
                 refImageContent,
                 { type: "text", text: `Describe the person who is approximately ${char.age} years old in this photo.
-Write 40-50 words: exact age appearance, hair color/style, skin tone, eye color, distinctive features, body type.
-Format: "${char.name}: [age] years old, [exact visible features]"
+Write 40-50 words about FACE AND BODY ONLY — NO clothing, NO accessories.
+Include: exact age appearance, hair color/style, skin tone, eye color, face shape, distinctive facial features, body type/build.
+DO NOT mention: clothing, shirts, jackets, glasses frames style, jewelry, accessories.
+Format: "${char.name}: [age] years old, [hair], [skin tone], [eye color], [face shape], [distinctive features], [body type]"
 English only.` },
               ]}],
               max_tokens: 120,
@@ -348,9 +350,10 @@ English only.` },
               model: "gpt-4.1",
               messages: [{ role: "user", content: [
                 { type: "image_url", image_url: { url: matchedPhoto.url, detail: "high" } },
-                { type: "text", text: `Describe ONLY what you can ACTUALLY SEE on this person.
-Write 40-50 words: age appearance, hair color/style, skin tone, eye color, distinctive features, body type.
-Format: "${char.name}: [age] years old, [exact visible features]"
+                { type: "text", text: `Describe ONLY the FACE AND BODY of this person — NO clothing, NO accessories.
+Write 40-50 words: age appearance, hair color/style, skin tone, eye color, face shape, distinctive facial features, body type/build.
+DO NOT mention: clothing, shirts, jackets, scarves, jewelry, accessories.
+Format: "${char.name}: [age] years old, [hair], [skin tone], [eye color], [face shape], [distinctive features], [body type]"
 English only.` },
               ]}],
               max_tokens: 120,
