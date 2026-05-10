@@ -1267,40 +1267,82 @@ router.post("/page", async (req, res) => {
       console.log(`  → 🎨 RE-ILLUSTRATION requested: "${reillustrationNote}"`);
     }
 
-    // Generate character-specific clothing to ensure variety
+    // ── CLOTHING CONSISTENCY PER SCENE ────────────────────────────────────────
+    // Generate DETERMINISTIC clothing based on scene location and character
+    // This ensures characters wear the same clothes throughout a scene (e.g., birthday party)
+    // WITHOUT needing to store/retrieve from database
+    
+    // Create a deterministic seed from location and character name
+    const getClothingForCharacter = (charName, location, age, role) => {
+      // Simple hash function for deterministic color selection
+      const hashCode = (str) => {
+        let hash = 0;
+        for (let i = 0; i < str.length; i++) {
+          hash = ((hash << 5) - hash) + str.charCodeAt(i);
+          hash = hash & hash; // Convert to 32bit integer
+        }
+        return Math.abs(hash);
+      };
+      
+      // Combine character name + location for deterministic seed
+      const seed = hashCode(charName.toLowerCase() + (location || 'default').toLowerCase());
+      
+      // Deterministic color palettes based on seed
+      const shirtColors = ['blue', 'green', 'red', 'yellow', 'purple', 'orange', 'pink', 'white', 'gray', 'brown'];
+      const pantsColors = ['jeans', 'black pants', 'khaki pants', 'gray pants', 'brown pants'];
+      const dressColors = ['blue', 'pink', 'yellow', 'purple', 'red', 'green', 'white', 'floral'];
+      
+      const shirtColor = shirtColors[seed % shirtColors.length];
+      const pantsColor = pantsColors[seed % pantsColors.length];
+      const dressColor = dressColors[seed % dressColors.length];
+      
+      // Generate clothing based on age/role (deterministic per character+scene)
+      if (age < 12 || role.includes("kind") || role.includes("child")) {
+        return `${shirtColor} t-shirt with comfortable ${pantsColor}, sneakers`;
+      } else if (role.includes("mutter") || role.includes("mother") || role.includes("mama") || role.includes("mom")) {
+        return `${shirtColor} blouse with ${pantsColor}, comfortable shoes`;
+      } else if (role.includes("vater") || role.includes("father") || role.includes("papa") || role.includes("dad")) {
+        return `${shirtColor} button-up shirt with ${pantsColor}, casual shoes`;
+      } else if (age > 60 || role.includes("oma") || role.includes("opa") || role.includes("grand")) {
+        return `${shirtColor} cardigan with comfortable ${pantsColor}`;
+      } else {
+        // Generic adult
+        return `${shirtColor} casual shirt with ${pantsColor}`;
+      }
+    };
+    
+    // Generate character-specific clothing (deterministic per scene)
     const charClothingDesc = finalCharacters.map(c => {
       const name = c.name;
       const age = c.age || 25;
       const role = (c.role || name).toLowerCase();
       
-      // Determine character-specific outfit based on age and role
-      let charOutfit = "";
-      if (age < 12 || role.includes("kind") || role.includes("child")) {
-        charOutfit = "child's outfit — colorful t-shirt or playful top with comfortable pants or shorts, sneakers";
-      } else if (role.includes("mutter") || role.includes("mother") || role.includes("mama") || role.includes("mom")) {
-        charOutfit = "adult woman's outfit — casual blouse or nice shirt with trousers or jeans, comfortable shoes";
-      } else if (role.includes("vater") || role.includes("father") || role.includes("papa") || role.includes("dad")) {
-        charOutfit = "adult man's outfit — casual button-up shirt or polo with jeans or chinos, casual shoes";
-      } else if (age > 60 || role.includes("oma") || role.includes("opa") || role.includes("grand")) {
-        charOutfit = "elderly person's outfit — comfortable casual clothes, cardigan or light jacket";
-      } else {
-        charOutfit = outfit; // Use scene-based outfit for other characters
-      }
+      const clothing = getClothingForCharacter(name, page.location, age, role);
+      console.log(`  → ${name}: ${clothing} (scene: ${page.location || 'default'})`);
       
-      return `${name}: ${charOutfit}`;
+      return `${name}: ${clothing}`;
     }).join("\n");
 
     const prompt = sanitizePrompt(`${COMIC_STYLE} ${mood}
 
-🚨 CRITICAL CLOTHING RULES (HIGHEST PRIORITY — READ THIS FIRST):
-Each character MUST wear DIFFERENT clothing appropriate for their age and role.
-DO NOT copy ANY clothing from reference photos.
-Reference photos are ONLY for facial features — COMPLETELY IGNORE all clothing in photos.
+🚨 ULTRA-CRITICAL CLOTHING CONSISTENCY RULES (HIGHEST PRIORITY — READ THIS FIRST):
 
-CHARACTER-SPECIFIC CLOTHING (draw exactly as specified):
+MANDATORY CLOTHING FOR THIS SCENE:
 ${charClothingDesc}
 
-Scene-appropriate clothing: ${outfit}
+ABSOLUTE REQUIREMENTS:
+- Each character MUST wear EXACTLY the clothing specified above
+- These are the SAME clothes they wear throughout this entire scene/location
+- DO NOT change colors, DO NOT change garment types
+- If ${finalCharacters[0]?.name || 'character'} wears a blue shirt, it must be BLUE in ALL panels
+- If ${finalCharacters[1]?.name || 'character'} wears jeans, they must be JEANS in ALL panels
+- Clothing MUST be IDENTICAL across all ${panelCount} panels on this page
+
+CRITICAL: DO NOT copy ANY clothing from reference photos.
+Reference photos are ONLY for facial features — COMPLETELY IGNORE all clothing in photos.
+Draw the clothing specified above EXACTLY.
+
+Scene-appropriate context: ${outfit}
 
 CRITICAL: Each character must have DISTINCT, DIFFERENT clothing from each other.
 Children's clothing must look different from adults' clothing.
@@ -1319,12 +1361,26 @@ CRITICAL PANEL BORDER RULES:
 - NO body parts (hands, feet, heads) may cross into adjacent panels
 - NO objects may extend beyond panel boundaries
 
-CHARACTERS — draw identically across all panels (FACES ONLY, NOT CLOTHING):
+🚨 ULTRA-CRITICAL FACE CONSISTENCY RULES (MAINTAIN EXACT SAME FACES):
+
+CHARACTERS — draw with IDENTICAL faces across all ${panelCount} panels:
 ${charAnchors}
 
+ABSOLUTE FACE CONSISTENCY REQUIREMENTS:
+- Study the reference image VERY carefully before drawing
+- Each character's face must be EXACTLY the same in ALL ${panelCount} panels
+- EXACT SAME: eye shape, eye color, nose shape, mouth shape, face proportions, jawline
+- EXACT SAME: hair color, hair style, hair length, hair texture
+- EXACT SAME: skin tone, facial features, wrinkles, distinctive marks
+- If a character has brown eyes in panel 1, they MUST have brown eyes in panels 2, 3, 4
+- If a character has short black hair in panel 1, they MUST have short black hair in panels 2, 3, 4
+- Face consistency is MORE IMPORTANT than anything else
+
 ${ageContext.modifier ? `AGE MODIFIER: ${ageContext.modifier}\n` : ""}
+
 CRITICAL: Draw characters EXACTLY as described above. Do NOT add features not mentioned (glasses, beard, mustache, jewelry, tattoos).
 If a feature is not in the description, the character does NOT have it.
+DO NOT let faces "drift" or change between panels — they must be IDENTICAL.
 
 CRITICAL SIZE RULES — enforce in every panel:
 - Children must be drawn at their correct height relative to adults
