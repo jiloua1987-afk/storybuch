@@ -140,6 +140,39 @@
 
 ---
 
+## 💡 IDEEN ZUM TESTEN (Sicher, ohne Production zu riskieren)
+
+### **Test: Seiten basieren auf Original-Fotos (statt Cover)**
+**Idee:** Aktuell basieren alle Seiten auf dem Cover als Reference. Früher gab es das Problem mit photorealistischen Figuren. Das Cover ist jetzt gut (scharf, nicht photorealistisch). Frage: Wären Seiten noch besser, wenn sie direkt auf den Original-Upload-Fotos basieren?
+
+**Erwartetes Ergebnis:**
+- ✅ Möglicherweise schärfere Gesichter (direkt vom Foto)
+- ⚠️ Risiko: Photorealismus kommt zurück (das alte Problem von vor 2 Wochen)
+- ⚠️ Risiko: Stil-Inkonsistenz zwischen Seiten
+
+**Sicherer Test-Ansatz (Railway Preview Deployment):**
+```bash
+# 1. Neuen Branch erstellen
+git checkout -b test-original-photos-for-pages
+
+# 2. In comic.js: Seiten-Strategie ändern
+#    reference = primaryRefUrl (Original-Foto) statt coverImageUrl (Cover)
+
+# 3. Pushen → Railway deployed automatisch auf separater Test-URL
+git push origin test-original-photos-for-pages
+# → https://storybuch-test-original-photos.up.railway.app
+
+# 4. Testen → wenn gut: merge, wenn schlecht: Branch löschen
+```
+
+**Alternativen:**
+- Feature-Flag: `USE_ORIGINAL_PHOTOS_FOR_PAGES=true` in Railway Env Variables
+- Lokaler Test-Server mit `npm start` im backend-railway Ordner
+
+**Status:** 💤 Idee gespeichert — noch nicht umgesetzt (zu riskant ohne sicheres Testing-Setup)
+
+---
+
 ## 🎯 LANGFRISTIGE VISION
 
 ### Panel-by-Panel Generation
