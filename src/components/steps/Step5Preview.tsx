@@ -265,16 +265,36 @@ export default function Step5Preview() {
     try {
       const note = regenNotes[pageId] || ""; // Freitext-Anweisung
       const result = await regenPage(pageId, pageData, note);
-      const newImageUrl = result.imageUrl || pageData.imageUrl;
+      
+      // CRITICAL FIX: Backend returns imageUrl or url, check both
+      const newImageUrl = result.imageUrl || result.url || pageData.imageUrl;
+      
+      console.log('🎨 Re-illustration result:', {
+        hasImageUrl: !!result.imageUrl,
+        hasUrl: !!result.url,
+        newImageUrl,
+        hasPanels: !!result.panels,
+        hasPanelPositions: !!result.panelPositions
+      });
+      
       updateChapter(pageId, {
         imageUrl: newImageUrl,
-        panels: result.panels || pageData.panels, // ← WICHTIG: Neue panels vom Backend übernehmen!
+        panels: result.panels || pageData.panels,
         panelPositions: result.panelPositions || pageData.panelPositions,
       });
+      
+      // Verify Store update
+      setTimeout(() => {
+        const updatedProject = useBookStore.getState().project;
+        const updatedChapter = updatedProject?.chapters.find(c => c.id === pageId);
+        console.log(`✓ Store updated: imageUrl = ${updatedChapter?.imageUrl?.substring(0, 50)}...`);
+      }, 100);
+      
       setRegenCount(prev => ({ ...prev, [pageId]: (prev[pageId] || 0) + 1 }));
       setRegenNotes(prev => ({ ...prev, [pageId]: "" })); // Reset note after use
       toast.success("Seite neu illustriert!");
     } catch (e) {
+      console.error('Re-illustration error:', e);
       toast.error("Fehler beim Neu-Illustrieren");
     } finally {
       setRegenerating(null);

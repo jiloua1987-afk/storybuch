@@ -657,25 +657,28 @@ export default function PanelView({ imageUrl, title, panels = [], panelPositions
                   initH={initH} 
                   style={{}}
                   onResize={(w, h) => {
-                    // Save size changes immediately
+                    // Update resolved positions immediately for this bubble
+                    const updatedPositions: PanelPosition[] = dialogPanels.map((p, idx) => {
+                      const bid = p.bubbleId ?? `${p.originalIndex}-0`;
+                      const dragPos = dragPositions[bid];
+                      const resolved = resolvedPositions[idx];
+                      
+                      // If this is the bubble being resized, use new dimensions
+                      const isCurrentBubble = bid === bubbleId;
+                      
+                      return {
+                        nummer: p.originalIndex + 1,
+                        bubbleIndex: p.bubbleIndex,
+                        top: dragPos?.top ?? resolved?.top ?? 5,
+                        left: dragPos?.left ?? resolved?.left ?? 2,
+                        width: isCurrentBubble ? (w / 400) * 100 : (resolved?.w ?? 20),
+                        height: isCurrentBubble ? (h / 600) * 100 : (resolved?.h ?? 10),
+                      };
+                    });
+                    
+                    // Save immediately
                     if (onPositionsChange) {
-                      const updatedPositions: PanelPosition[] = dialogPanels.map((p, idx) => {
-                        const bid = p.bubbleId ?? `${p.originalIndex}-0`;
-                        const dragPos = dragPositions[bid];
-                        const resolved = resolvedPositions[idx];
-                        
-                        // If this is the bubble being resized, use new dimensions
-                        const isCurrentBubble = bid === bubbleId;
-                        
-                        return {
-                          nummer: p.originalIndex + 1,
-                          bubbleIndex: p.bubbleIndex,
-                          top: dragPos?.top ?? resolved?.top ?? 5,
-                          left: dragPos?.left ?? resolved?.left ?? 2,
-                          width: isCurrentBubble ? (w / 400) * 100 : (resolved?.w ?? 20),
-                          height: isCurrentBubble ? (h / 600) * 100 : (resolved?.h ?? 10),
-                        };
-                      });
+                      console.log(`📏 Bubble ${bubbleId} resized to ${w}×${h}px, saving...`);
                       onPositionsChange(updatedPositions);
                     }
                   }}
@@ -683,27 +686,30 @@ export default function PanelView({ imageUrl, title, panels = [], panelPositions
                   {(w, h) => (
                     <HanddrawnBubble w={w} h={h} type={panel.bubble_type}>
                       {isEditing ? (
-                        <textarea
-                          autoFocus
-                          value={displayDialog}
-                          onChange={(e) => setEditedDialogs({ ...editedDialogs, [bubbleId]: e.target.value })}
-                          onBlur={() => handleDialogBlur(panel.originalIndex, bubbleId, panel.bubbleIndex)}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter" && !e.shiftKey) {
-                              e.preventDefault();
-                              handleDialogBlur(panel.originalIndex, bubbleId, panel.bubbleIndex);
-                            }
-                          }}
+                        <div
                           onMouseDown={(e) => e.stopPropagation()}
                           onTouchStart={(e) => e.stopPropagation()}
-                          className="w-full h-full bg-transparent outline-none resize-none text-[#1A1410]"
-                          style={{ fontFamily: "'Comic Neue', cursive", fontSize: "12px" }}
-                        />
+                        >
+                          <textarea
+                            autoFocus
+                            value={displayDialog}
+                            onChange={(e) => setEditedDialogs({ ...editedDialogs, [bubbleId]: e.target.value })}
+                            onBlur={() => handleDialogBlur(panel.originalIndex, bubbleId, panel.bubbleIndex)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter" && !e.shiftKey) {
+                                e.preventDefault();
+                                handleDialogBlur(panel.originalIndex, bubbleId, panel.bubbleIndex);
+                              }
+                            }}
+                            className="w-full h-full bg-transparent border-none outline-none resize-none text-[#1A1410] text-sm leading-snug p-0"
+                            style={{ fontFamily: "'Comic Neue', cursive", fontSize: "12px" }}
+                          />
+                        </div>
                       ) : (
                         <p
                           className="text-[#1A1410] leading-snug select-none"
                           style={{ fontFamily: "'Comic Neue', cursive", fontSize: "12px", fontWeight: 500 }}
-                          onDoubleClick={(e) => { e.stopPropagation(); setEditingBubbleId(bubbleId); }} // Changed: set bubbleId instead of panelIndex
+                          onDoubleClick={(e) => { e.stopPropagation(); setEditingBubbleId(bubbleId); }}
                         >
                           {panel.speaker && panel.speaker !== "narrator" && panel.speaker.toLowerCase() !== "null" && (
                             <span className="font-bold">{panel.speaker}: </span>
