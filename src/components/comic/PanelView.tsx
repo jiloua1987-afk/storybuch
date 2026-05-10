@@ -637,13 +637,19 @@ export default function PanelView({ imageUrl, title, panels = [], panelPositions
             let initW, initH;
             if (savedPos && savedPos.width && savedPos.height) {
               // Use saved size (convert from % to px)
-              initW = (savedPos.width / 100) * 400; // 400px is container width
-              initH = (savedPos.height / 100) * 600; // 600px is container height
+              // Container uses aspect ratio 1024/1536, so we need to calculate actual px based on that
+              // Assuming container width is responsive, we use a reference width
+              const containerWidth = containerRef.current?.offsetWidth || 400;
+              const containerHeight = containerRef.current?.offsetHeight || 600;
+              initW = (savedPos.width / 100) * containerWidth;
+              initH = (savedPos.height / 100) * containerHeight;
+              console.log(`📐 Bubble ${bubbleId}: Loading saved size ${savedPos.width}%×${savedPos.height}% = ${initW}×${initH}px`);
             } else {
               // Calculate from text
               const size = initBubbleSize(displayDialog, panel.speaker || "");
               initW = size.w;
               initH = size.h;
+              console.log(`📐 Bubble ${bubbleId}: No saved size, calculated ${initW}×${initH}px from text`);
             }
 
             return (
@@ -700,6 +706,10 @@ export default function PanelView({ imageUrl, title, panels = [], panelPositions
                   initH={initH} 
                   style={{}}
                   onResize={(w, h) => {
+                    // Get actual container dimensions for accurate percentage calculation
+                    const containerWidth = containerRef.current?.offsetWidth || 400;
+                    const containerHeight = containerRef.current?.offsetHeight || 600;
+                    
                     // Update resolved positions immediately for this bubble
                     const updatedPositions: PanelPosition[] = dialogPanels.map((p, idx) => {
                       const bid = p.bubbleId ?? `${p.originalIndex}-0`;
@@ -714,14 +724,14 @@ export default function PanelView({ imageUrl, title, panels = [], panelPositions
                         bubbleIndex: p.bubbleIndex,
                         top: dragPos?.top ?? resolved?.top ?? 5,
                         left: dragPos?.left ?? resolved?.left ?? 2,
-                        width: isCurrentBubble ? (w / 400) * 100 : (resolved?.w ?? 20),
-                        height: isCurrentBubble ? (h / 600) * 100 : (resolved?.h ?? 10),
+                        width: isCurrentBubble ? (w / containerWidth) * 100 : (resolved?.w ?? 20),
+                        height: isCurrentBubble ? (h / containerHeight) * 100 : (resolved?.h ?? 10),
                       };
                     });
                     
                     // Save immediately
                     if (onPositionsChange) {
-                      console.log(`📏 Bubble ${bubbleId} resized to ${w}×${h}px, saving NOW...`);
+                      console.log(`📏 Bubble ${bubbleId} resized to ${w}×${h}px (${((w / containerWidth) * 100).toFixed(1)}%×${((h / containerHeight) * 100).toFixed(1)}%), saving NOW...`);
                       onPositionsChange(updatedPositions);
                       
                       // VERIFY
@@ -730,7 +740,10 @@ export default function PanelView({ imageUrl, title, panels = [], panelPositions
                         if (stored) {
                           const parsed = JSON.parse(stored);
                           const chapter = parsed?.state?.project?.chapters?.find((c: any) => c.id === pageId);
-                          console.log(`  ✓ VERIFIED: ${chapter?.panelPositions?.length || 0} positions saved`);
+                          const savedBubble = chapter?.panelPositions?.find((p: any) => 
+                            p.nummer === panel.originalIndex + 1 && p.bubbleIndex === panel.bubbleIndex
+                          );
+                          console.log(`  ✓ VERIFIED: Bubble ${bubbleId} size in localStorage: ${savedBubble?.width}%×${savedBubble?.height}%`);
                         }
                       }, 100);
                     }
