@@ -315,9 +315,12 @@ async function createComicPDF(project) {
             const bgColor = isCaption ? '#1E0F32' : '#FFFEF8';
             const textColor = isCaption ? '#FFFFFF' : '#1A1410';
             
+            // Scale font size proportionally to bubble height (min 6pt, max 12pt)
+            const scaledFontSize = Math.min(12, Math.max(6, bubbleHeight * 0.13));
+            
             doc.save();
             doc.roundedRect(bubbleX, bubbleY, bubbleWidth, bubbleHeight, 6)
-               .lineWidth(1.5)  // Dünner Rahmen wie in Vorschau
+               .lineWidth(1.5)
                .fillAndStroke(bgColor, '#1A1410');
             
             // Tail (Schwänzchen) hinzufügen - kleines Dreieck nach unten links
@@ -333,15 +336,13 @@ async function createComicPDF(project) {
             
             // Text in Bubble - Speaker fett, Rest normal
             if (speaker) {
-              // Speaker fett
-              doc.fontSize(8) // SEHR kleine Schrift
+              doc.fontSize(scaledFontSize)
                  .font('Helvetica-Bold')
                  .fillColor(textColor)
                  .text(speaker, bubbleX + padding, bubbleY + padding + 1, {
                    width: bubbleWidth - (padding * 2),
                    continued: true
                  })
-                 // Dialog normal
                  .font('Helvetica')
                  .text(bubble.dialog, {
                    width: bubbleWidth - (padding * 2),
@@ -349,8 +350,7 @@ async function createComicPDF(project) {
                    lineGap: 0.5
                  });
             } else {
-              // Nur Dialog, normal
-              doc.fontSize(8) // SEHR kleine Schrift
+              doc.fontSize(scaledFontSize)
                  .font('Helvetica')
                  .fillColor(textColor)
                  .text(text, bubbleX + padding, bubbleY + padding + 1, {
