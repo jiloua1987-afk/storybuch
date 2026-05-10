@@ -9,7 +9,7 @@ import toast from "react-hot-toast";
 // ── Shared page dimensions — A5 portrait (1:√2 ≈ 2:3), matches API output 1024×1536
 const PAGE_RATIO = "1024 / 1536"; // CSS aspect-ratio value
 
-// ── Cover with CSS title overlay ─────────────────────────────────────────────
+// ── Cover - just the image, no overlay ───────────────────────────────────────
 function CoverView({ imageUrl, title, subtitle }: { imageUrl?: string; title: string; subtitle?: string }) {
   return (
     <div className="relative w-full max-w-sm mx-auto overflow-hidden rounded-xl" style={{ aspectRatio: PAGE_RATIO }}>
@@ -18,23 +18,6 @@ function CoverView({ imageUrl, title, subtitle }: { imageUrl?: string; title: st
       ) : (
         <div className="absolute inset-0 bg-gradient-to-b from-[#2D2620] to-[#1A1410]" />
       )}
-      <div className="absolute inset-x-0 bottom-0 h-[40%]"
-        style={{ background: "linear-gradient(to bottom, transparent 0%, rgba(10,5,2,0.75) 60%, rgba(10,5,2,0.95) 100%)" }}>
-        <div className="absolute inset-x-0 bottom-[15%] text-center px-6">
-          <div className="mx-auto w-16 h-[3px] bg-[#C9963A] rounded mb-3" />
-          <h1 className="text-white font-black text-2xl md:text-3xl leading-tight tracking-wide drop-shadow-lg"
-            style={{ fontFamily: "'Bangers', 'Arial Black', sans-serif", letterSpacing: "0.05em" }}>
-            {title.toUpperCase()}
-          </h1>
-          {subtitle && (
-            <p className="text-white/70 text-sm mt-2 tracking-widest uppercase"
-              style={{ fontFamily: "'Playfair Display', Georgia, serif" }}>
-              {subtitle}
-            </p>
-          )}
-          <div className="mx-auto w-16 h-[3px] bg-[#C9963A] rounded mt-3" />
-        </div>
-      </div>
     </div>
   );
 }
@@ -435,39 +418,90 @@ export default function Step5Preview() {
   const handleExportPDF = async () => {
     setExportingPDF(true);
     try {
-      const fullUrl = RAILWAY_URL ? `${RAILWAY_URL}/api/comic/export-pdf` : "/api/comic/export-pdf";
+      // Import html2canvas dynamically
+      const html2canvas = (await import('html2canvas')).default;
       
-      // Filter out deleted pages before export
-      const projectForExport = {
-        ...project,
-        chapters: project.chapters.filter(c => !deletedPages.has(c.id))
-      };
+      console.log('📸 Starting PNG → PDF export...');
       
-      // DEBUG: Log data being sent
-      console.log('📤 PDF Export - Sending data:');
-      console.log(`  → ${projectForExport.chapters.length} chapters`);
-      projectForExport.chapters.forEach((ch, i) => {
-        console.log(`  → Chapter ${i + 1}: "${ch.title}"`);
-        console.log(`     - panels: ${ch.panels?.length || 0}`);
-        console.log(`     - panelPositions: ${ch.panelPositions?.length || 0}`);
-        if (ch.panels && ch.panels.length > 0) {
-          const dialogCount = ch.panels.filter(p => 
-            (p.dialog && p.dialog.trim()) || 
-            (p.dialogs && p.dialogs.length > 0)
-          ).length;
-          console.log(`     - panels with dialog: ${dialogCount}`);
+      const pages: string[] = [];
+      
+      // 1. Capture Cover
+      const coverElement = document.querySelector('[data-page-type="cover"]') as HTMLElement;
+      if (coverElement) {
+        console.log('  → Capturing cover...');
+        const canvas = await html2canvas(coverElement, {
+          scale: 2,
+          backgroundColor: '#FFFFFF',
+          logging: false,
+          useCORS: true,
+        });
+        pages.push(canvas.toDataURL('image/png'));
+      }
+      
+      // 2. Capture all comic pages (excluding deleted ones)
+      const comicPagesToExport = comicPages.filter(c => !deletedPages.has(c.id));
+      for (let i = 0; i < comicPagesToExport.length; i++) {
+        const pageElement = document.querySelector(`[data-page-id="${comicPagesToExport[i].id}"]`) as HTMLElement;
+        if (pageElement) {
+          console.log(`  → Capturing page ${i + 1}/${comicPagesToExport.length}...`);
+          const canvas = await html2canvas(pageElement, {
+            scale: 2,
+            backgroundColor: '#FFFFFF',
+            logging: false,
+            useCORS: true,
+          });
+          pages.push(canvas.toDataURL('image/png'));
         }
-      });
+      }
+      
+      // 3. Capture Ending
+      if (hasEnding) {
+        const endingElement = document.querySelector('[data-page-type="ending"]') as HTMLElement;
+        if (endingElement) {
+          console.log('  → Capturing ending...');
+          const canvas = await html2canvas(endingElement, {
+            scale: 2,
+            backgroundColor: '#FFFFFF',
+            logging: false,
+            useCORS: true,
+          });
+          pages.push(canvas.toDataURL('image/png'));
+        }
+      }
+      
+      // 4. Capture Back Cover
+      if (hasEnding) {
+        const backCoverElement = document.querySelector('[data-page-type="back-cover"]') as HTMLElement;
+        if (backCoverElement) {
+          console.log('  → Capturing back cover...');
+          const canvas = await html2canvas(backCoverElement, {
+            scale: 2,
+            backgroundColor: '#FFFFFF',
+            logging: false,
+            useCORS: true,
+          });
+          pages.push(canvas.toDataURL('image/png'));
+        }
+      }
+      
+      console.log(`✓ Captured ${pages.length} pages as PNG`);
+      console.log('📤 Sending to backend for PDF conversion...');
+      
+      // 5. Send PNGs to backend for PDF conversion
+      const fullUrl = RAILWAY_URL ? `${RAILWAY_URL}/api/comic/export-pdf-from-png` : "/api/comic/export-pdf-from-png";
       
       const res = await fetch(fullUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ project: projectForExport })
+        body: JSON.stringify({ 
+          pages,
+          title: project.title 
+        })
       });
       
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       
-      // PDF als Blob herunterladen
+      // 6. Download PDF
       const blob = await res.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -478,6 +512,7 @@ export default function Step5Preview() {
       document.body.removeChild(a);
       window.URL.revokeObjectURL(url);
       
+      console.log('✓ PDF downloaded successfully');
       toast.success("PDF erfolgreich exportiert! 📄");
     } catch (e) {
       console.error("PDF export error:", e);
@@ -533,11 +568,12 @@ export default function Step5Preview() {
             className="bg-white rounded-2xl overflow-hidden shadow-xl border border-gray-100"
           >
             {isCover ? (
-              <>
+              <div data-page-type="cover">
                 <CoverView
                   imageUrl={project.coverImageUrl}
                   title={project.title}
                 />
+              </div>
                 {/* Cover regenerate controls - UNTER dem Bild wie bei Folgeseiten */}
                 <div className="px-6 py-3 border-t border-gray-100 space-y-2">
                   <textarea
@@ -565,9 +601,9 @@ export default function Step5Preview() {
                     )}
                   </button>
                 </div>
-              </>
+              </div>
             ) : isEnding && project.endingData ? (
-              <div className="relative">
+              <div className="relative" data-page-type="ending">
                 <EndingView
                   endingText={project.endingData.endingText}
                   dedication={project.endingData.dedication}
@@ -615,12 +651,15 @@ export default function Step5Preview() {
                 )}
               </div>
             ) : isBackCover ? (
-              <BackCoverView
-                title={project.title}
-                summary={generateStorySummary()}
-              />
+              <div data-page-type="back-cover">
+                <BackCoverView
+                  title={project.title}
+                  summary={generateStorySummary()}
+                />
+              </div>
             ) : page ? (
-              <div>
+              <div data-page-id={page.id}>
+                <div>
                 {regenerating === page.id ? (
                   <div className="w-full bg-white flex flex-col items-center justify-center gap-3 py-20" style={{ aspectRatio: "1024 / 1536" }}>
                     <div className="text-4xl animate-pulse">🎨</div>
