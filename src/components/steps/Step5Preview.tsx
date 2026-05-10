@@ -568,12 +568,13 @@ export default function Step5Preview() {
             className="bg-white rounded-2xl overflow-hidden shadow-xl border border-gray-100"
           >
             {isCover ? (
-              <div data-page-type="cover">
-                <CoverView
-                  imageUrl={project.coverImageUrl}
-                  title={project.title}
-                />
-              </div>
+              <>
+                <div data-page-type="cover">
+                  <CoverView
+                    imageUrl={project.coverImageUrl}
+                    title={project.title}
+                  />
+                </div>
                 {/* Cover regenerate controls - UNTER dem Bild wie bei Folgeseiten */}
                 <div className="px-6 py-3 border-t border-gray-100 space-y-2">
                   <textarea
@@ -601,7 +602,7 @@ export default function Step5Preview() {
                     )}
                   </button>
                 </div>
-              </div>
+              </>
             ) : isEnding && project.endingData ? (
               <div className="relative" data-page-type="ending">
                 <EndingView
