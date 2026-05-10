@@ -735,7 +735,10 @@ export default function PanelView({ imageUrl, title, panels = [], panelPositions
                         <p
                           className="text-[#1A1410] leading-snug select-none cursor-pointer"
                           style={{ fontFamily: "'Comic Neue', cursive", fontSize: "12px", fontWeight: 500 }}
-                          onClick={(e) => { e.stopPropagation(); setEditingBubbleId(bubbleId); }}
+                          onDoubleClick={(e) => { 
+                            e.stopPropagation(); 
+                            setEditingBubbleId(bubbleId); 
+                          }}
                         >
                           {panel.speaker && panel.speaker !== "narrator" && panel.speaker.toLowerCase() !== "null" && (
                             <span className="font-bold">{panel.speaker}: </span>
