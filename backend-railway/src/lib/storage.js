@@ -8,31 +8,45 @@ const supabase = createClient(
 
 async function saveImage(b64OrUrl, folder, filename) {
   try {
+    console.log(`📤 Saving image: ${folder}/${filename}.png`);
+    
     let buffer;
     if (b64OrUrl.startsWith("data:")) {
       buffer = Buffer.from(b64OrUrl.replace(/^data:image\/\w+;base64,/, ""), "base64");
     } else if (b64OrUrl.startsWith("http")) {
       const res = await fetch(b64OrUrl, { signal: AbortSignal.timeout(20000) });
+      if (!res.ok) {
+        throw new Error(`Failed to fetch image: HTTP ${res.status}`);
+      }
       buffer = Buffer.from(await res.arrayBuffer());
     } else {
       buffer = Buffer.from(b64OrUrl, "base64");
     }
 
+    console.log(`  → Image buffer size: ${(buffer.length / 1024).toFixed(2)} KB`);
+
     const compressed = await sharp(buffer)
       .png({ quality: 95 })
       .toBuffer();
+
+    console.log(`  → Compressed size: ${(compressed.length / 1024).toFixed(2)} KB`);
 
     const path = `${folder}/${filename}.png`;
     const { error } = await supabase.storage
       .from("comic-panels")
       .upload(path, compressed, { contentType: "image/png", upsert: true });
 
-    if (error) throw error;
+    if (error) {
+      console.error(`  ❌ Supabase upload error:`, error);
+      throw error;
+    }
 
     const { data } = supabase.storage.from("comic-panels").getPublicUrl(path);
+    console.log(`  ✓ Image saved successfully: ${path}`);
     return data.publicUrl;
   } catch (err) {
-    console.error("Storage error:", err.message);
+    console.error(`❌ Storage error for ${folder}/${filename}:`, err.message);
+    console.error(`   → Error details:`, err);
     return null;
   }
 }
