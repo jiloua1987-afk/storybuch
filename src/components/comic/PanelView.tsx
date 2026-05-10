@@ -346,10 +346,9 @@ export default function PanelView({ imageUrl, title, panels = [], panelPositions
   const hasDetectedPositions = panelPositions && panelPositions.length > 0;
 
   const resolvedPositions = useMemo(() => {
-    // If we have saved positions, use them directly WITHOUT collision resolution
-    // Collision resolution should only run on FIRST load when no positions exist
+    // SIMPLIFIED: No collision resolution, just use saved positions or simple grid
     if (hasDetectedPositions && panelPositions && panelPositions.length > 0) {
-      console.log(`📍 Using saved positions for ${dialogPanels.length} bubbles (skipping collision resolution)`);
+      console.log(`📍 Using saved positions for ${dialogPanels.length} bubbles`);
       return dialogPanels.map((panel) => {
         const i = panel.originalIndex;
         const bubbleIdx = panel.bubbleIndex;
@@ -367,51 +366,38 @@ export default function PanelView({ imageUrl, title, panels = [], panelPositions
             h: pos.height || 10
           };
         } else {
-          // Fallback for missing position (shouldn't happen)
-          const text = (panel.speaker || "") + (panel.dialog || "");
-          const wPx = Math.min(220, Math.max(100, 80 + text.length * 3.2));
-          const lines = Math.ceil(text.length / 22);
-          const hPx = Math.max(48, 28 + lines * 20);
+          // Fallback: simple grid position
+          const row = Math.floor(bubbleIdx / 2);
+          const col = bubbleIdx % 2;
           return {
-            top: 5 + (bubbleIdx * 15),
-            left: 2,
-            w: (wPx / 400) * 100,
-            h: (hPx / 600) * 100
+            top: 5 + (row * 25),
+            left: col === 0 ? 5 : 55,
+            w: 20,
+            h: 10
           };
         }
       });
     }
     
-    // NO saved positions → calculate initial positions and run collision resolution
-    console.log(`📍 No saved positions, calculating initial positions with collision resolution`);
-    const initial = dialogPanels.map((panel) => {
-      const i = panel.originalIndex;
-      const bubbleIdx = panel.bubbleIndex;
-      
-      const style = getFallbackPosition(i, panels.length);
-      let top  = parseFloat(String(style.top  ?? "5%"));
-      let left = parseFloat(String(style.left ?? style.right ?? "2%"));
-      
-      // For multi-bubble panels, stack them vertically
-      if (panel.isMultiBubble && bubbleIdx > 0) {
-        top = top + (bubbleIdx * 15);
-      }
+    // NO saved positions → simple grid layout (NO collision resolution)
+    console.log(`📍 No saved positions, using simple grid for ${dialogPanels.length} bubbles`);
+    return dialogPanels.map((panel, idx) => {
+      const row = Math.floor(idx / 2);
+      const col = idx % 2;
       
       const text = (panel.speaker || "") + (panel.dialog || "");
       const wPx = Math.min(220, Math.max(100, 80 + text.length * 3.2));
       const lines = Math.ceil(text.length / 22);
       const hPx = Math.max(48, 28 + lines * 20);
-      return { top, left, w: (wPx / 400) * 100, h: (hPx / 600) * 100 };
+      
+      return {
+        top: 5 + (row * 25),
+        left: col === 0 ? 5 : 55,
+        w: (wPx / 400) * 100,
+        h: (hPx / 600) * 100
+      };
     });
-    
-    const resolved = resolveCollisions(initial);
-    // Merge resolved positions with original w/h
-    return resolved.map((pos, idx) => ({
-      ...pos,
-      w: initial[idx].w,
-      h: initial[idx].h
-    }));
-  }, [dialogPanels.length, hasDetectedPositions, panels.length, panelPositions]); // eslint-disable-line
+  }, [dialogPanels.length, hasDetectedPositions, panelPositions]); // Removed panels.length dependency
 
   // ── Save initial positions on first render ────────────────────────────────
   useEffect(() => {
@@ -476,7 +462,7 @@ export default function PanelView({ imageUrl, title, panels = [], panelPositions
   const handleMouseUp = () => {
     // Save positions to store when drag ends
     if (dragging && dragging.type === "panel" && onPositionsChange) {
-      console.log('🎯 Drag ended, saving positions...');
+      console.log('💾 Drag ended, saving positions NOW...');
       
       const updatedPositions: PanelPosition[] = dialogPanels.map((panel, idx) => {
         const bubbleId = panel.bubbleId ?? `${panel.originalIndex}-0`;
@@ -485,35 +471,35 @@ export default function PanelView({ imageUrl, title, panels = [], panelPositions
         
         const position: PanelPosition = {
           nummer: panel.originalIndex + 1,
-          bubbleIndex: panel.bubbleIndex, // Always defined now
+          bubbleIndex: panel.bubbleIndex,
           top: dragPos?.top ?? resolved?.top ?? 5,
           left: dragPos?.left ?? resolved?.left ?? 2,
           width: resolved?.w ?? 20,
           height: resolved?.h ?? 10,
         };
         
-        console.log(`  → Bubble ${bubbleId}: top=${position.top.toFixed(1)}%, left=${position.left.toFixed(1)}%`);
         return position;
       });
       
-      console.log(`  → Calling onPositionsChange with ${updatedPositions.length} positions`);
+      console.log(`  → Saving ${updatedPositions.length} positions`);
       onPositionsChange(updatedPositions);
       
-      // Force immediate save to localStorage
+      // VERIFY save immediately
       setTimeout(() => {
-        console.log('  → Verifying save in localStorage...');
         const stored = localStorage.getItem('storybuch-project');
         if (stored) {
           const parsed = JSON.parse(stored);
-          console.log(`  ✓ localStorage has ${parsed?.state?.project?.chapters?.length || 0} chapters`);
+          const chapter = parsed?.state?.project?.chapters?.find((c: any) => c.id === pageId);
+          console.log(`  ✓ VERIFIED: ${chapter?.panelPositions?.length || 0} positions in localStorage`);
         } else {
-          console.warn('  ⚠️ No data in localStorage!');
+          console.error('  ❌ VERIFICATION FAILED: No data in localStorage!');
         }
-      }, 200);
+      }, 100);
     }
     
     // Save extra bubbles when drag ends
     if (dragging && dragging.type === "extra" && pageId) {
+      console.log('💾 Extra bubble drag ended, saving...');
       saveExtraBubbles();
     }
     
@@ -695,8 +681,18 @@ export default function PanelView({ imageUrl, title, panels = [], panelPositions
                     
                     // Save immediately
                     if (onPositionsChange) {
-                      console.log(`📏 Bubble ${bubbleId} resized to ${w}×${h}px, saving...`);
+                      console.log(`📏 Bubble ${bubbleId} resized to ${w}×${h}px, saving NOW...`);
                       onPositionsChange(updatedPositions);
+                      
+                      // VERIFY
+                      setTimeout(() => {
+                        const stored = localStorage.getItem('storybuch-project');
+                        if (stored) {
+                          const parsed = JSON.parse(stored);
+                          const chapter = parsed?.state?.project?.chapters?.find((c: any) => c.id === pageId);
+                          console.log(`  ✓ VERIFIED: ${chapter?.panelPositions?.length || 0} positions saved`);
+                        }
+                      }, 100);
                     }
                   }}
                 >
