@@ -6,63 +6,58 @@
 
 ## 🔥 KRITISCHE PROBLEME (Sofort)
 
-### 1. **Clothing-Consistency** ⚠️ HOCH
-**Problem:** Charaktere tragen unterschiedliche Kleidung auf verschiedenen Seiten
-- Cover: Mama braunes Shirt, Papa grünes Shirt, Rania blaues Kleid
-- Seite 1: Andere Kleidung
-- Seite 2: Noch andere Kleidung
+### ✅ 1. **Clothing-Consistency** (ERLEDIGT - 10. Mai 2025)
+**Problem:** Charaktere trugen unterschiedliche Kleidung auf verschiedenen Seiten derselben Szene
+- Seite 1 Geburtstag: Mama blaues Kleid
+- Seite 2 Geburtstag: Mama grünes Shirt ❌
 
-**Lösung:**
-- Nach Cover-Generierung: Kleidung jedes Charakters extrahieren/speichern
-- In jeden Seiten-Prompt einbauen: "Mama wears brown button-up shirt, Papa wears dark green shirt..."
-- Prompt: "CRITICAL: Maintain EXACT same clothing as reference image"
+**Lösung:** ✅ Implementiert
+- **Deterministische Kleidungsgenerierung:** Hash-basiert (Name + Location)
+- **Konsistent pro Szene:** Dieselbe Location → dieselbe Kleidung
+- **Keine Datenbank nötig:** Rein algorithmisch
+- **Verstärkte Prompts:** "MUST wear EXACTLY the clothing specified, IDENTICAL across all panels"
 
-**Impact:** Hoch - Konsistenz ist Kernfeature
-**Aufwand:** Mittel (2-3h)
-
----
-
-### 2. **Character-Presence-Check** ⚠️ HOCH
-**Problem:** Papa fehlt auf manchen Seiten, obwohl er in der Szene sein sollte
-
-**Lösung:**
-- Story-Analyse: Welche Charaktere sind in welcher Szene?
-- Explizit im Prompt erwähnen: "Characters in scene: Mama, Papa, Rania, Aymen"
-- Warnung wenn Charakter fehlt
-
-**Impact:** Hoch - Charaktere müssen präsent sein
-**Aufwand:** Mittel (2-3h)
+**Status:** ✅ Deployed (Commit 682b6449)
+**Test:** Mit neuem Comic testen
 
 ---
 
-### 3. **Duplicate Characters in Panel** ⚠️ KRITISCH
+### ~~2. **Character-Presence-Check**~~ ❌ NICHT WICHTIG
+**User-Feedback:** "Nr. 3. ist nicht wichtig, er wurde in der Moment beschreibung auch nicht erwähnt"
+- Papa fehlt auf manchen Seiten → OK, wenn nicht in Story erwähnt
+- **Status:** Übersprungen per User-Anweisung
+
+---
+
+### ✅ 3. **Duplicate Characters in Panel** (ERLEDIGT - 10. Mai 2025)
 **Problem:** GPT bildet manchmal eine Figur ZWEIMAL im gleichen Panel ab
-- Beispiel: Aymen erscheint links UND rechts im gleichen Panel
-- Verwirrt Leser, sieht unprofessionell aus
+- Beispiel: Aymen erscheint links UND rechts im gleichen Panel ❌
 
-**Lösung:**
-- Strikter Prompt: "CRITICAL: Each character appears EXACTLY ONCE per panel. Never show the same character multiple times in one panel."
-- Panel-Beschreibung präziser: "Rania in center, Aymen on left, Papa on right" (klare Positionen)
-- Post-Generation-Check: Warnung wenn möglich
+**Lösung:** ✅ Implementiert
+- Strikter Prompt: "Each character appears EXACTLY ONCE per panel"
+- "NEVER show the same character on left AND right side"
+- "Each person has ONE body, ONE position per panel"
 
-**Impact:** Kritisch - zerstört Immersion
-**Aufwand:** Niedrig (Prompt-Änderung)
+**Status:** ✅ Deployed (bereits in vorherigem Commit)
+**Test:** Mit neuem Comic testen
 
 ---
 
-### 4. **Face-Consistency nimmt ab** ⚠️ HOCH
+### ✅ 4. **Face-Consistency nimmt ab** (VERBESSERT - 10. Mai 2025)
 **Problem:** 
 - Cover: ✅ Perfekt
 - Seite 1: ✅ Gut
 - Seite 2+: ❌ Gesichter ändern sich immer mehr
 
-**Lösung:**
-- Stärkere Prompts: "CRITICAL: Maintain EXACT same facial features as reference image"
-- Evtl. Cover-Reference mehrfach verwenden (nicht nur einmal)
-- Face-Locking mit OpenAI's neue Features (falls verfügbar)
+**Lösung:** ✅ Implementiert
+- **3x stärkere Prompts:** "ULTRA-CRITICAL FACE CONSISTENCY RULES"
+- **Explizite Details:** "EXACT SAME: eye shape, eye color, nose shape, mouth shape..."
+- **Anti-Drift:** "DO NOT let faces drift or change between panels"
+- **Wiederholung:** "If brown eyes in panel 1, MUST be brown eyes in panels 2, 3, 4"
 
-**Impact:** Hoch - Konsistenz ist Kernfeature
-**Aufwand:** Mittel-Hoch (3-4h)
+**Status:** ✅ Deployed (Commit 682b6449)
+**Test:** Mit neuem Comic testen - Gesichter sollten konsistenter bleiben
+**Hinweis:** OpenAI's image-edit hat inherenten "drift" - 100% Konsistenz schwierig
 
 ---
 
@@ -96,6 +91,23 @@
 ---
 
 ## ✅ ERLEDIGTE FEATURES
+
+### ✅ Clothing-Consistency (10. Mai 2025)
+- Deterministische Kleidungsgenerierung pro Szene
+- Hash-basiert: Name + Location → konsistente Farben
+- Verstärkte Prompts: "IDENTICAL across all panels"
+- **Status:** Deployed ✅
+
+### ✅ Face-Consistency Prompts (10. Mai 2025)
+- 3x stärkere Prompts mit expliziten Details
+- Anti-Drift Anweisungen
+- Wiederholung kritischer Features
+- **Status:** Deployed ✅ (Verbesserung, nicht 100% Lösung)
+
+### ✅ Duplicate Characters Fix (10. Mai 2025)
+- Ultra-strikte Prompts: "EXACTLY ONCE per panel"
+- "NEVER show same character twice"
+- **Status:** Deployed ✅
 
 ### ✅ Bubble-Größe speichern (10. Mai 2025)
 - Frontend: `useEffect` in `ResizableBubble` aktualisiert State
@@ -149,40 +161,42 @@
 
 ## 📊 Prioritäten-Matrix
 
-| Feature | Impact | Aufwand | Priorität |
-|---------|--------|---------|-----------|
-| Duplicate Characters Fix | Kritisch | Niedrig | 🔥 **SOFORT** |
-| Clothing-Consistency | Hoch | Mittel | 🔥 **SOFORT** |
-| Character-Presence | Hoch | Mittel | 🔥 **SOFORT** |
-| Face-Consistency | Hoch | Hoch | ⚠️ **BALD** |
-| Speaker bearbeiten | Mittel | Niedrig | 📋 **BALD** |
-| Bubble-Position 100% | Niedrig | Mittel | 💤 **SPÄTER** |
+| Feature | Impact | Aufwand | Priorität | Status |
+|---------|--------|---------|-----------|--------|
+| Duplicate Characters Fix | Kritisch | Niedrig | 🔥 **SOFORT** | ✅ **ERLEDIGT** |
+| Clothing-Consistency | Hoch | Mittel | 🔥 **SOFORT** | ✅ **ERLEDIGT** |
+| Face-Consistency | Hoch | Hoch | ⚠️ **BALD** | ✅ **VERBESSERT** |
+| Speaker bearbeiten | Mittel | Niedrig | 📋 **BALD** | ⏳ **OFFEN** |
+| ~~Character-Presence~~ | ~~Hoch~~ | ~~Mittel~~ | ~~SOFORT~~ | ❌ **ÜBERSPRUNGEN** |
+| Bubble-Position 100% | Niedrig | Mittel | 💤 **SPÄTER** | ⏳ **OFFEN** |
 
 ---
 
 ## 🚀 Nächste Schritte
 
-1. **Duplicate Characters Fix** (30 Min)
-   - Prompt-Änderung: "Each character appears EXACTLY ONCE per panel"
+1. ✅ ~~**Duplicate Characters Fix**~~ (ERLEDIGT)
    
-2. **Clothing-Consistency** (2-3h)
-   - Cover-Kleidung extrahieren
-   - In Seiten-Prompts einbauen
+2. ✅ ~~**Clothing-Consistency**~~ (ERLEDIGT)
 
-3. **Character-Presence** (2-3h)
-   - Story-Analyse für Charakter-Präsenz
-   - Explizite Charakter-Liste in Prompts
+3. ✅ ~~**Face-Consistency**~~ (VERBESSERT)
 
-4. **Face-Consistency** (3-4h)
-   - Stärkere Prompts
-   - Evtl. Cover mehrfach als Reference
+4. **Speaker bearbeiten** (1-2h) - NÄCHSTES
+   - Input-Feld für Speaker im Edit-Modus
+   - Speichern in `dialogs[].speaker`
+   - Nur falls einfach möglich
+
+5. **Testing mit neuem Comic**
+   - Kleidung konsistent innerhalb Szene?
+   - Gesichter bleiben konsistent?
+   - Keine Duplikate mehr?
 
 ---
 
-**Geschätzte Zeit für kritische Fixes:** 6-8 Stunden  
-**Geschätzte Zeit für alle Features:** 12-15 Stunden
+**Geschätzte Zeit für kritische Fixes:** ~~6-8 Stunden~~ → ✅ **ERLEDIGT**  
+**Geschätzte Zeit für alle Features:** ~~12-15 Stunden~~ → **2-3 Stunden verbleibend**
 
 ---
 
 **Erstellt:** 10. Mai 2025  
-**Nächstes Review:** Nach kritischen Fixes
+**Letztes Update:** 10. Mai 2025, 14:40 Uhr  
+**Nächstes Review:** Nach Test mit neuem Comic
