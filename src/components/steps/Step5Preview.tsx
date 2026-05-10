@@ -660,7 +660,6 @@ export default function Step5Preview() {
               </div>
             ) : page ? (
               <div data-page-id={page.id}>
-                <div>
                 {regenerating === page.id ? (
                   <div className="w-full bg-white flex flex-col items-center justify-center gap-3 py-20" style={{ aspectRatio: "1024 / 1536" }}>
                     <div className="text-4xl animate-pulse">🎨</div>
