@@ -50,24 +50,34 @@ async function createComicPDF(project) {
         height: A4_HEIGHT 
       });
       
-      // Titel als Overlay unten auf dem Bild
+      // Titel als Overlay unten auf dem Bild - NUR goldene Linien, KEIN schwarzer Balken
       const overlayY = A4_HEIGHT - 150;
       
-      // Dunkler Hintergrund für bessere Lesbarkeit
-      doc.rect(0, overlayY - 10, A4_WIDTH, 140)
-         .fillOpacity(0.88)
-         .fill('#1A1410');
+      // Goldene Linie oben
+      doc.moveTo(A4_WIDTH / 2 - 60, overlayY + 10)
+         .lineTo(A4_WIDTH / 2 + 60, overlayY + 10)
+         .lineWidth(3)
+         .strokeColor('#C9963A')
+         .stroke();
       
+      // Titel in Weiß mit Schatten
       doc.fillOpacity(1)
          .fontSize(32)
          .font('Helvetica-Bold')
          .fillColor('#FFFFFF')
-         .text(project.title.toUpperCase(), 40, overlayY + 20, {
+         .text(project.title.toUpperCase(), 40, overlayY + 30, {
            width: A4_WIDTH - 80,
            align: 'center',
            characterSpacing: 1.5,
            lineGap: 5
          });
+      
+      // Goldene Linie unten
+      doc.moveTo(A4_WIDTH / 2 - 60, overlayY + 90)
+         .lineTo(A4_WIDTH / 2 + 60, overlayY + 90)
+         .lineWidth(3)
+         .strokeColor('#C9963A')
+         .stroke();
       
     } catch (e) {
       console.error('Cover processing error:', e.message);
@@ -236,11 +246,12 @@ async function createComicPDF(project) {
                 bubbleX = imgX + (pos.left / 100) * imgWidth;
                 bubbleY = imgY + (pos.top / 100) * imgHeight;
                 
-                // USE SAVED SIZE from panelPositions
+                // USE SAVED SIZE from panelPositions, but SCALE DOWN for PDF
                 if (pos.width && pos.height) {
-                  bubbleWidth = (pos.width / 100) * imgWidth;
-                  bubbleHeight = (pos.height / 100) * imgHeight;
-                  console.log(`    → Bubble ${bubble.nummer}-${bubble.bubbleIndex}: Using saved size ${pos.width}%×${pos.height}% = ${bubbleWidth.toFixed(0)}×${bubbleHeight.toFixed(0)}px`);
+                  // Scale down by 70% for PDF (bubbles are too big otherwise)
+                  bubbleWidth = (pos.width / 100) * imgWidth * 0.7;
+                  bubbleHeight = (pos.height / 100) * imgHeight * 0.7;
+                  console.log(`    → Bubble ${bubble.nummer}-${bubble.bubbleIndex}: Using saved size ${pos.width}%×${pos.height}% = ${bubbleWidth.toFixed(0)}×${bubbleHeight.toFixed(0)}px (scaled 70%)`);
                 }
               } else {
                 // Fallback: Stack multi-bubble panels vertically
