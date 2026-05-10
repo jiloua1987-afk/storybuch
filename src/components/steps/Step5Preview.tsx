@@ -9,7 +9,7 @@ import toast from "react-hot-toast";
 // ── Shared page dimensions — A5 portrait (1:√2 ≈ 2:3), matches API output 1024×1536
 const PAGE_RATIO = "1024 / 1536"; // CSS aspect-ratio value
 
-// ── Cover with CSS title overlay ─────────────────────────────────────────────
+// ── Cover with title overlay (NO BLACK BAR) ──────────────────────────────────
 function CoverView({ imageUrl, title, subtitle }: { imageUrl?: string; title: string; subtitle?: string }) {
   return (
     <div className="relative w-full max-w-sm mx-auto overflow-hidden rounded-xl" style={{ aspectRatio: PAGE_RATIO }}>
@@ -18,22 +18,27 @@ function CoverView({ imageUrl, title, subtitle }: { imageUrl?: string; title: st
       ) : (
         <div className="absolute inset-0 bg-gradient-to-b from-[#2D2620] to-[#1A1410]" />
       )}
-      <div className="absolute inset-x-0 bottom-0 h-[40%]"
-        style={{ background: "linear-gradient(to bottom, transparent 0%, rgba(10,5,2,0.75) 60%, rgba(10,5,2,0.95) 100%)" }}>
-        <div className="absolute inset-x-0 bottom-[15%] text-center px-6">
-          <div className="mx-auto w-16 h-[3px] bg-[#C9963A] rounded mb-3" />
-          <h1 className="text-white font-black text-2xl md:text-3xl leading-tight tracking-wide drop-shadow-lg"
-            style={{ fontFamily: "'Bangers', 'Arial Black', sans-serif", letterSpacing: "0.05em" }}>
-            {title.toUpperCase()}
-          </h1>
-          {subtitle && (
-            <p className="text-white/70 text-sm mt-2 tracking-widest uppercase"
-              style={{ fontFamily: "'Playfair Display', Georgia, serif" }}>
-              {subtitle}
-            </p>
-          )}
-          <div className="mx-auto w-16 h-[3px] bg-[#C9963A] rounded mt-3" />
-        </div>
+      {/* Title overlay - centered, no background */}
+      <div className="absolute inset-0 flex flex-col items-center justify-center px-6">
+        <div className="w-24 h-[3px] bg-[#C9963A] rounded mb-4" />
+        <h1 className="text-white font-black text-3xl md:text-4xl leading-tight tracking-wide text-center"
+          style={{ 
+            fontFamily: "'Bangers', 'Arial Black', sans-serif", 
+            letterSpacing: "0.05em",
+            textShadow: "2px 2px 4px rgba(0,0,0,0.8), -1px -1px 2px rgba(0,0,0,0.6)"
+          }}>
+          {title.toUpperCase()}
+        </h1>
+        {subtitle && (
+          <p className="text-white/90 text-sm mt-3 tracking-widest uppercase text-center"
+            style={{ 
+              fontFamily: "'Playfair Display', Georgia, serif",
+              textShadow: "1px 1px 3px rgba(0,0,0,0.8)"
+            }}>
+            {subtitle}
+          </p>
+        )}
+        <div className="w-24 h-[3px] bg-[#C9963A] rounded mt-4" />
       </div>
     </div>
   );
@@ -607,7 +612,6 @@ export default function Step5Preview() {
             ) : isBackCover ? (
               <BackCoverView
                 title={project.title}
-              />
               />
             ) : page ? (
               <div>
