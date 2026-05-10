@@ -160,12 +160,23 @@ async function createComicPDF(project) {
         if (page.panels && page.panels.length > 0) {
           console.log(`    → Rendering bubbles for page ${i + 1}`);
           
+          // Load hidden bubbles from chapter data
+          const hiddenBubbles = new Set(page.hiddenBubbles || []);
+          console.log(`    → Hidden bubbles: ${hiddenBubbles.size}`);
+          
           // Flatten multi-bubble panels (dialogs array) into individual bubbles
           const allBubbles = [];
           page.panels.forEach((panel, panelIdx) => {
             // Check for multi-bubble format (dialogs array)
             if (panel.dialogs && Array.isArray(panel.dialogs) && panel.dialogs.length > 0) {
               panel.dialogs.forEach((dialogItem, bubbleIdx) => {
+                const bubbleId = `${panelIdx}-${bubbleIdx}`;
+                // Skip hidden bubbles
+                if (hiddenBubbles.has(bubbleId)) {
+                  console.log(`    → Skipping hidden bubble ${bubbleId}`);
+                  return;
+                }
+                
                 if (dialogItem.text && dialogItem.text.trim() && dialogItem.text.toLowerCase() !== 'null') {
                   allBubbles.push({
                     nummer: panel.nummer,
@@ -180,6 +191,13 @@ async function createComicPDF(project) {
             }
             // Legacy single bubble format
             else if (panel.dialog && panel.dialog.trim() && panel.dialog.toLowerCase() !== 'null') {
+              const bubbleId = `${panelIdx}-0`;
+              // Skip hidden bubbles
+              if (hiddenBubbles.has(bubbleId)) {
+                console.log(`    → Skipping hidden bubble ${bubbleId}`);
+                return;
+              }
+              
               allBubbles.push({
                 nummer: panel.nummer,
                 dialog: panel.dialog,
@@ -191,7 +209,7 @@ async function createComicPDF(project) {
             }
           });
           
-          console.log(`    → Found ${allBubbles.length} bubbles to render`);
+          console.log(`    → Found ${allBubbles.length} bubbles to render (after filtering hidden)`);
           
           allBubbles.forEach((bubble, idx) => {
             // Text vorbereiten (ZUERST!)
@@ -203,6 +221,8 @@ async function createComicPDF(project) {
             // Position aus panelPositions oder Fallback
             let bubbleX = imgX + 30;
             let bubbleY = imgY + 30 + (idx * 100);
+            let bubbleWidth = 90; // Default
+            let bubbleHeight = 40; // Default
             
             if (page.panelPositions && page.panelPositions.length > 0) {
               // Find position for this panel number AND bubbleIndex (for multi-bubble support)
@@ -215,6 +235,13 @@ async function createComicPDF(project) {
                 // Konvertiere Prozent zu Pixel-Koordinaten basierend auf TATSÄCHLICHER Bildgröße
                 bubbleX = imgX + (pos.left / 100) * imgWidth;
                 bubbleY = imgY + (pos.top / 100) * imgHeight;
+                
+                // USE SAVED SIZE from panelPositions
+                if (pos.width && pos.height) {
+                  bubbleWidth = (pos.width / 100) * imgWidth;
+                  bubbleHeight = (pos.height / 100) * imgHeight;
+                  console.log(`    → Bubble ${bubble.nummer}-${bubble.bubbleIndex}: Using saved size ${pos.width}%×${pos.height}% = ${bubbleWidth.toFixed(0)}×${bubbleHeight.toFixed(0)}px`);
+                }
               } else {
                 // Fallback: Stack multi-bubble panels vertically
                 if (bubble.isMultiBubble && bubble.bubbleIndex > 0) {
@@ -223,15 +250,19 @@ async function createComicPDF(project) {
               }
             }
             
-            // Bubble-Größe berechnen (EXTREM kompakt für PDF)
-            const maxBubbleWidth = 90; // SEHR klein
-            const padding = 4; // SEHR wenig Padding
+            // If no saved size, calculate from text
+            if (!page.panelPositions || !page.panelPositions.find(p => p.nummer === bubble.nummer && p.bubbleIndex === bubble.bubbleIndex)?.width) {
+              const maxBubbleWidth = 90;
+              const padding = 4;
+              
+              // Text-Höhe messen
+              doc.fontSize(8).font('Helvetica');
+              const textHeight = doc.heightOfString(text, { width: maxBubbleWidth - (padding * 2) });
+              bubbleWidth = Math.min(maxBubbleWidth, Math.max(60, text.length * 1.8));
+              bubbleHeight = textHeight + (padding * 2) + 3;
+            }
             
-            // Text-Höhe messen
-            doc.fontSize(8).font('Helvetica'); // SEHR kleine Schrift
-            const textHeight = doc.heightOfString(text, { width: maxBubbleWidth - (padding * 2) });
-            const bubbleWidth = Math.min(maxBubbleWidth, Math.max(60, text.length * 1.8));
-            const bubbleHeight = textHeight + (padding * 2) + 3;
+            const padding = 4;
             
             // Ensure bubble stays within image bounds
             if (bubbleY + bubbleHeight > imgY + imgHeight) {
@@ -416,73 +447,8 @@ async function createComicPDF(project) {
   doc.rect(0, 0, A4_WIDTH, A4_HEIGHT)
      .fill('#FDF8F2');
   
-  // Cover Thumbnail oben (kleines Vorschaubild) - REMOVED
-  // Story Zusammenfassung - moved up, no thumbnail
-  const summaryY = 200; // Changed from 300
-  
-  // Erstelle 2-3 schöne Sätze im Fließtext aus Story
-  let summary = '';
-  if (project.storyInput && project.storyInput.length > 20) {
-    // Nimm ersten Satz oder erste 200 Zeichen
-    summary = project.storyInput.substring(0, 200);
-    if (project.storyInput.length > 200) {
-      summary += '...';
-    }
-  } else if (project.guidedAnswers?.specialMoments) {
-    // Erstelle 2-3 schöne Sätze aus special moments
-    const moments = project.guidedAnswers.specialMoments
-      .split('|')
-      .map(m => m.trim())
-      .filter(m => m.length > 0);
-    
-    const characters = project.guidedAnswers?.characters || project.title;
-    const location = project.guidedAnswers?.location || '';
-    
-    if (moments.length === 0) {
-      summary = `Eine personalisierte Comic-Geschichte über ${characters}.`;
-    } else {
-      // Erster Satz: Charaktere und erstes Ereignis
-      if (moments.length >= 1) {
-        summary = `${characters} ${moments[0].toLowerCase().startsWith('die ') || moments[0].toLowerCase().startsWith('der ') ? 'erleben' : 'erleben'} ${moments[0].toLowerCase()}.`;
-      }
-      
-      // Zweiter Satz: Ort und/oder weitere Ereignisse
-      if (moments.length >= 2) {
-        if (location) {
-          summary += ` In ${location} ${moments.length > 2 ? 'genießen sie' : 'genießen sie'} ${moments[1].toLowerCase()}.`;
-        } else {
-          summary += ` Danach ${moments.length > 2 ? 'folgen' : 'folgt'} ${moments[1].toLowerCase()}.`;
-        }
-      }
-      
-      // Dritter Satz: Abschluss
-      if (moments.length >= 3) {
-        summary += ` Zum Abschluss ${moments[2].toLowerCase()}.`;
-      }
-    }
-  } else {
-    summary = `Eine personalisierte Comic-Geschichte über ${project.title}.`;
-  }
-  
-  doc.fontSize(16)
-     .font('Helvetica')
-     .fillColor('#1A1410')
-     .text(summary, 80, summaryY, {
-       width: A4_WIDTH - 160,
-       align: 'center',
-       lineGap: 10
-     });
-  
-  // Dekorative Linie
-  const lineY = summaryY + doc.heightOfString(summary, { width: A4_WIDTH - 160, lineGap: 10 }) + 50;
-  doc.moveTo(A4_WIDTH / 2 - 80, lineY)
-     .lineTo(A4_WIDTH / 2 + 80, lineY)
-     .lineWidth(2.5)
-     .strokeColor('#C9963A')
-     .stroke();
-  
-  // ComicStyle.de Branding unten - GRÖSSERES LOGO
-  const brandingY = A4_HEIGHT - 200;
+  // ComicStyle.de Branding ZENTRIERT - VIEL GRÖSSERES LOGO
+  const brandingY = A4_HEIGHT / 2 - 100; // Zentriert
   
   // Logo laden und einfügen - VIEL GRÖSSER
   try {
@@ -514,12 +480,12 @@ async function createComicPDF(project) {
       throw new Error('Logo file not found in any expected location');
     }
     
-    // Logo zentriert über dem Text - VIEL GRÖSSER
-    const logoHeight = 60; // Increased from 40
-    const logoWidth = 180; // Increased from 120
+    // Logo zentriert - VIEL GRÖSSER
+    const logoHeight = 120; // Increased from 60
+    const logoWidth = 360; // Increased from 180
     const logoX = (A4_WIDTH - logoWidth) / 2;
     
-    doc.image(logoBuffer, logoX, brandingY - 10, {
+    doc.image(logoBuffer, logoX, brandingY, {
       width: logoWidth,
       fit: [logoWidth, logoHeight],
       align: 'center'
@@ -527,7 +493,7 @@ async function createComicPDF(project) {
   } catch (e) {
     console.error('Logo loading error:', e.message);
     // Fallback: Text-basiertes Branding - GRÖSSER
-    doc.fontSize(28)
+    doc.fontSize(42)
        .font('Helvetica-Bold')
        .fillColor('#C9963A')
        .text('ComicStyle.de', 50, brandingY, {
@@ -537,18 +503,18 @@ async function createComicPDF(project) {
        });
   }
   
-  doc.fontSize(12)
+  doc.fontSize(16)
      .font('Helvetica')
      .fillColor('#8B7355')
-     .text('Deine Geschichte als personalisiertes Comic-Buch', 50, brandingY + 70, {
+     .text('Deine Geschichte als personalisiertes Comic-Buch', 50, brandingY + 140, {
        width: A4_WIDTH - 100,
        align: 'center'
      });
   
-  // Barcode-Platzhalter (für professionellen Look) - GRÖSSER
-  const barcodeY = A4_HEIGHT - 90;
-  const barcodeWidth = 140; // Increased from 120
-  const barcodeHeight = 50; // Increased from 40
+  // Barcode-Platzhalter (für professionellen Look) - GRÖSSER, weiter unten
+  const barcodeY = A4_HEIGHT - 120;
+  const barcodeWidth = 140;
+  const barcodeHeight = 50;
   const barcodeX = (A4_WIDTH - barcodeWidth) / 2;
   
   // Einfacher Barcode-Look (Streifen)
@@ -557,7 +523,7 @@ async function createComicPDF(project) {
      .strokeColor('#1A1410')
      .stroke();
   
-  // Barcode-Streifen (dekorativ) - GRÖSSER
+  // Barcode-Streifen (dekorativ)
   for (let i = 0; i < 15; i++) {
     const x = barcodeX + 5 + (i * 8.5);
     const width = Math.random() > 0.5 ? 4 : 3;
