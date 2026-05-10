@@ -76,7 +76,21 @@
 
 ---
 
-### 6. **Bubble-Positionierung 100% perfekt** 📍 NIEDRIG
+### 6. **Comic-Schriftart in PDF-Sprechblasen** 🖋️ MITTEL
+**Problem:** PDF nutzt Helvetica → wirkt wie Office-Dokument, nicht wie Comic
+
+**Lösung:**
+- Custom Font (`.ttf`) ins Backend laden (`backend-railway/public/fonts/`)
+- In `pdf-generator.js` einbinden via `doc.font('./fonts/...')`
+- Optionen: **Bangers** (klassisch-comic), **Comic Neue** (lesbarer)
+- Alle kostenlos via Google Fonts
+
+**Impact:** Mittel - verbessert professionellen Eindruck stark
+**Aufwand:** Niedrig (1h)
+
+---
+
+### 7. **Bubble-Positionierung 100% perfekt** 📍 NIEDRIG
 **Problem:** Positionen werden "etwas besser" gespeichert, aber nicht 100% perfekt
 
 **Status:** Aktuell "gut genug" - einfaches 2-Spalten-Grid funktioniert
@@ -227,6 +241,15 @@ git push origin test-original-photos-for-pages
 
 **Geschätzte Zeit für kritische Fixes:** ~~6-8 Stunden~~ → ✅ **ERLEDIGT**  
 **Geschätzte Zeit für alle Features:** ~~12-15 Stunden~~ → **2-3 Stunden verbleibend**
+
+---
+
+## 🧹 TODO: Dokumentation aufräumen
+Zu viele separate Dateien entstanden. Zusammenführen in ROADMAP.md:
+- `PRODUCTION-ROADMAP-MAY-9.md`
+- `LAUNCH-ROADMAP-MAY-9.md`
+- `QUALITY-IMPROVEMENT-STATUS.md` (falls vorhanden)
+- Alle `*-FIX.md` und `*-COMPLETE.md` Dateien archivieren oder löschen
 
 ---
 
