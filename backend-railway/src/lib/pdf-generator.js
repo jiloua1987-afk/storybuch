@@ -448,7 +448,7 @@ async function createComicPDF(project) {
      .fill('#FDF8F2');
   
   // ComicStyle.de Branding ZENTRIERT - VIEL GRÖSSERES LOGO
-  const brandingY = A4_HEIGHT / 2 - 100; // Zentriert
+  const brandingY = A4_HEIGHT / 2 - 100; // Zentriert - MUST be defined BEFORE try block
   
   // Logo laden und einfügen - VIEL GRÖSSER
   try {
@@ -481,12 +481,18 @@ async function createComicPDF(project) {
     }
     
     // Logo zentriert - VIEL GRÖSSER
-    const logoHeight = 120; // Increased from 60
-    const logoWidth = 360; // Increased from 180
+    const logoHeight = 120;
+    const logoWidth = 360;
     const logoX = (A4_WIDTH - logoWidth) / 2;
+    
+    // Ensure brandingY is a valid number
+    if (isNaN(brandingY)) {
+      throw new Error('brandingY is NaN');
+    }
     
     doc.image(logoBuffer, logoX, brandingY, {
       width: logoWidth,
+      height: logoHeight,
       fit: [logoWidth, logoHeight],
       align: 'center'
     });
