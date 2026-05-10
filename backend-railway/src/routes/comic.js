@@ -1233,8 +1233,32 @@ router.post("/page", async (req, res) => {
     const finalCharacters = enrichedCharacters;
 
     // Primary reference: Supabase URL > Base64 fallback
-    const primaryRefUrl = referenceImageUrls[0]?.url || null;
+    // For individual photos mode (multiple photos): pick the photo whose character
+    // appears in this scene, not always photo[0]
+    let primaryRefUrl = referenceImageUrls[0]?.url || null;
     const primaryRefBase64 = referenceImages[0] || null;
+    
+    if (referenceImageUrls.length > 1) {
+      // Extract character names mentioned in this page's panels
+      const pageCharNames = page.panels
+        .flatMap(p => [p.speaker, ...(p.dialogs || []).map(d => d.speaker)])
+        .filter(Boolean)
+        .map(n => n.toLowerCase());
+      const pageText = page.panels.map(p => p.szene || "").join(" ").toLowerCase();
+      
+      // Find the first photo whose label matches a character in this scene
+      const matchedPhoto = referenceImageUrls.find(ref =>
+        pageCharNames.some(n => n.includes(ref.label.toLowerCase()) || ref.label.toLowerCase().includes(n)) ||
+        pageText.includes(ref.label.toLowerCase())
+      );
+      
+      if (matchedPhoto) {
+        primaryRefUrl = matchedPhoto.url;
+        console.log(`  → Multi-photo fallback: using photo of "${matchedPhoto.label}" (matches scene characters)`);
+      } else {
+        console.log(`  → Multi-photo fallback: no scene match found, using photo[0] ("${referenceImageUrls[0]?.label}")`);
+      }
+    }
 
     const mood = MOOD_MOD[comicStyle] || MOOD_MOD.emotional;
     const panelCount = page.panels.length;
@@ -1434,14 +1458,14 @@ RULES:
     // 4. Single photo → use as style reference
     // 5. Generate only → no reference
     
-    const pageCharNames = page.panels
+    const sceneCharNames = page.panels
       .flatMap(p => [p.speaker])
       .filter(Boolean)
       .map(n => (n || "").toLowerCase());
 
     const hasCharNotInPhoto = finalCharacters.some(c =>
       c.inPhoto === false &&
-      (pageCharNames.some(n => n.includes(c.name.toLowerCase())) ||
+      (sceneCharNames.some(n => n.includes(c.name.toLowerCase())) ||
        panelDescriptions.toLowerCase().includes(c.name.toLowerCase()))
     );
 
