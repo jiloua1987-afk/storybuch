@@ -2,7 +2,11 @@
 
 ## Status: ✅ DEPLOYED
 
-**Commit:** `c10391bc`  
+**Commits:** 
+- `c10391bc` - Hauptfixes (hidden bubbles, double-click, cover title)
+- `fef572b6` - Zusätzliches Logging
+- `e0987232` - **Bubble-Größe wird jetzt gespeichert** ✅
+
 **Deployment:** Vercel (automatisch nach Push)
 
 ---
@@ -25,27 +29,6 @@
 - `src/store/bookStore.ts` - Interface erweitert
 - `src/components/comic/PanelView.tsx` - Load/Save Logik
 
-**Code:**
-```typescript
-// Store Interface
-export interface Chapter {
-  // ...
-  hiddenBubbles?: string[]; // Format: "panelIndex-bubbleIndex"
-}
-
-// Beim Löschen
-const newHiddenBubbles = new Set([...hiddenBubbles, bubbleId]);
-setHiddenBubbles(newHiddenBubbles);
-updateChapter(pageId, {
-  hiddenBubbles: Array.from(newHiddenBubbles)
-});
-
-// Beim Laden
-if (currentPageData?.hiddenBubbles) {
-  setHiddenBubbles(new Set(currentPageData.hiddenBubbles));
-}
-```
-
 ---
 
 ### 2. ✅ Doppelklick zum Bearbeiten verbessert
@@ -60,19 +43,6 @@ if (currentPageData?.hiddenBubbles) {
 - Tooltip "Doppelklick zum Bearbeiten"
 - Console-Logging für Debugging
 
-**Code:**
-```tsx
-<p
-  className="text-[#1A1410] leading-snug select-none cursor-text hover:bg-yellow-50/30 transition-colors rounded px-1"
-  onDoubleClick={(e) => { 
-    e.stopPropagation(); 
-    console.log(`✏️ Double-click detected on bubble ${bubbleId}`);
-    setEditingBubbleId(bubbleId); 
-  }}
-  title="Doppelklick zum Bearbeiten"
->
-```
-
 ---
 
 ### 3. ✅ Cover-Titel nach unten verschoben
@@ -85,14 +55,38 @@ if (currentPageData?.hiddenBubbles) {
 - `justify-center` → `justify-end`
 - `pb-12` für Abstand vom unteren Rand
 
+---
+
+### 4. ✅ Bubble-Größe wird jetzt gespeichert
+
+**Problem:**
+- Beim Resize wurde die Größe zwar geändert, aber nicht korrekt gespeichert
+- Beim Neuladen hatten Bubbles wieder die Standard-Größe
+- Hardcoded 400×600px statt echte Container-Größe
+
+**Lösung:**
+- Verwende `containerRef.current.offsetWidth/Height` für echte Container-Größe
+- Konvertiere gespeicherte %-Werte korrekt zu px beim Laden
+- Konvertiere px korrekt zu % beim Speichern
+- Detailliertes Logging für Debugging
+
 **Code:**
-```tsx
-<div className="absolute inset-x-0 bottom-0 flex flex-col items-center justify-end px-6 pb-12">
-  <div className="w-24 h-[3px] bg-[#C9963A] rounded mb-4" />
-  <h1>{title.toUpperCase()}</h1>
-  <div className="w-24 h-[3px] bg-[#C9963A] rounded mt-4" />
-</div>
+```typescript
+// Beim Laden
+const containerWidth = containerRef.current?.offsetWidth || 400;
+const containerHeight = containerRef.current?.offsetHeight || 600;
+initW = (savedPos.width / 100) * containerWidth;
+initH = (savedPos.height / 100) * containerHeight;
+
+// Beim Resize
+width: (w / containerWidth) * 100,
+height: (h / containerHeight) * 100,
 ```
+
+**Logging:**
+- `📐 Bubble X-Y: Loading saved size 15%×8% = 120×96px`
+- `📏 Bubble X-Y resized to 150×100px (18.8%×10.4%), saving NOW...`
+- `✓ VERIFIED: Bubble X-Y size in localStorage: 18.8%×10.4%`
 
 ---
 
@@ -103,13 +97,19 @@ if (currentPageData?.hiddenBubbles) {
 - `🗑️ Hiding bubble X-Y, saving to Store...` - Bubble wird gelöscht
 - `✓ Saved N hidden bubbles to Store` - Erfolgreich gespeichert
 - `📍 Loaded N hidden bubbles for page "..."` - Beim Laden
+- `📐 Bubble X-Y: Loading saved size ...` - **NEU:** Größe wird geladen
+- `📏 Bubble X-Y resized to ...` - **NEU:** Größe wird gespeichert
+- `✓ VERIFIED: Bubble X-Y size in localStorage: ...` - **NEU:** Größe verifiziert
 
 ### Testen:
 1. **Neues Comic erstellen** (alte haben gecachte Daten)
 2. Sprechblase doppelklicken → sollte editierbar werden
-3. Sprechblase löschen (rotes X)
-4. Zu anderer Seite wechseln und zurück
-5. Gelöschte Bubble sollte NICHT wieder da sein
+3. Sprechblase **resizen** (an den Ecken ziehen)
+4. Zu anderer Seite wechseln und **zurück**
+5. Bubble sollte **gleiche Größe** haben wie vorher
+6. Sprechblase löschen (rotes X)
+7. Zu anderer Seite wechseln und zurück
+8. Gelöschte Bubble sollte NICHT wieder da sein
 
 ---
 
@@ -121,6 +121,7 @@ if (currentPageData?.hiddenBubbles) {
 
 **Was funktioniert:**
 - Positionen werden gespeichert
+- **Größe wird jetzt auch gespeichert** ✅
 - Keine Kollisionserkennung mehr (zu komplex)
 - Einfaches Grid: Links/Rechts Spalten
 
@@ -153,6 +154,7 @@ if (currentPageData?.hiddenBubbles) {
 - [x] Gelöschte Sprechblasen bleiben gelöscht
 - [x] Doppelklick zum Bearbeiten mit visueller Rückmeldung
 - [x] Cover-Titel unten positioniert
+- [x] **Bubble-Größe wird gespeichert** ✅
 - [ ] Positionierung 100% perfekt (aktuell "etwas besser")
 
 ---
@@ -167,5 +169,5 @@ if (currentPageData?.hiddenBubbles) {
 ---
 
 **Erstellt:** 10. Mai 2025  
-**Commit:** c10391bc  
+**Commits:** c10391bc, fef572b6, e0987232  
 **Status:** Deployed ✅
