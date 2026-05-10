@@ -79,56 +79,46 @@ function EndingView({ endingText, dedication, dedicationFrom }: { endingText: st
   );
 }
 
-// ── Back Cover — professional back page with summary ──────────────────────────
-function BackCoverView({ title, summary }: { title: string; summary: string }) {
+// ── Back Cover — professional back page with logo and barcode ────────────────
+function BackCoverView({ title }: { title: string }) {
   return (
     <div className="w-full max-w-sm mx-auto bg-[#FDF8F2] rounded-xl overflow-hidden border border-[#E8D9C0] shadow-lg"
       style={{ aspectRatio: "1024/1536" }}>
       <div className="flex flex-col items-center justify-center h-full px-8 py-12">
-        {/* Story Summary */}
-        <div className="flex-1 flex flex-col justify-center text-center px-4 max-w-md">
-          <p className="text-[#1A1410] text-base leading-relaxed mb-12"
-            style={{ fontFamily: "'Playfair Display', Georgia, serif" }}>
-            {summary}
-          </p>
-          
-          {/* Decorative line */}
-          <div className="w-20 h-[2px] bg-[#C9963A] rounded mx-auto mb-12" />
-        </div>
         
-        {/* ComicStyle.de Branding */}
-        <div className="text-center space-y-4">
+        {/* ComicStyle.de Branding - CENTERED */}
+        <div className="flex-1 flex flex-col items-center justify-center text-center space-y-8">
           {/* Logo - MUCH LARGER */}
           <img 
             src="/Logo 1.png" 
             alt="ComicStyle.de" 
-            className="h-20 mx-auto object-contain"
+            className="h-32 mx-auto object-contain"
           />
           
-          <p className="text-[#8B7355] text-sm"
+          <p className="text-[#8B7355] text-base"
             style={{ fontFamily: "'Playfair Display', Georgia, serif" }}>
             Deine Geschichte als personalisiertes Comic-Buch
           </p>
-          
-          {/* Barcode */}
-          <div className="flex flex-col items-center pt-6">
-            <div className="relative w-[140px] h-[50px] border border-[#1A1410] rounded flex items-center justify-center overflow-hidden">
-              {/* Barcode stripes */}
-              {[...Array(15)].map((_, i) => (
-                <div 
-                  key={i}
-                  className="bg-[#1A1410] mx-[1px]"
-                  style={{ 
-                    width: Math.random() > 0.5 ? '4px' : '3px',
-                    height: '38px'
-                  }}
-                />
-              ))}
-            </div>
-            <p className="text-[#1A1410] text-[9px] mt-2 font-mono">
-              ISBN 978-3-XXXXX-XXX-X
-            </p>
+        </div>
+        
+        {/* Barcode at bottom */}
+        <div className="flex flex-col items-center pt-6">
+          <div className="relative w-[140px] h-[50px] border border-[#1A1410] rounded flex items-center justify-center overflow-hidden">
+            {/* Barcode stripes */}
+            {[...Array(15)].map((_, i) => (
+              <div 
+                key={i}
+                className="bg-[#1A1410] mx-[1px]"
+                style={{ 
+                  width: Math.random() > 0.5 ? '4px' : '3px',
+                  height: '38px'
+                }}
+              />
+            ))}
           </div>
+          <p className="text-[#1A1410] text-[9px] mt-2 font-mono">
+            ISBN 978-3-XXXXX-XXX-X
+          </p>
         </div>
       </div>
     </div>
@@ -617,7 +607,7 @@ export default function Step5Preview() {
             ) : isBackCover ? (
               <BackCoverView
                 title={project.title}
-                summary={generateStorySummary()}
+              />
               />
             ) : page ? (
               <div>
