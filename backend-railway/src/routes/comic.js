@@ -929,7 +929,6 @@ Draw each character in DIFFERENT, DISTINCT casual attire appropriate for a comic
 REDRAW both people in this photo as hand-drawn comic book characters standing together.
 This must look like a page from a printed comic book, NOT a photograph.
 Bold ink outlines on every person. Flat cel-shaded colors. Expressive cartoon faces.
-SHOW FULL BODIES — head to toe, not just faces or busts. Both characters fully visible.
 
 Left person is ${referenceImageUrls[0].label}: ${characters.find(c => c.name === referenceImageUrls[0].label)?.visual_anchor || ""}
 Right person is ${referenceImageUrls[1].label}: ${characters.find(c => c.name === referenceImageUrls[1].label)?.visual_anchor || ""}
@@ -941,7 +940,7 @@ CLOTHING INSTRUCTIONS:
 - NO matching outfits, NO similar colors
 
 Draw BOTH characters together in ${coverLocation}.
-Composition: dynamic group shot showing FULL BODIES, both characters prominently visible from head to toe, vivid illustrated background.
+Composition: dynamic group shot, both characters prominently visible, vivid illustrated background.
 NO text, NO title, NO letters anywhere in the image.`);
 
         const res2 = await openai.images.edit({
