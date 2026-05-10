@@ -129,6 +129,12 @@ function ResizableBubble({
   const [size, setSize] = useState({ w: initW, h: initH });
   const resizing = useRef<{ dir: string; startX: number; startY: number; startW: number; startH: number } | null>(null);
 
+  // CRITICAL: Update size when initW/initH changes (e.g., when loading saved size)
+  useEffect(() => {
+    setSize({ w: initW, h: initH });
+    console.log(`🔄 ResizableBubble: Size updated to ${initW}×${initH}px`);
+  }, [initW, initH]);
+
   const onResizeMouseDown = useCallback((e: React.MouseEvent, dir: string) => {
     e.stopPropagation();
     e.preventDefault();
