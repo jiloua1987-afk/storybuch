@@ -1238,9 +1238,16 @@ router.post("/page", async (req, res) => {
 
     const mood = MOOD_MOD[comicStyle] || MOOD_MOD.emotional;
     const panelCount = page.panels.length;
-    const panelDescriptions = page.panels
+    
+    // ── SAFETY REWRITE: Sanitize panel descriptions ────────────────────────────
+    const { rewriteIfRisky } = require('../lib/safety-rewriter');
+    const originalPanelDescriptions = page.panels
       .map(p => `Panel ${p.nummer}: ${p.szene}`)
       .join("\n");
+    
+    // Rewrite if risky keywords detected
+    const panelDescriptions = await rewriteIfRisky(originalPanelDescriptions);
+    
     const outfit = getOutfit(page.location, panelDescriptions);
     const layoutDesc =
       panelCount <= 2 ? "2 equal panels" :
@@ -1772,69 +1779,106 @@ NO text, NO speech bubbles anywhere in image.`;
       throw err;
     });
 
-    // CRITICAL CHECK: If reference was NOT used but we have photos → ACCEPT IT ANYWAY
-    // The fallback strategy already tried everything possible
-    if (!usedReference && hasPhotos && rawUrl) {
-      console.warn(`  ⚠️ WARNING: Generated without reference despite having photos!`);
-      console.log(`  → Accepting result anyway - fallback strategy already exhausted all options`);
-      console.log(`  → Better to have a page with potentially different faces than no page at all`);
+    // ═══════════════════════════════════════════════════════════════════════════
+    // GANZHEITLICHE LÖSUNG: NEVER accept pages without cover reference when photos exist
+    // ═══════════════════════════════════════════════════════════════════════════
+    if (!usedReference && hasPhotos) {
+      console.error(`  ⚠️ CRITICAL: Reference NOT used despite having photos!`);
+      console.log(`  → This would break style consistency - retrying with cover reference`);
       
-      // Don't try safe alternative - just accept the result
-      // The user can regenerate the page if needed
-    }
-
-    // If reference was blocked by safety filter → sanitize prompt and retry
-    // ONLY if we don't have photos (otherwise already handled above)
-    if (!usedReference && rawUrl && !hasPhotos) {
-      console.log(`  → Safety block, retrying with sanitized prompt + generate-only`);
+      // Retry with sanitized prompt + cover reference (NEVER without reference!)
       const sanitizedPanelDescs = page.panels
         .map(p => `Panel ${p.nummer}: ${(p.szene || "")
-          // Remove action/violence words
-          .replace(/\b(shout|scream|yell|cry|hit|kick|fight|punch|grab|push|fall|hurt|pain|tears|crying|loud|aggressive)\b/gi, "")
-          .replace(/\b(ruft|schreit|weint|schlägt|tritt|kämpft|fällt|laut|aggressiv)\b/gi, "")
-          // Remove potentially sensitive words with children
-          .replace(/\b(photo|photos|album|picture|pictures|image|images|memory|memories|secret|secrets|hidden)\b/gi, "")
-          .replace(/\b(foto|fotos|album|bild|bilder|erinnerung|erinnerungen|geheim|geheime|versteckt)\b/gi, "")
+          // Remove risky words that trigger safety
+          .replace(/\b(essen|eating|eat|feed|bite|chew|swallow|mouth|taste)\b/gi, "enjoying meal")
+          .replace(/\b(drunk|beer|wine|alcohol|intoxicated)\b/gi, "celebrating")
+          .replace(/\b(fight|punch|hit|weapon|blood|violence|attack)\b/gi, "playing")
+          .replace(/\b(screaming|scream|yelling|yell|shouting|shout)\b/gi, "talking excitedly")
+          .replace(/\b(crying|cry|sobbing|sob)\b/gi, "feeling emotional")
+          .replace(/\b(wild|crazy|chaotic|chaos)\b/gi, "lively")
           .trim()}`)
         .join("\n");
 
-      const safePrompt = `${COMIC_STYLE} ${mood}
+      const safePromptWithRef = `${refNote}${COMIC_STYLE} ${mood}
 
-Comic page — ${panelCount} panels in ${layoutDesc}. Bold black borders between panels.
+Comic page: "${page.title}" (family-friendly version)
+${panelCount} panels in ${layoutDesc}. Bold black borders between panels.
 
-CHARACTERS — draw identically across all panels:
+CHARACTERS (draw EXACTLY as described):
 ${charAnchors}
 
-CRITICAL: Draw characters EXACTLY as described. Do NOT add features not mentioned (glasses, beard, mustache, jewelry).
+${ageContext.modifier ? `AGE MODIFIER: ${ageContext.modifier}\n` : ""}
+CRITICAL: Draw characters EXACTLY as described above. Do NOT add features not mentioned.
 
-CLOTHING — characters wear ${outfit}.
+CLOTHING — characters wear ${outfit}
 
-PANELS:
+SAFE FAMILY-FRIENDLY SCENE:
 ${sanitizedPanelDescs}
 
-RULES:
-- Each panel shows a DIFFERENT scene/angle/moment
-- Each character appears ONLY ONCE per panel
-- Expressive faces showing correct emotions for the scene
-- Sharp detailed faces — eyes, nose, mouth clearly visible
-- Movement/action: show with TILTED POSES and MOTION BLUR in Bande Dessinée style — NOT manga speed lines
-- Exaggerated expressions: use WESTERN COMIC STYLE — NOT anime big eyes, NOT manga sweat drops
-- NO text, NO speech bubbles, NO letters, NO titles anywhere in image
+CRITICAL RULES:
+- Each panel shows a DIFFERENT moment
+- Characters interact naturally and warmly
+- Focus on connection, joy, and family warmth
+- NO risky activities, only safe family moments
 
 NATURAL SCENE BEHAVIOR:
-- Characters are IN THE SCENE, not posing for a photo
-- They interact with each other and their environment
-- NO direct eye contact with viewer/camera
-- NO portrait-style poses looking at camera
-- Show them from various angles: 3/4 view, profile, back view, action shots
-- They are LIVING the moment, not posing for it${reillustrationNote ? `\n\nUSER CORRECTION: ${reillustrationNote}. Apply this change while keeping all other elements identical.` : ""}`;
+- Characters are IN THE SCENE, not posing
+- They interact with each other naturally
+- Various angles: 3/4 view, profile, action shots
+
+NO text, NO speech bubbles anywhere in image.`;
 
       try {
-        const result2 = await generateImage(`${COMIC_STYLE} ${mood}\n\n${safePrompt}`, null);
-        rawUrl = result2.url;
-      } catch (e2) {
-        console.error(`  → Sanitized retry also failed:`, e2.message);
-        // rawUrl stays as whatever was returned (may be empty)
+        console.log(`  → Retry attempt 1: Sanitized prompt WITH cover reference`);
+        const retry1 = await generateImage(safePromptWithRef, reference);
+        if (retry1.usedReference) {
+          console.log(`  ✓ SUCCESS: Generated with cover reference after sanitization`);
+          rawUrl = retry1.url;
+          usedReference = true;
+        } else {
+          throw new Error("Reference still not used");
+        }
+      } catch (e1) {
+        console.error(`  → Retry 1 failed:`, e1.message);
+        
+        // Retry 2: Even more aggressive sanitization
+        try {
+          console.log(`  → Retry attempt 2: Ultra-safe prompt WITH cover reference`);
+          const ultraSafePanelDescs = page.panels
+            .map(p => `Panel ${p.nummer}: Characters spending quality time together in a warm, joyful moment`)
+            .join("\n");
+          
+          const ultraSafePrompt = `${refNote}${COMIC_STYLE} ${mood}
+
+Comic page: "${page.title}"
+${panelCount} panels in ${layoutDesc}. Bold black borders between panels.
+
+CHARACTERS (draw EXACTLY as described):
+${charAnchors}
+
+CLOTHING — characters wear ${outfit}
+
+ULTRA-SAFE FAMILY SCENE:
+${ultraSafePanelDescs}
+
+Show characters in warm, joyful family moments. Focus on connection and happiness.
+
+NO text, NO speech bubbles anywhere in image.`;
+          
+          const retry2 = await generateImage(ultraSafePrompt, reference);
+          if (retry2.usedReference) {
+            console.log(`  ✓ SUCCESS: Generated with cover reference (ultra-safe version)`);
+            rawUrl = retry2.url;
+            usedReference = true;
+          } else {
+            throw new Error("Reference still not used after all retries");
+          }
+        } catch (e2) {
+          console.error(`  → Retry 2 failed:`, e2.message);
+          console.error(`  ❌ FATAL: Cannot generate page with cover reference`);
+          console.error(`  → Rejecting page generation - style consistency is CRITICAL`);
+          throw new Error(`Cannot generate page "${page.title}" with cover reference. Style consistency cannot be maintained. Please try regenerating this page with different scene descriptions.`);
+        }
       }
     }
 
@@ -1906,19 +1950,33 @@ router.post("/ending", async (req, res) => {
       model: "gpt-4.1",
       messages: [{
         role: "system",
-        content: `Write a personal dedication for the last page of a comic book in ${lang}.
-This is a DEDICATION — like handwritten on the last page of a gift.
-- Max 2-3 short heartfelt sentences
-- Address the main person(s) DIRECTLY
-- Mention ONE concrete detail from the story
+        content: `Write a beautiful, professional dedication for the last page of a comic book in ${lang}.
+
+CRITICAL RULES:
+- Write 2-3 complete, well-formed sentences with proper grammar
+- Each sentence MUST have: Subject + Predicate + Object
+- Use elegant, flowing language - NOT keywords or bullet points
+- Address the main person(s) DIRECTLY by name
+- Mention 1-2 concrete moments from the story
 - Tone: ${toneEn}
-- NO sender ("Von:", "Deine Familie") — that is shown separately
-${dedicationFrom ? `Info: sender is "${dedicationFrom}" — do NOT write this in the dedication` : ""}`
+- NO sender signature ("Von:", "Deine Familie") — that is shown separately
+${dedicationFrom ? `Info: sender is "${dedicationFrom}" — do NOT write this in the dedication` : ""}
+
+GOOD EXAMPLES (German):
+"Liebe Mama, dieser besondere Tag zeigt, wie sehr wir dich lieben. Vom gemeinsamen Frühstück bis zum selbstgebackenen Kuchen - jeder Moment war voller Freude und Dankbarkeit."
+
+"Für dich, liebe Oma! Wir haben zusammen gelacht, gespielt und die schönsten Erinnerungen geschaffen. Du machst jeden Tag zu etwas Besonderem."
+
+BAD EXAMPLES (DO NOT DO THIS):
+"Aymen (3 Jahre), Mama (38 Jahre) erleben morgens frühstücken, geschenk geben, kuchen backen."
+"Frühstück, Geschenke, Backen, Sushi essen"
+
+Write ONLY the dedication text, nothing else.`
       }, {
         role: "user",
         content: `Story: ${storyInput || ""}\n${Object.entries(guidedAnswers).filter(([k, v]) => v && k !== "category").map(([k, v]) => `${k}: ${v}`).join("\n")}${dedication ? `\nUser dedication: ${dedication}` : ""}`,
       }],
-      max_tokens: 100, temperature: 0.8,
+      max_tokens: 150, temperature: 0.7,
     });
 
     const endingText = r.choices[0].message.content || "";
