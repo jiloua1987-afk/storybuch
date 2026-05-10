@@ -1993,6 +1993,7 @@ Write ONLY the dedication text, nothing else.`
 // Erstellt PDF mit Cover + Seiten + Ending für Testdrucke
 // ─────────────────────────────────────────────────────────────────────────────
 const { createComicPDF } = require('../lib/pdf-generator');
+const PDFDocument = require('pdfkit');
 
 router.post("/export-pdf", async (req, res) => {
   try {
@@ -2015,6 +2016,82 @@ router.post("/export-pdf", async (req, res) => {
     console.log(`✓ PDF created: ${pdfBuffer.length} bytes`);
   } catch (err) {
     console.error("PDF export error:", err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// POST /api/comic/export-pdf-from-png
+// NEW: WYSIWYG PDF export - converts PNG screenshots to PDF
+// This ensures bubbles appear EXACTLY as in preview (no coordinate conversion)
+// ─────────────────────────────────────────────────────────────────────────────
+router.post("/export-pdf-from-png", async (req, res) => {
+  try {
+    const { pages, title } = req.body;
+    
+    if (!pages || !Array.isArray(pages) || pages.length === 0) {
+      return res.status(400).json({ error: "Pages array required" });
+    }
+    
+    console.log(`Creating PDF from ${pages.length} PNG images for: ${title}`);
+    
+    // Create PDF document (A4 size: 595 x 842 points)
+    const doc = new PDFDocument({
+      size: 'A4',
+      autoFirstPage: false,
+      margins: { top: 0, bottom: 0, left: 0, right: 0 }
+    });
+    
+    // Collect PDF chunks
+    const chunks = [];
+    doc.on('data', chunk => chunks.push(chunk));
+    
+    // Process each PNG page
+    for (let i = 0; i < pages.length; i++) {
+      const pngDataUrl = pages[i];
+      
+      // Convert base64 to buffer
+      const base64Data = pngDataUrl.replace(/^data:image\/png;base64,/, '');
+      const pngBuffer = Buffer.from(base64Data, 'base64');
+      
+      console.log(`  → Adding page ${i + 1}/${pages.length} (${pngBuffer.length} bytes)`);
+      
+      // Add new page
+      doc.addPage({
+        size: 'A4',
+        margins: { top: 0, bottom: 0, left: 0, right: 0 }
+      });
+      
+      // Add image to fill entire page
+      doc.image(pngBuffer, 0, 0, {
+        width: 595,
+        height: 842,
+        align: 'center',
+        valign: 'center'
+      });
+    }
+    
+    // Finalize PDF
+    doc.end();
+    
+    // Wait for PDF to finish
+    await new Promise((resolve, reject) => {
+      doc.on('end', resolve);
+      doc.on('error', reject);
+    });
+    
+    const pdfBuffer = Buffer.concat(chunks);
+    
+    console.log(`✓ PDF created: ${pdfBuffer.length} bytes`);
+    
+    // Send PDF as download
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${sanitizeFilename(title || 'comic')}.pdf"`);
+    res.setHeader('Content-Length', pdfBuffer.length);
+    res.send(pdfBuffer);
+    
+  } catch (err) {
+    console.error("PNG → PDF export error:", err.message);
     res.status(500).json({ error: err.message });
   }
 });
