@@ -41,6 +41,7 @@ export interface Chapter {
   panels?: ChapterPanel[];
   panelPositions?: PanelPosition[] | null;
   extraBubbles?: Array<{ id: number; top: number; left: number; dialog: string; speaker: string }>; // NEW: User-added bubbles
+  hiddenBubbles?: string[]; // NEW: IDs of hidden/deleted bubbles (format: "panelIndex-bubbleIndex")
 }
 
 export type ComicStyle = "action" | "emotional" | "humor";

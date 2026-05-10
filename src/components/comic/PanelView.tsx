@@ -270,12 +270,21 @@ export default function PanelView({ imageUrl, title, panels = [], panelPositions
   // Reset local state when page changes, but keep saved positions
   useEffect(() => {
     setDragPositions({}); // Clear temporary drag positions
-    setHiddenBubbles(new Set());
     
-    // Load extra bubbles from store if pageId is available
+    // Load hidden bubbles from store if pageId is available
     if (pageId) {
       const project = useBookStore.getState().project;
       const currentPageData = project?.chapters?.find(c => c.id === pageId);
+      
+      // Load hidden bubbles
+      if (currentPageData?.hiddenBubbles) {
+        setHiddenBubbles(new Set(currentPageData.hiddenBubbles));
+        console.log(`📍 Loaded ${currentPageData.hiddenBubbles.length} hidden bubbles for page "${currentPageData.title}"`);
+      } else {
+        setHiddenBubbles(new Set());
+      }
+      
+      // Load extra bubbles
       if (currentPageData?.extraBubbles) {
         setExtraBubbles(currentPageData.extraBubbles);
       } else {
@@ -561,7 +570,22 @@ export default function PanelView({ imageUrl, title, panels = [], panelPositions
         </button>
         {(hiddenBubbles.size > 0 || extraBubbles.length > 0) && (
           <button
-            onClick={() => { setHiddenBubbles(new Set()); setExtraBubbles([]); setEditedDialogs({}); }}
+            onClick={() => { 
+              setHiddenBubbles(new Set()); 
+              setExtraBubbles([]); 
+              setEditedDialogs({});
+              
+              // Clear from Store as well
+              if (pageId) {
+                console.log('🔄 Resetting all bubbles, clearing from Store...');
+                const { updateChapter } = useBookStore.getState();
+                updateChapter(pageId, {
+                  hiddenBubbles: [],
+                  extraBubbles: []
+                });
+                console.log('✓ Cleared hidden bubbles and extra bubbles from Store');
+              }
+            }}
             className="text-xs px-3 py-1.5 rounded-lg border border-[#E8D9C0] text-[#8B7355] hover:bg-[#F5EDE0] transition-all"
           >
             Alle zurücksetzen
@@ -633,8 +657,20 @@ export default function PanelView({ imageUrl, title, panels = [], panelPositions
                   onMouseDown={(e) => e.stopPropagation()}
                   onClick={(e) => { 
                     e.stopPropagation(); 
-                    setHiddenBubbles(prev => new Set([...prev, bubbleId]));
-                    // Save updated positions after hiding bubble
+                    const newHiddenBubbles = new Set([...hiddenBubbles, bubbleId]);
+                    setHiddenBubbles(newHiddenBubbles);
+                    
+                    // Save to Store immediately
+                    if (pageId) {
+                      console.log(`🗑️ Hiding bubble ${bubbleId}, saving to Store...`);
+                      const { updateChapter } = useBookStore.getState();
+                      updateChapter(pageId, {
+                        hiddenBubbles: Array.from(newHiddenBubbles)
+                      });
+                      console.log(`✓ Saved ${newHiddenBubbles.size} hidden bubbles to Store`);
+                    }
+                    
+                    // Also update positions after hiding bubble
                     if (onPositionsChange) {
                       const updatedPositions: PanelPosition[] = dialogPanels
                         .filter(p => (p.bubbleId ?? `${p.originalIndex}-0`) !== bubbleId)
@@ -729,12 +765,14 @@ export default function PanelView({ imageUrl, title, panels = [], panelPositions
                         </div>
                       ) : (
                         <p
-                          className="text-[#1A1410] leading-snug select-none cursor-pointer"
+                          className="text-[#1A1410] leading-snug select-none cursor-text hover:bg-yellow-50/30 transition-colors rounded px-1"
                           style={{ fontFamily: "'Comic Neue', cursive", fontSize: "12px", fontWeight: 500 }}
                           onDoubleClick={(e) => { 
                             e.stopPropagation(); 
+                            console.log(`✏️ Double-click detected on bubble ${bubbleId}`);
                             setEditingBubbleId(bubbleId); 
                           }}
+                          title="Doppelklick zum Bearbeiten"
                         >
                           {panel.speaker && panel.speaker !== "narrator" && panel.speaker.toLowerCase() !== "null" && (
                             <span className="font-bold">{panel.speaker}: </span>

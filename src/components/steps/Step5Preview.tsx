@@ -18,8 +18,8 @@ function CoverView({ imageUrl, title, subtitle }: { imageUrl?: string; title: st
       ) : (
         <div className="absolute inset-0 bg-gradient-to-b from-[#2D2620] to-[#1A1410]" />
       )}
-      {/* Title overlay - centered, no background */}
-      <div className="absolute inset-0 flex flex-col items-center justify-center px-6">
+      {/* Title overlay - at bottom of page */}
+      <div className="absolute inset-x-0 bottom-0 flex flex-col items-center justify-end px-6 pb-12">
         <div className="w-24 h-[3px] bg-[#C9963A] rounded mb-4" />
         <h1 className="text-white font-black text-3xl md:text-4xl leading-tight tracking-wide text-center"
           style={{ 
