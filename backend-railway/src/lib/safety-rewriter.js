@@ -5,8 +5,8 @@ const openai = new OpenAI({
 });
 
 /**
- * Rewrites a scene description to be safety-compliant
- * while keeping emotional meaning and visual details
+ * Rewrite a scene description to be safer for OpenAI image generation
+ * while maintaining emotional meaning and visual composition
  */
 async function rewriteSafeScene(sceneText) {
   if (!sceneText || sceneText.trim().length === 0) {
@@ -15,24 +15,27 @@ async function rewriteSafeScene(sceneText) {
   
   const prompt = `Rewrite the following comic scene for OpenAI image generation safety compliance.
 
-CRITICAL RULES:
+IMPORTANT RULES:
 - Keep emotional meaning and atmosphere
 - Keep scene structure and characters
-- Keep visual details (location, objects, activities)
 - REMOVE or soften risky wording
 - Replace food-related terms with family-friendly descriptions
 - NEVER mention: eating, feeding, food in mouth, consuming, biting, chewing
-- USE instead: "preparing food", "cooking together", "enjoying meal", "sharing food"
+- Use instead: "preparing food", "cooking together", "enjoying meal", "sharing food"
+- Replace aggressive/dramatic terms with warm, celebratory language
+- NEVER mention: violence, intoxication, sexuality, danger, illegal activity, weapons
 - Keep it visually descriptive and emotionally warm
+- Use positive, celebratory language
 - Focus on connection, joy, and warmth
 
 EXAMPLES:
 - "essen und backen" → "preparing food and baking together"
-- "Sushi essen" → "enjoying a meal together with sushi on the table"
-- "Kuchen essen" → "sharing a freshly baked cake"
-- "Erdbeerkuchen backen und essen" → "baking strawberry cake together and enjoying it"
+- "Sushi essen" → "enjoying a meal together"
+- "Kuchen essen" → "sharing a cake together"
 - "wild party with drunk friends" → "lively celebration with friends laughing together"
-- "children screaming" → "children excitedly playing"
+- "couple argued emotionally" → "couple had an intense emotional conversation"
+- "children screaming through crowd" → "children excitedly running through busy festival"
+- "fist pump celebration" → "arms raised in joyful celebration"
 
 Scene to rewrite:
 ${sceneText}
@@ -57,45 +60,32 @@ Return ONLY the rewritten scene, nothing else.`;
     
   } catch (err) {
     console.error('Safety rewrite failed:', err.message);
-    // Fallback: return original (better than crashing)
-    return sceneText;
+    return sceneText; // Fallback to original
   }
 }
 
 /**
- * Checks if a scene contains high-risk keywords
+ * Check if text contains risky keywords that might trigger safety rejection
  */
 function containsRiskyKeywords(text) {
   const riskWords = [
-    // Food + Eating (triggers Safety with children)
+    // Food + Eating (triggers safety with children)
     'essen', 'eating', 'eat', 'feed', 'feeding', 'consume', 'consuming',
     'bite', 'biting', 'chew', 'chewing', 'swallow', 'mouth', 'taste',
-    
-    // Alcohol/Drugs
-    'drunk', 'beer', 'wine', 'alcohol', 'intoxicated', 'wasted', 'drinking',
-    
+    // Alcohol
+    'drunk', 'beer', 'wine', 'alcohol', 'intoxicated', 'drinking',
     // Violence
-    'fight', 'fighting', 'punch', 'punching', 'hit', 'hitting', 'weapon', 
-    'blood', 'violence', 'aggressive', 'attack',
-    
-    // Danger
-    'danger', 'dangerous', 'threat', 'threatening', 'scary', 'terrifying', 'horror',
-    
-    // Sexuality
-    'sexy', 'naked', 'undressed', 'intimate',
-    
-    // Illegal
-    'police', 'arrest', 'crime', 'illegal',
-    
-    // Extreme emotion
-    'screaming', 'scream', 'yelling', 'yell', 'shouting', 'shout', 
-    'crying', 'cry', 'sobbing', 'sob',
-    
-    // Crowds/Chaos
-    'wild', 'crazy', 'chaotic', 'chaos', 'mob', 'riot',
-    
-    // Party
-    'party', 'nightclub', 'club', 'rave',
+    'fight', 'fighting', 'punch', 'hit', 'hitting', 'weapon', 'blood', 'violence',
+    'danger', 'dangerous', 'threat', 'threatening', 'scary', 'terrifying',
+    // Emotional intensity
+    'screaming', 'scream', 'yelling', 'yell', 'shouting', 'shout', 'crying', 'cry',
+    // Chaos
+    'wild', 'crazy', 'chaotic', 'mob', 'crowd',
+    // Party (can be risky with alcohol context)
+    'party', 'nightclub', 'club',
+    // Other
+    'sexy', 'naked', 'undressed',
+    'police', 'arrest', 'crime',
   ];
   
   const lowerText = text.toLowerCase();
@@ -103,11 +93,12 @@ function containsRiskyKeywords(text) {
 }
 
 /**
- * Rewrites scene only if it contains risky keywords
- * This is the main function to use in the API
+ * Main function: Rewrite scene if it contains risky keywords
  */
 async function rewriteIfRisky(sceneText) {
-  if (!sceneText) return sceneText;
+  if (!sceneText || sceneText.trim().length === 0) {
+    return sceneText;
+  }
   
   if (containsRiskyKeywords(sceneText)) {
     console.log(`⚠️ Risky keywords detected in scene, rewriting for safety...`);
