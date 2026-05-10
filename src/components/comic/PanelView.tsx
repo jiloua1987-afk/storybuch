@@ -358,7 +358,7 @@ export default function PanelView({ imageUrl, title, panels = [], panelPositions
     // SIMPLIFIED: No collision resolution, just use saved positions or simple grid
     if (hasDetectedPositions && panelPositions && panelPositions.length > 0) {
       console.log(`📍 Using saved positions for ${dialogPanels.length} bubbles`);
-      return dialogPanels.map((panel) => {
+      const positions = dialogPanels.map((panel) => {
         const i = panel.originalIndex;
         const bubbleIdx = panel.bubbleIndex;
         
@@ -368,6 +368,7 @@ export default function PanelView({ imageUrl, title, panels = [], panelPositions
         );
         
         if (pos) {
+          console.log(`  ✓ Bubble ${i}-${bubbleIdx}: loaded position (${pos.top}%, ${pos.left}%)`);
           return {
             top: pos.top,
             left: pos.left,
@@ -375,6 +376,7 @@ export default function PanelView({ imageUrl, title, panels = [], panelPositions
             h: pos.height || 10
           };
         } else {
+          console.log(`  ⚠️ Bubble ${i}-${bubbleIdx}: NO saved position, using fallback`);
           // Fallback: simple grid position
           const row = Math.floor(bubbleIdx / 2);
           const col = bubbleIdx % 2;
@@ -386,6 +388,8 @@ export default function PanelView({ imageUrl, title, panels = [], panelPositions
           };
         }
       });
+      console.log(`  → Total: ${positions.length} positions resolved`);
+      return positions;
     }
     
     // NO saved positions → simple grid layout (NO collision resolution)
