@@ -765,8 +765,11 @@ export default function PanelView({ imageUrl, title, panels = [], panelPositions
                         >
                           <textarea
                             autoFocus
-                            value={displayDialog}
-                            onChange={(e) => setEditedDialogs({ ...editedDialogs, [bubbleId]: e.target.value })}
+                            value={editedDialogs[bubbleId] !== undefined ? editedDialogs[bubbleId] : displayDialog}
+                            onChange={(e) => {
+                              console.log(`✍️ Text changed in bubble ${bubbleId}: "${e.target.value}"`);
+                              setEditedDialogs({ ...editedDialogs, [bubbleId]: e.target.value });
+                            }}
                             onKeyDown={(e) => {
                               if (e.key === "Enter" && !e.shiftKey) {
                                 e.preventDefault();
