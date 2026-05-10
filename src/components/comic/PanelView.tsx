@@ -610,10 +610,27 @@ export default function PanelView({ imageUrl, title, panels = [], panelPositions
             if (!dialog && !panel.dialog) return null;
             
             const displayDialog = panel.dialog || dialog; // Use panel.dialog from flattened structure
-            const isEditing = editingBubbleId === bubbleId; // Changed: check by bubbleId instead of panelIndex
+            const isEditing = editingBubbleId === bubbleId;
             const posStyle = getFinalPosition(bubbleId, bubbleIndex);
             const isDragging = dragging?.type === "panel" && dragging.index === bubbleId;
-            const { w: initW, h: initH } = initBubbleSize(displayDialog, panel.speaker || "");
+            
+            // Get saved size from panelPositions if available, otherwise calculate from text
+            const savedPos = panelPositions?.find(p => 
+              p.nummer === panel.originalIndex + 1 && 
+              p.bubbleIndex === panel.bubbleIndex
+            );
+            
+            let initW, initH;
+            if (savedPos && savedPos.width && savedPos.height) {
+              // Use saved size (convert from % to px)
+              initW = (savedPos.width / 100) * 400; // 400px is container width
+              initH = (savedPos.height / 100) * 600; // 600px is container height
+            } else {
+              // Calculate from text
+              const size = initBubbleSize(displayDialog, panel.speaker || "");
+              initW = size.w;
+              initH = size.h;
+            }
 
             return (
               <div
@@ -687,6 +704,7 @@ export default function PanelView({ imageUrl, title, panels = [], panelPositions
                     <HanddrawnBubble w={w} h={h} type={panel.bubble_type}>
                       {isEditing ? (
                         <div
+                          className="flex flex-col gap-1 w-full h-full"
                           onMouseDown={(e) => e.stopPropagation()}
                           onTouchStart={(e) => e.stopPropagation()}
                         >
@@ -694,22 +712,30 @@ export default function PanelView({ imageUrl, title, panels = [], panelPositions
                             autoFocus
                             value={displayDialog}
                             onChange={(e) => setEditedDialogs({ ...editedDialogs, [bubbleId]: e.target.value })}
-                            onBlur={() => handleDialogBlur(panel.originalIndex, bubbleId, panel.bubbleIndex)}
                             onKeyDown={(e) => {
                               if (e.key === "Enter" && !e.shiftKey) {
                                 e.preventDefault();
                                 handleDialogBlur(panel.originalIndex, bubbleId, panel.bubbleIndex);
                               }
                             }}
-                            className="w-full h-full bg-transparent border-none outline-none resize-none text-[#1A1410] text-sm leading-snug p-0"
+                            className="w-full flex-1 bg-transparent outline-none resize-none text-[#1A1410]"
                             style={{ fontFamily: "'Comic Neue', cursive", fontSize: "12px" }}
+                            onClick={(e) => e.stopPropagation()}
+                            placeholder="Text eingeben…"
                           />
+                          <button
+                            className="text-xs text-[#C9963A] font-semibold text-right"
+                            onMouseDown={(e) => { 
+                              e.stopPropagation(); 
+                              handleDialogBlur(panel.originalIndex, bubbleId, panel.bubbleIndex);
+                            }}
+                          >Fertig ✓</button>
                         </div>
                       ) : (
                         <p
-                          className="text-[#1A1410] leading-snug select-none"
+                          className="text-[#1A1410] leading-snug select-none cursor-pointer"
                           style={{ fontFamily: "'Comic Neue', cursive", fontSize: "12px", fontWeight: 500 }}
-                          onDoubleClick={(e) => { e.stopPropagation(); setEditingBubbleId(bubbleId); }}
+                          onClick={(e) => { e.stopPropagation(); setEditingBubbleId(bubbleId); }}
                         >
                           {panel.speaker && panel.speaker !== "narrator" && panel.speaker.toLowerCase() !== "null" && (
                             <span className="font-bold">{panel.speaker}: </span>
