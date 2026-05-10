@@ -129,31 +129,27 @@ async function createComicPDF(project) {
            characterSpacing: 1.2
          });
       
-      // Comic-Bild - VOLLE BREITE, aber mit schwarzem Rahmen oben
+      // Comic-Bild - VOLLE BREITE, volle Fläche zwischen Titel und Footer
       if (page.imageUrl) {
         const pageBuffer = await fetchImageBuffer(page.imageUrl);
         
-        // VOLLE BREITE nutzen, Höhe basierend auf verfügbarem Platz
-        const footerHeight = 30;
-        const imgPadding = 0; // Kein Padding - Bild füllt Raum zwischen Titel und Footer
-        const imgWidth = A4_WIDTH; // VOLLE BREITE
+        const footerHeight = 20;
+        const imgWidth = A4_WIDTH;   // Volle Breite
         const imgX = 0;
-        const imgY = titleHeight; // Direkt nach Titel
-        
-        // Verfügbare Höhe für Bild
-        const availableHeight = A4_HEIGHT - titleHeight - footerHeight;
-        const imgHeight = availableHeight;
+        const imgY = titleHeight;    // Direkt nach Titel
+        const imgHeight = A4_HEIGHT - titleHeight - footerHeight;
         
         // Schwarzer Rahmen oben (Panel-Border)
         const borderWidth = 4;
         doc.rect(imgX, imgY, imgWidth, borderWidth)
            .fill('#000000');
         
+        // fit: cover → füllt die gesamte Fläche, kein Letterboxing, keine weißen Streifen
+        // Koordinaten für Bubbles sind damit direkt 1:1 auf imgX/imgY/imgWidth/imgHeight
         const pageProcessed = await sharp(pageBuffer)
           .resize(Math.round(imgWidth * 2), Math.round(imgHeight * 2), { 
-            fit: 'contain',  // CONTAIN statt COVER - zeigt ganzes Bild ohne Abschneiden
+            fit: 'cover',
             position: 'center',
-            background: { r: 255, g: 255, b: 255, alpha: 1 }
           })
           .png()
           .toBuffer();
@@ -161,9 +157,6 @@ async function createComicPDF(project) {
         doc.image(pageProcessed, imgX, imgY, { 
           width: imgWidth, 
           height: imgHeight,
-          fit: [imgWidth, imgHeight],
-          align: 'center',
-          valign: 'center'
         });
         
         // ── Sprechblasen rendern ──────────────────────────────────────
@@ -174,25 +167,13 @@ async function createComicPDF(project) {
           const hiddenBubbles = new Set(page.hiddenBubbles || []);
           console.log(`    → Hidden bubbles: ${hiddenBubbles.size}`);
           
-          // Calculate ACTUAL rendered image dimensions (fit: contain may add letterboxing)
-          // Image aspect ratio: 1024x1536 = 2:3
-          const imageAspect = 1024 / 1536; // ~0.667
-          const containerAspect = imgWidth / imgHeight;
-          let actualImgWidth, actualImgHeight, actualImgX, actualImgY;
-          if (imageAspect < containerAspect) {
-            // Image is taller relative to container → letterbox left/right
-            actualImgHeight = imgHeight;
-            actualImgWidth = imgHeight * imageAspect;
-            actualImgX = imgX + (imgWidth - actualImgWidth) / 2;
-            actualImgY = imgY;
-          } else {
-            // Image is wider relative to container → letterbox top/bottom
-            actualImgWidth = imgWidth;
-            actualImgHeight = imgWidth / imageAspect;
-            actualImgX = imgX;
-            actualImgY = imgY + (imgHeight - actualImgHeight) / 2;
-          }
-          console.log(`    → Actual image area: ${actualImgWidth.toFixed(0)}×${actualImgHeight.toFixed(0)}px at (${actualImgX.toFixed(0)}, ${actualImgY.toFixed(0)})`);
+          // Mit fit: cover füllt das Bild exakt imgX/imgY/imgWidth/imgHeight
+          // Keine Letterboxing-Berechnung nötig
+          const actualImgWidth = imgWidth;
+          const actualImgHeight = imgHeight;
+          const actualImgX = imgX;
+          const actualImgY = imgY;
+          console.log(`    → Image area: ${actualImgWidth}×${actualImgHeight}px at (${actualImgX}, ${actualImgY})`);
           
           // Flatten multi-bubble panels (dialogs array) into individual bubbles
           const allBubbles = [];
