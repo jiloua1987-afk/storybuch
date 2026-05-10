@@ -1107,8 +1107,8 @@ NO text, NO title, NO letters.`;
         console.error("❌ All photo-based attempts failed");
         console.error("   → Trying FALLBACK: generateImage() without photo composite");
           
-          // FALLBACK: Try generateImage() approach (like page generation)
-          try {
+        // FALLBACK: Try generateImage() approach (like page generation)
+        try {
             let refBuffer;
             if (primaryRefUrl) {
               refBuffer = await fetchBuffer(primaryRefUrl);
@@ -1161,8 +1161,9 @@ NO text, NO title, NO letters anywhere in the image.`);
             console.error("   → Fallback also failed:", fallbackErr.message);
             // Continue to return error below
           }
+        }
           
-          return res.status(400).json({ 
+        return res.status(400).json({ 
             error: "SAFETY_REJECTION",
             message: "Dieses Foto wurde vom System blockiert. Bitte verwenden Sie ein anderes Foto.",
             userMessage: "Das hochgeladene Foto konnte nicht verarbeitet werden. Bitte versuchen Sie es mit einem anderen Foto.",
