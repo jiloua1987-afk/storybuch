@@ -823,6 +823,22 @@ Location:`;
     }
     
     console.log(`  → Cover location: "${coverLocation}"`);
+    
+    // ── SAFETY CHECK: Risky locations should skip photo composite ─────────────
+    // Problem: OpenAI blocks photos + stadiums/crowds/sports
+    // Solution: If location is risky, skip photo composite and use generate-only
+    const { containsRiskyKeywords } = require('../lib/safety-rewriter');
+    const locationIsRisky = containsRiskyKeywords(coverLocation);
+    
+    if (locationIsRisky && (referenceImageUrls.length > 0 || referenceImages.length > 0)) {
+      console.log(`  ⚠️ RISKY LOCATION DETECTED: "${coverLocation}"`);
+      console.log(`  → Skipping photo composite, using generate-only mode`);
+      console.log(`  → This prevents OpenAI safety blocks for sports/crowds/stadiums`);
+      
+      // Clear photos to force generate-only mode
+      referenceImageUrls = [];
+      referenceImages = [];
+    }
 
     // Generate character-specific clothing for cover
     const coverCharClothing = characters.map(c => {
