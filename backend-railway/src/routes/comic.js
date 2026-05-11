@@ -1299,22 +1299,74 @@ router.post("/page", async (req, res) => {
     }
 
     // ── CLOTHING CONSISTENCY ──────────────────────────────────────────────────
-    // Seed = name + pageTitle (normalisiert)
-    // → Gleicher Moment/Szene = gleiche Kleidung auf allen Seiten dieses Moments
-    // → Verschiedene Momente = verschiedene Kleidung (Biografie, Urlaub, etc.)
+    // 1. Szenen-spezifische Kleidung (Hochzeit, Strand, Sport etc.) hat Priorität
+    // 2. Fallback: Hash aus name + pageTitle → konsistent pro Szene, wechselt zwischen Szenen
     
-    // Normalisiere den Seitentitel: Kleinbuchstaben, Zahlen/Sonderzeichen raus
-    // "Geburtstag im Garten" und "Geburtstag: Torte" → beide "geburtstag" → gleiche Kleidung
-    // "Erster Schultag" vs "Hochzeit" → verschiedene Kleidung
     const normalizeTitle = (title) => {
-      return (title || '')
-        .toLowerCase()
-        .replace(/[^a-zäöüß]/g, '') // nur Buchstaben
-        .substring(0, 12);           // erste 12 Zeichen als Szenen-ID
+      return (title || '').toLowerCase().replace(/[^a-zäöüß]/g, '').substring(0, 12);
     };
     const sceneSeed = normalizeTitle(page.title);
     
+    // Szenen-Erkennung aus Titel + Panels
+    const sceneText = `${page.title || ''} ${page.location || ''} ${panelDescriptions}`.toLowerCase();
+    
+    const isWedding    = ['hochzeit', 'wedding', 'heirat', 'trauung', 'bride', 'groom'].some(k => sceneText.includes(k));
+    const isBirthday   = ['geburtstag', 'birthday', 'geburtstagsfeier'].some(k => sceneText.includes(k));
+    const isBeach      = ['strand', 'beach', 'pool', 'schwimm', 'swim'].some(k => sceneText.includes(k));
+    const isSport      = ['sport', 'fußball', 'soccer', 'football', 'training', 'gym', 'laufen', 'running'].some(k => sceneText.includes(k));
+    const isRestaurant = ['restaurant', 'dinner', 'abendessen', 'gala', 'theater', 'oper'].some(k => sceneText.includes(k));
+    const isWinter     = ['winter', 'schnee', 'snow', 'weihnacht', 'christmas', 'ski'].some(k => sceneText.includes(k));
+    
+    const getSceneOutfit = (age, role) => {
+      const isChild  = age < 12 || role.includes("kind") || role.includes("child");
+      const isMom    = role.includes("mutter") || role.includes("mother") || role.includes("mama") || role.includes("mom");
+      const isDad    = role.includes("vater") || role.includes("father") || role.includes("papa") || role.includes("dad");
+      const isGrand  = age > 60 || role.includes("oma") || role.includes("opa") || role.includes("grand");
+      
+      if (isWedding) {
+        if (isMom)        return "elegant floral dress with heels";
+        if (isDad)        return "elegant dress shirt with suit trousers and tie";
+        if (isChild)      return "smart formal outfit — dress shirt or party dress";
+        if (isGrand)      return "elegant formal attire — suit or formal dress";
+        return "elegant formal attire";
+      }
+      if (isBirthday) {
+        if (isMom)        return "festive blouse with nice trousers or skirt";
+        if (isDad)        return "smart casual shirt with chinos";
+        if (isChild)      return "colorful festive outfit — party shirt or dress";
+        if (isGrand)      return "comfortable festive clothes — nice cardigan or blouse";
+        return "festive casual outfit";
+      }
+      if (isBeach) {
+        if (isMom)        return "light summer dress or swimwear with cover-up";
+        if (isDad)        return "swim shorts and casual t-shirt";
+        if (isChild)      return "colorful swimwear or beach outfit";
+        if (isGrand)      return "light summer clothes";
+        return "summer beach outfit";
+      }
+      if (isSport) {
+        if (isChild)      return "sporty t-shirt with shorts and sneakers";
+        return "sporty outfit — t-shirt, shorts or tracksuit, sneakers";
+      }
+      if (isRestaurant) {
+        if (isMom)        return "elegant blouse or dress with nice shoes";
+        if (isDad)        return "smart shirt with dress trousers";
+        if (isChild)      return "smart casual outfit";
+        return "smart casual attire";
+      }
+      if (isWinter) {
+        if (isChild)      return "warm winter jacket, scarf, and boots";
+        return "warm winter coat, scarf, and boots";
+      }
+      return null; // kein spezifischer Kontext → Hash-Fallback
+    };
+    
     const getClothingForCharacter = (charName, age, role) => {
+      // 1. Szenen-spezifisch
+      const sceneOutfit = getSceneOutfit(age, role);
+      if (sceneOutfit) return sceneOutfit;
+      
+      // 2. Hash-Fallback: konsistent pro Szene
       const hashCode = (str) => {
         let hash = 0;
         for (let i = 0; i < str.length; i++) {
@@ -1323,33 +1375,23 @@ router.post("/page", async (req, res) => {
         }
         return Math.abs(hash);
       };
-      
-      // Seed = Name + Szene → gleiche Kleidung innerhalb einer Szene,
-      // andere Kleidung bei anderen Szenen
       const seed = hashCode(charName.toLowerCase() + sceneSeed);
-      
       const shirtColors = ['blue', 'dark green', 'red', 'burgundy', 'navy', 'orange', 'teal', 'white', 'gray', 'olive'];
       const pantsColors = ['jeans', 'black pants', 'khaki pants', 'gray pants', 'dark pants'];
+      const shirtColor  = shirtColors[seed % shirtColors.length];
+      const pantsColor  = pantsColors[(seed >> 3) % pantsColors.length];
       
-      const shirtColor = shirtColors[seed % shirtColors.length];
-      const pantsColor = pantsColors[(seed >> 3) % pantsColors.length];
-      
-      if (age < 12 || role.includes("kind") || role.includes("child")) {
-        return `${shirtColor} t-shirt with ${pantsColor}, sneakers`;
-      } else if (role.includes("mutter") || role.includes("mother") || role.includes("mama") || role.includes("mom")) {
-        return `${shirtColor} blouse with ${pantsColor}, comfortable shoes`;
-      } else if (role.includes("vater") || role.includes("father") || role.includes("papa") || role.includes("dad")) {
-        return `${shirtColor} button-up shirt with ${pantsColor}, casual shoes`;
-      } else if (age > 60 || role.includes("oma") || role.includes("opa") || role.includes("grand")) {
-        return `${shirtColor} cardigan with ${pantsColor}`;
-      } else {
-        return `${shirtColor} casual shirt with ${pantsColor}`;
-      }
+      if (age < 12 || role.includes("kind") || role.includes("child")) return `${shirtColor} t-shirt with ${pantsColor}, sneakers`;
+      if (role.includes("mutter") || role.includes("mother") || role.includes("mama") || role.includes("mom")) return `${shirtColor} blouse with ${pantsColor}`;
+      if (role.includes("vater") || role.includes("father") || role.includes("papa") || role.includes("dad")) return `${shirtColor} button-up shirt with ${pantsColor}`;
+      if (age > 60 || role.includes("oma") || role.includes("opa") || role.includes("grand")) return `${shirtColor} cardigan with ${pantsColor}`;
+      return `${shirtColor} casual shirt with ${pantsColor}`;
     };
     
     const charClothingDesc = finalCharacters.map(c => {
       const clothing = getClothingForCharacter(c.name, c.age || 25, (c.role || c.name).toLowerCase());
-      console.log(`  → ${c.name}: ${clothing} (scene: "${sceneSeed}")`);
+      const sceneType = isWedding ? 'wedding' : isBirthday ? 'birthday' : isBeach ? 'beach' : isSport ? 'sport' : isRestaurant ? 'restaurant' : isWinter ? 'winter' : 'default';
+      console.log(`  → ${c.name}: ${clothing} (scene: ${sceneType})`);
       return `${c.name}: ${clothing}`;
     }).join("\n");
 
