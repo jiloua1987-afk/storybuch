@@ -1298,60 +1298,46 @@ router.post("/page", async (req, res) => {
       console.log(`  → 🎨 RE-ILLUSTRATION requested: "${reillustrationNote}"`);
     }
 
-    // ── CLOTHING CONSISTENCY PER SCENE ────────────────────────────────────────
-    // Generate DETERMINISTIC clothing based on scene location and character
-    // This ensures characters wear the same clothes throughout a scene (e.g., birthday party)
-    // WITHOUT needing to store/retrieve from database
+    // ── CLOTHING CONSISTENCY ──────────────────────────────────────────────────
+    // Deterministic clothing per CHARACTER (name only as seed, NOT location)
+    // → Papa trägt auf Cover, Seite 1 und Seite 2 immer dieselbe Farbe
     
-    // Create a deterministic seed from location and character name
-    const getClothingForCharacter = (charName, location, age, role) => {
-      // Simple hash function for deterministic color selection
+    const getClothingForCharacter = (charName, age, role) => {
       const hashCode = (str) => {
         let hash = 0;
         for (let i = 0; i < str.length; i++) {
           hash = ((hash << 5) - hash) + str.charCodeAt(i);
-          hash = hash & hash; // Convert to 32bit integer
+          hash = hash & hash;
         }
         return Math.abs(hash);
       };
       
-      // Combine character name + location for deterministic seed
-      const seed = hashCode(charName.toLowerCase() + (location || 'default').toLowerCase());
+      // Seed = nur Charaktername → gleiche Farbe auf ALLEN Seiten
+      const seed = hashCode(charName.toLowerCase());
       
-      // Deterministic color palettes based on seed
-      const shirtColors = ['blue', 'green', 'red', 'yellow', 'purple', 'orange', 'pink', 'white', 'gray', 'brown'];
-      const pantsColors = ['jeans', 'black pants', 'khaki pants', 'gray pants', 'brown pants'];
-      const dressColors = ['blue', 'pink', 'yellow', 'purple', 'red', 'green', 'white', 'floral'];
+      const shirtColors = ['blue', 'dark green', 'red', 'burgundy', 'navy', 'orange', 'teal', 'white', 'gray', 'olive'];
+      const pantsColors = ['jeans', 'black pants', 'khaki pants', 'gray pants', 'dark pants'];
       
       const shirtColor = shirtColors[seed % shirtColors.length];
-      const pantsColor = pantsColors[seed % pantsColors.length];
-      const dressColor = dressColors[seed % dressColors.length];
+      const pantsColor = pantsColors[(seed >> 3) % pantsColors.length]; // different offset for pants
       
-      // Generate clothing based on age/role (deterministic per character+scene)
       if (age < 12 || role.includes("kind") || role.includes("child")) {
-        return `${shirtColor} t-shirt with comfortable ${pantsColor}, sneakers`;
+        return `${shirtColor} t-shirt with ${pantsColor}, sneakers`;
       } else if (role.includes("mutter") || role.includes("mother") || role.includes("mama") || role.includes("mom")) {
         return `${shirtColor} blouse with ${pantsColor}, comfortable shoes`;
       } else if (role.includes("vater") || role.includes("father") || role.includes("papa") || role.includes("dad")) {
         return `${shirtColor} button-up shirt with ${pantsColor}, casual shoes`;
       } else if (age > 60 || role.includes("oma") || role.includes("opa") || role.includes("grand")) {
-        return `${shirtColor} cardigan with comfortable ${pantsColor}`;
+        return `${shirtColor} cardigan with ${pantsColor}`;
       } else {
-        // Generic adult
         return `${shirtColor} casual shirt with ${pantsColor}`;
       }
     };
     
-    // Generate character-specific clothing (deterministic per scene)
     const charClothingDesc = finalCharacters.map(c => {
-      const name = c.name;
-      const age = c.age || 25;
-      const role = (c.role || name).toLowerCase();
-      
-      const clothing = getClothingForCharacter(name, page.location, age, role);
-      console.log(`  → ${name}: ${clothing} (scene: ${page.location || 'default'})`);
-      
-      return `${name}: ${clothing}`;
+      const clothing = getClothingForCharacter(c.name, c.age || 25, (c.role || c.name).toLowerCase());
+      console.log(`  → ${c.name}: ${clothing}`);
+      return `${c.name}: ${clothing}`;
     }).join("\n");
 
     const prompt = sanitizePrompt(`${COMIC_STYLE} ${mood}
