@@ -158,46 +158,53 @@ async function createComicPDF(project) {
         const pageBuffer = await fetchImageBuffer(page.imageUrl);
         
         const footerHeight = 20;
-        const imgWidth = A4_WIDTH;   // Volle Breite
+        const imgWidth = A4_WIDTH;
         const imgX = 0;
-        const imgY = titleHeight;    // Direkt nach Titel
+        const imgY = titleHeight;
         const imgHeight = A4_HEIGHT - titleHeight - footerHeight;
         
         // Schwarzer Rahmen oben (Panel-Border)
-        const borderWidth = 4;
-        doc.rect(imgX, imgY, imgWidth, borderWidth)
-           .fill('#000000');
+        doc.rect(imgX, imgY, imgWidth, 4).fill('#000000');
         
-        // fit: cover → füllt die gesamte Fläche, kein Letterboxing, keine weißen Streifen
-        // Koordinaten für Bubbles sind damit direkt 1:1 auf imgX/imgY/imgWidth/imgHeight
+        // fit: contain → zeigt das GANZE Bild, kein Abschneiden
+        // Weiße Streifen links/rechts sind schmal da Bild fast A4-Breite hat
         const pageProcessed = await sharp(pageBuffer)
-          .resize(Math.round(imgWidth * 2), Math.round(imgHeight * 2), { 
-            fit: 'cover',
+          .resize(Math.round(imgWidth * 2), Math.round(imgHeight * 2), {
+            fit: 'contain',
             position: 'center',
+            background: { r: 255, g: 255, b: 255, alpha: 1 }
           })
           .png()
           .toBuffer();
         
-        doc.image(pageProcessed, imgX, imgY, { 
-          width: imgWidth, 
-          height: imgHeight,
-        });
+        doc.image(pageProcessed, imgX, imgY, { width: imgWidth, height: imgHeight });
+        
+        // ── Berechne tatsächliche Bildposition nach fit:contain Letterboxing ──
+        // Quellbild: 1024×1536 (Verhältnis 2:3 = 0.667)
+        // Container: imgWidth × imgHeight
+        const srcRatio = 1024 / 1536;
+        const containerRatio = imgWidth / imgHeight;
+        let actualImgWidth, actualImgHeight, actualImgX, actualImgY;
+        if (srcRatio < containerRatio) {
+          // Bild schmaler als Container → Letterbox links/rechts
+          actualImgHeight = imgHeight;
+          actualImgWidth  = imgHeight * srcRatio;
+          actualImgX = imgX + (imgWidth - actualImgWidth) / 2;
+          actualImgY = imgY;
+        } else {
+          // Bild breiter als Container → Letterbox oben/unten
+          actualImgWidth  = imgWidth;
+          actualImgHeight = imgWidth / srcRatio;
+          actualImgX = imgX;
+          actualImgY = imgY + (imgHeight - actualImgHeight) / 2;
+        }
+        console.log(`    → Actual image: ${actualImgWidth.toFixed(0)}×${actualImgHeight.toFixed(0)}px at (${actualImgX.toFixed(0)}, ${actualImgY.toFixed(0)})`);
         
         // ── Sprechblasen rendern ──────────────────────────────────────
         if (page.panels && page.panels.length > 0) {
           console.log(`    → Rendering bubbles for page ${i + 1}`);
-          
-          // Load hidden bubbles from chapter data
           const hiddenBubbles = new Set(page.hiddenBubbles || []);
           console.log(`    → Hidden bubbles: ${hiddenBubbles.size}`);
-          
-          // Mit fit: cover füllt das Bild exakt imgX/imgY/imgWidth/imgHeight
-          // Keine Letterboxing-Berechnung nötig
-          const actualImgWidth = imgWidth;
-          const actualImgHeight = imgHeight;
-          const actualImgX = imgX;
-          const actualImgY = imgY;
-          console.log(`    → Image area: ${actualImgWidth}×${actualImgHeight}px at (${actualImgX}, ${actualImgY})`);
           
           // Flatten multi-bubble panels (dialogs array) into individual bubbles
           const allBubbles = [];
@@ -320,68 +327,62 @@ async function createComicPDF(project) {
             
             const padding = 4;
             
-            // Ensure bubble stays within ACTUAL image bounds
-            if (bubbleY + bubbleHeight > actualImgY + actualImgHeight) {
-              bubbleY = actualImgY + actualImgHeight - bubbleHeight - 5;
-            }
-            if (bubbleY < actualImgY) {
-              bubbleY = actualImgY + 5;
-            }
-            if (bubbleX + bubbleWidth > actualImgX + actualImgWidth) {
-              bubbleX = actualImgX + actualImgWidth - bubbleWidth - 5;
-            }
-            if (bubbleX < actualImgX) {
-              bubbleX = actualImgX + 5;
-            }
+            // Bounds: Bubble MUSS innerhalb des tatsächlichen Bildbereichs bleiben
+            // Tail ist ~10px hoch → extra Puffer unten
+            bubbleX = Math.min(Math.max(bubbleX, actualImgX + 2), actualImgX + actualImgWidth  - bubbleWidth  - 2);
+            bubbleY = Math.min(Math.max(bubbleY, actualImgY + 2), actualImgY + actualImgHeight - bubbleHeight - 14);
             
-            // Bubble-Hintergrund (weiß mit dünnem schwarzem Rand wie in Vorschau)
+            // Bubble-Hintergrund
             const isCaption = bubble.bubble_type === 'caption';
             const bgColor = isCaption ? '#1E0F32' : '#FFFEF8';
             const textColor = isCaption ? '#FFFFFF' : '#1A1410';
             
-            // Scale font size proportionally to bubble height (min 6pt, max 12pt)
-            // Bangers is a display font — slightly larger visually, so scale factor is lower
-            const scaledFontSize = Math.min(12, Math.max(6, bubbleHeight * 0.13));
+            // Font size: proportional to bubble height, min 7pt, max 11pt
+            const bubbleFontSize = Math.min(11, Math.max(7, bubbleHeight * 0.14));
+            const padding = Math.max(4, bubbleHeight * 0.07);
             
             doc.save();
-            doc.roundedRect(bubbleX, bubbleY, bubbleWidth, bubbleHeight, 6)
+            doc.roundedRect(bubbleX, bubbleY, bubbleWidth, bubbleHeight, 5)
                .lineWidth(1.5)
                .fillAndStroke(bgColor, '#1A1410');
             
-            // Tail (Schwänzchen) hinzufügen - kleines Dreieck nach unten links
+            // Tail
             if (!isCaption) {
-              const tailX = bubbleX + 20;
+              const tailX = bubbleX + 18;
               const tailY = bubbleY + bubbleHeight;
               doc.moveTo(tailX, tailY)
-                 .lineTo(tailX - 8, tailY + 12)
-                 .lineTo(tailX + 12, tailY)
+                 .lineTo(tailX - 7, tailY + 10)
+                 .lineTo(tailX + 10, tailY)
                  .closePath()
                  .fillAndStroke(bgColor, '#1A1410');
             }
             
-            // Text in Bubble - Speaker fett, Rest normal
+            // Text: Bangers für alles (Speaker + Dialog)
             if (speaker) {
-              doc.fontSize(scaledFontSize)
+              doc.fontSize(bubbleFontSize)
                  .font(BUBBLE_FONT_BOLD)
                  .fillColor(textColor)
-                 .text(speaker, bubbleX + padding, bubbleY + padding + 1, {
+                 .text(speaker, bubbleX + padding, bubbleY + padding, {
                    width: bubbleWidth - (padding * 2),
-                   continued: true
-                 })
-                 .font(BUBBLE_FONT)
-                 .text(bubble.dialog, {
-                   width: bubbleWidth - (padding * 2),
-                   align: 'left',
-                   lineGap: 0.5
+                   lineGap: 0
                  });
-            } else {
-              doc.fontSize(scaledFontSize)
+              const speakerH = doc.heightOfString(speaker, { width: bubbleWidth - (padding * 2) });
+              doc.fontSize(bubbleFontSize)
                  .font(BUBBLE_FONT)
                  .fillColor(textColor)
-                 .text(text, bubbleX + padding, bubbleY + padding + 1, {
+                 .text(bubble.dialog, bubbleX + padding, bubbleY + padding + speakerH + 1, {
                    width: bubbleWidth - (padding * 2),
                    align: 'left',
-                   lineGap: 0.5
+                   lineGap: 1
+                 });
+            } else {
+              doc.fontSize(bubbleFontSize)
+                 .font(BUBBLE_FONT)
+                 .fillColor(textColor)
+                 .text(text, bubbleX + padding, bubbleY + padding, {
+                   width: bubbleWidth - (padding * 2),
+                   align: 'left',
+                   lineGap: 1
                  });
             }
             
