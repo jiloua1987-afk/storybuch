@@ -1299,8 +1299,20 @@ router.post("/page", async (req, res) => {
     }
 
     // ── CLOTHING CONSISTENCY ──────────────────────────────────────────────────
-    // Deterministic clothing per CHARACTER (name only as seed, NOT location)
-    // → Papa trägt auf Cover, Seite 1 und Seite 2 immer dieselbe Farbe
+    // Seed = name + pageTitle (normalisiert)
+    // → Gleicher Moment/Szene = gleiche Kleidung auf allen Seiten dieses Moments
+    // → Verschiedene Momente = verschiedene Kleidung (Biografie, Urlaub, etc.)
+    
+    // Normalisiere den Seitentitel: Kleinbuchstaben, Zahlen/Sonderzeichen raus
+    // "Geburtstag im Garten" und "Geburtstag: Torte" → beide "geburtstag" → gleiche Kleidung
+    // "Erster Schultag" vs "Hochzeit" → verschiedene Kleidung
+    const normalizeTitle = (title) => {
+      return (title || '')
+        .toLowerCase()
+        .replace(/[^a-zäöüß]/g, '') // nur Buchstaben
+        .substring(0, 12);           // erste 12 Zeichen als Szenen-ID
+    };
+    const sceneSeed = normalizeTitle(page.title);
     
     const getClothingForCharacter = (charName, age, role) => {
       const hashCode = (str) => {
@@ -1312,14 +1324,15 @@ router.post("/page", async (req, res) => {
         return Math.abs(hash);
       };
       
-      // Seed = nur Charaktername → gleiche Farbe auf ALLEN Seiten
-      const seed = hashCode(charName.toLowerCase());
+      // Seed = Name + Szene → gleiche Kleidung innerhalb einer Szene,
+      // andere Kleidung bei anderen Szenen
+      const seed = hashCode(charName.toLowerCase() + sceneSeed);
       
       const shirtColors = ['blue', 'dark green', 'red', 'burgundy', 'navy', 'orange', 'teal', 'white', 'gray', 'olive'];
       const pantsColors = ['jeans', 'black pants', 'khaki pants', 'gray pants', 'dark pants'];
       
       const shirtColor = shirtColors[seed % shirtColors.length];
-      const pantsColor = pantsColors[(seed >> 3) % pantsColors.length]; // different offset for pants
+      const pantsColor = pantsColors[(seed >> 3) % pantsColors.length];
       
       if (age < 12 || role.includes("kind") || role.includes("child")) {
         return `${shirtColor} t-shirt with ${pantsColor}, sneakers`;
@@ -1336,7 +1349,7 @@ router.post("/page", async (req, res) => {
     
     const charClothingDesc = finalCharacters.map(c => {
       const clothing = getClothingForCharacter(c.name, c.age || 25, (c.role || c.name).toLowerCase());
-      console.log(`  → ${c.name}: ${clothing}`);
+      console.log(`  → ${c.name}: ${clothing} (scene: "${sceneSeed}")`);
       return `${c.name}: ${clothing}`;
     }).join("\n");
 
