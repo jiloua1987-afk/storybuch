@@ -3,6 +3,19 @@ const sharp = require('sharp');
 const fs = require('fs');
 const path = require('path');
 
+// Comic font path — Bangers (Google Fonts, OFL License)
+const COMIC_FONT_PATH = (() => {
+  const candidates = [
+    path.join(process.cwd(), 'public', 'fonts', 'Bangers.ttf'),
+    path.join(__dirname, '..', '..', 'public', 'fonts', 'Bangers.ttf'),
+    '/app/public/fonts/Bangers.ttf',
+  ];
+  for (const p of candidates) {
+    if (fs.existsSync(p)) return p;
+  }
+  return null;
+})();
+
 /**
  * Erstellt PDF mit Cover + Seiten + Ending im A4-Format
  * @param {Object} project - Projekt-Daten
@@ -20,6 +33,17 @@ async function createComicPDF(project) {
       Creator: 'MyComicStory.com'
     }
   });
+  
+  // Register comic font if available
+  if (COMIC_FONT_PATH) {
+    doc.registerFont('Bangers', COMIC_FONT_PATH);
+    console.log(`✓ Comic font loaded: ${COMIC_FONT_PATH}`);
+  } else {
+    console.warn('⚠ Comic font not found, falling back to Helvetica');
+  }
+  
+  const BUBBLE_FONT = COMIC_FONT_PATH ? 'Bangers' : 'Helvetica';
+  const BUBBLE_FONT_BOLD = COMIC_FONT_PATH ? 'Bangers' : 'Helvetica-Bold';
   
   const buffers = [];
   doc.on('data', buffers.push.bind(buffers));
@@ -316,6 +340,7 @@ async function createComicPDF(project) {
             const textColor = isCaption ? '#FFFFFF' : '#1A1410';
             
             // Scale font size proportionally to bubble height (min 6pt, max 12pt)
+            // Bangers is a display font — slightly larger visually, so scale factor is lower
             const scaledFontSize = Math.min(12, Math.max(6, bubbleHeight * 0.13));
             
             doc.save();
@@ -337,13 +362,13 @@ async function createComicPDF(project) {
             // Text in Bubble - Speaker fett, Rest normal
             if (speaker) {
               doc.fontSize(scaledFontSize)
-                 .font('Helvetica-Bold')
+                 .font(BUBBLE_FONT_BOLD)
                  .fillColor(textColor)
                  .text(speaker, bubbleX + padding, bubbleY + padding + 1, {
                    width: bubbleWidth - (padding * 2),
                    continued: true
                  })
-                 .font('Helvetica')
+                 .font(BUBBLE_FONT)
                  .text(bubble.dialog, {
                    width: bubbleWidth - (padding * 2),
                    align: 'left',
@@ -351,7 +376,7 @@ async function createComicPDF(project) {
                  });
             } else {
               doc.fontSize(scaledFontSize)
-                 .font('Helvetica')
+                 .font(BUBBLE_FONT)
                  .fillColor(textColor)
                  .text(text, bubbleX + padding, bubbleY + padding + 1, {
                    width: bubbleWidth - (padding * 2),
