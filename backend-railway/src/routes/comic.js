@@ -1311,6 +1311,9 @@ router.post("/page", async (req, res) => {
     const sceneText = `${page.title || ''} ${page.location || ''} ${panelDescriptions}`.toLowerCase();
     
     const isWedding    = ['hochzeit', 'wedding', 'heirat', 'trauung', 'bride', 'groom'].some(k => sceneText.includes(k));
+    const isOwnWedding = ['unsere hochzeit', 'meine hochzeit', 'our wedding', 'my wedding', 
+                          'heiraten wir', 'wir heiraten', 'we got married', 'we are getting married',
+                          'braut', 'bräutigam', 'bride and groom'].some(k => sceneText.includes(k));
     const isBirthday   = ['geburtstag', 'birthday', 'geburtstagsfeier'].some(k => sceneText.includes(k));
     const isBeach      = ['strand', 'beach', 'pool', 'schwimm', 'swim'].some(k => sceneText.includes(k));
     const isSport      = ['sport', 'fußball', 'soccer', 'football', 'training', 'gym', 'laufen', 'running'].some(k => sceneText.includes(k));
@@ -1324,11 +1327,21 @@ router.post("/page", async (req, res) => {
       const isGrand  = age > 60 || role.includes("oma") || role.includes("opa") || role.includes("grand");
       
       if (isWedding) {
-        if (isMom)        return "elegant floral dress with heels";
-        if (isDad)        return "elegant dress shirt with suit trousers and tie";
-        if (isChild)      return "smart formal outfit — dress shirt or party dress";
-        if (isGrand)      return "elegant formal attire — suit or formal dress";
-        return "elegant formal attire";
+        if (isOwnWedding) {
+          // Eigene Hochzeit: Braut in Weiß, Bräutigam im Anzug
+          if (isMom)   return "white wedding dress with veil and bridal bouquet";
+          if (isDad)   return "dark formal suit with white dress shirt and tie";
+          if (isChild) return "smart formal outfit — dress shirt or flower girl dress";
+          if (isGrand) return "elegant formal attire";
+          return "elegant formal attire";
+        } else {
+          // Gast bei Hochzeit
+          if (isMom)   return "elegant floral dress with heels";
+          if (isDad)   return "elegant dress shirt with suit trousers and tie";
+          if (isChild) return "smart formal outfit — dress shirt or party dress";
+          if (isGrand) return "elegant formal attire — suit or formal dress";
+          return "elegant formal attire";
+        }
       }
       if (isBirthday) {
         if (isMom)        return "festive blouse with nice trousers or skirt";
@@ -1390,7 +1403,7 @@ router.post("/page", async (req, res) => {
     
     const charClothingDesc = finalCharacters.map(c => {
       const clothing = getClothingForCharacter(c.name, c.age || 25, (c.role || c.name).toLowerCase());
-      const sceneType = isWedding ? 'wedding' : isBirthday ? 'birthday' : isBeach ? 'beach' : isSport ? 'sport' : isRestaurant ? 'restaurant' : isWinter ? 'winter' : 'default';
+      const sceneType = isOwnWedding ? 'own-wedding' : isWedding ? 'wedding-guest' : isBirthday ? 'birthday' : isBeach ? 'beach' : isSport ? 'sport' : isRestaurant ? 'restaurant' : isWinter ? 'winter' : 'default';
       console.log(`  → ${c.name}: ${clothing} (scene: ${sceneType})`);
       return `${c.name}: ${clothing}`;
     }).join("\n");
