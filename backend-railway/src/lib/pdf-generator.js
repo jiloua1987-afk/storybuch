@@ -318,28 +318,19 @@ async function createComicPDF(project) {
             // If no saved size, calculate from text
             if (!bubble.isExtra && (!page.panelPositions || !page.panelPositions.find(p => p.nummer === bubble.nummer && p.bubbleIndex === bubble.bubbleIndex)?.width)) {
               const maxBubbleWidth = 90;
-              const padding = 4;
               doc.fontSize(8).font('Helvetica');
-              const textHeight = doc.heightOfString(text, { width: maxBubbleWidth - (padding * 2) });
+              const textHeight = doc.heightOfString(text, { width: maxBubbleWidth - 8 });
               bubbleWidth = Math.min(maxBubbleWidth, Math.max(60, text.length * 1.8));
-              bubbleHeight = textHeight + (padding * 2) + 3;
+              bubbleHeight = textHeight + 11;
             }
             
-            const padding = 4;
-            
-            // Bounds: Bubble MUSS innerhalb des tatsächlichen Bildbereichs bleiben
-            // Tail ist ~10px hoch → extra Puffer unten
-            bubbleX = Math.min(Math.max(bubbleX, actualImgX + 2), actualImgX + actualImgWidth  - bubbleWidth  - 2);
-            bubbleY = Math.min(Math.max(bubbleY, actualImgY + 2), actualImgY + actualImgHeight - bubbleHeight - 14);
-            
-            // Bubble-Hintergrund
-            const isCaption = bubble.bubble_type === 'caption';
-            const bgColor = isCaption ? '#1E0F32' : '#FFFEF8';
-            const textColor = isCaption ? '#FFFFFF' : '#1A1410';
-            
-            // Font size: proportional to bubble height, min 7pt, max 11pt
+            // Font size + padding — proportional to bubble height
             const bubbleFontSize = Math.min(11, Math.max(7, bubbleHeight * 0.14));
             const padding = Math.max(4, bubbleHeight * 0.07);
+            
+            // Bounds: Bubble MUSS innerhalb des tatsächlichen Bildbereichs bleiben
+            bubbleX = Math.min(Math.max(bubbleX, actualImgX + 2), actualImgX + actualImgWidth  - bubbleWidth  - 2);
+            bubbleY = Math.min(Math.max(bubbleY, actualImgY + 2), actualImgY + actualImgHeight - bubbleHeight - 14);
             
             doc.save();
             doc.roundedRect(bubbleX, bubbleY, bubbleWidth, bubbleHeight, 5)
