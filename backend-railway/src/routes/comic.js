@@ -93,7 +93,7 @@ function getOutfit(location = "", panelDescriptions = "", pageTitle = "") {
   
   if (["beach", "sea", "pool", "shore", "coast", "swimming", "water"].some(k => combined.includes(k)))
     return "swimwear, swim shorts, light summer dresses, sandals. NO jeans, NO dark shirts.";
-  if (["airport", "gate", "terminal", "departure", "arrival", "flight"].some(k => combined.includes(k)))
+  if (["airport", "gate", "terminal", "departure", "arrival", "flight", "flughafen", "abflug", "ankunft", "fliegen"].some(k => combined.includes(k)))
     return "comfortable travel clothes — casual shirts, jeans, sneakers, light jackets.";
   if (["wedding", "hochzeit", "heirat", "marriage", "bride", "groom", "ceremony", "braut", "bräutigam", "trauung"].some(k => combined.includes(k)))
     return "WEDDING ATTIRE — bride in white wedding dress with veil, groom in dark formal suit with tie. Guests in elegant formal attire. NO casual clothes.";
