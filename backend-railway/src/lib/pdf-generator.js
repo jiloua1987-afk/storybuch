@@ -61,29 +61,34 @@ async function createComicPDF(project) {
         fontSize -= 2;
       }
 
-      const overlayY = A4_H - 150;
+      // Titelblock-Höhe berechnen
+      const titleH = doc.heightOfString(title, { width: maxW, fontSize, lineGap: 3 });
+      
+      // Gesamthöhe des Overlay-Blocks: Linie + Abstand + Text + Abstand + Linie
+      const lineGap = 12;  // Abstand zwischen Linie und Text
+      const blockH = lineGap + titleH + lineGap;
+      
+      // Block vertikal zentriert im unteren Bereich
+      const blockY = A4_H - 140 - blockH / 2;
+      const line1Y = blockY;
+      const textY  = blockY + lineGap;
+      const line2Y = blockY + lineGap + titleH + lineGap;
 
       // Goldene Linie oben
-      doc.moveTo(A4_W / 2 - 60, overlayY + 10)
-         .lineTo(A4_W / 2 + 60, overlayY + 10)
+      doc.moveTo(A4_W / 2 - 60, line1Y)
+         .lineTo(A4_W / 2 + 60, line1Y)
          .lineWidth(3).strokeColor('#C9963A').stroke();
 
-      // Titel — dynamische Größe, passt zwischen die Linien
+      // Titel
       doc.fillOpacity(1)
          .fontSize(fontSize)
          .font('Helvetica-Bold')
          .fillColor('#FFFFFF')
-         .text(title, 40, overlayY + 20, {
-           width: maxW,
-           align: 'center',
-           lineGap: 3
-         });
+         .text(title, 40, textY, { width: maxW, align: 'center', lineGap: 3 });
 
-      // Goldene Linie unten — nach dem Text
-      const titleH = doc.heightOfString(title, { width: maxW, fontSize, lineGap: 3 });
-      const lineBottomY = overlayY + 20 + titleH + 10;
-      doc.moveTo(A4_W / 2 - 60, lineBottomY)
-         .lineTo(A4_W / 2 + 60, lineBottomY)
+      // Goldene Linie unten
+      doc.moveTo(A4_W / 2 - 60, line2Y)
+         .lineTo(A4_W / 2 + 60, line2Y)
          .lineWidth(3).strokeColor('#C9963A').stroke();
 
     } catch (e) {
@@ -193,6 +198,7 @@ async function createComicPDF(project) {
       });
 
       console.log(`    → Bubbles: ${allBubbles.length} (hidden: ${hiddenBubbles.size})`);
+      console.log(`    → panelPositions available: ${(page.panelPositions || []).length}`);
 
       allBubbles.forEach((bubble, idx) => {
         const speakerText = (bubble.speaker && bubble.speaker !== 'narrator' && bubble.speaker.toLowerCase() !== 'null')
@@ -216,8 +222,15 @@ async function createComicPDF(project) {
             bX = aX + (pos.left  / 100) * aW;
             bY = aY + (pos.top   / 100) * aH;
             if (pos.width && pos.height) {
+              // pos.width/height are % of the preview container
+              // Preview container has same aspect ratio as image (1024/1536)
+              // So % values map directly to the actual image area
               bW = (pos.width  / 100) * aW;
               bH = (pos.height / 100) * aH;
+              // Sanity check: bubble must be at least readable
+              bW = Math.max(bW, 60);
+              bH = Math.max(bH, 25);
+              console.log(`    → Bubble ${bubble.nummer}-${bubble.bubbleIndex}: pos=${pos.left.toFixed(1)}%,${pos.top.toFixed(1)}% size=${pos.width.toFixed(1)}%×${pos.height.toFixed(1)}% → ${bW.toFixed(0)}×${bH.toFixed(0)}px`);
             }
           }
         }
