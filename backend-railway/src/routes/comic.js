@@ -317,17 +317,38 @@ Respond ONLY with JSON: {"characters":[{"name":"Name","age":30}]}`
               model: "gpt-4.1",
               messages: [{ role: "user", content: [
                 refImageContent,
-                { type: "text", text: `Describe the person who is approximately ${char.age} years old in this photo.
-Write 40-50 words about FACE AND BODY ONLY — NO clothing, NO accessories.
-Include: exact age appearance, hair color/style, skin tone, eye color, face shape, distinctive facial features, body type/build.
-DO NOT mention: clothing, shirts, jackets, glasses frames style, jewelry, accessories.
-Format: "${char.name}: [age] years old, [hair], [skin tone], [eye color], [face shape], [distinctive features], [body type]"
+                { type: "text", text: `Is there a person approximately ${char.age} years old visible in this photo?
+If YES: Describe their face and body in 40-50 words (NO clothing). Format: "${char.name}: [age] years old, [hair], [skin tone], [eye color], [face shape], [distinctive features], [body type]"
+If NO (person not visible in photo): Reply exactly: "NOT_IN_PHOTO"
 English only.` },
               ]}],
-              max_tokens: 120,
+              max_tokens: 130,
             });
+            const response = r.choices[0].message.content || '';
+            
+            if (response.trim() === 'NOT_IN_PHOTO' || response.includes('NOT_IN_PHOTO')) {
+              // Character not in photo — generate a consistent description from story context
+              console.log(`  → ${char.name}: not in photo, generating description from story`);
+              const descR = await openai.chat.completions.create({
+                model: "gpt-4.1",
+                messages: [{
+                  role: "user",
+                  content: `Create a CONSISTENT, DETAILED visual description for a comic book character named "${char.name}", approximately ${char.age} years old.
+Story context: ${storyCtx.substring(0, 300)}
+
+Write 40-50 words about face and body ONLY — NO clothing.
+Include: age appearance, hair color/style, skin tone, eye color, face shape, distinctive features, body type.
+This description will be used on EVERY page — make it specific and memorable.
+Format: "${char.name}: [age] years old, [hair], [skin tone], [eye color], [face shape], [distinctive features], [body type]"
+English only.`
+                }],
+                max_tokens: 130,
+              });
+              return { ...char, visual_anchor: descR.choices[0].message.content || `${char.name}, ${char.age} years old`, inPhoto: false };
+            }
+            
             console.log(`  → ${char.name}: described from family photo`);
-            return { ...char, visual_anchor: r.choices[0].message.content || `${char.name}, ${char.age} years old`, inPhoto: true };
+            return { ...char, visual_anchor: response, inPhoto: true };
           } catch (e) {
             console.error(`Photo description error for ${char.name}:`, e.message);
             return { ...char, visual_anchor: `${char.name}, ${char.age} years old`, inPhoto: false };
