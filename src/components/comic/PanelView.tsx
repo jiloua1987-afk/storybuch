@@ -778,7 +778,8 @@ export default function PanelView({ imageUrl, title, panels = [], panelPositions
                               }
                             }}
                             className="w-full flex-1 bg-transparent outline-none resize-none text-[#1A1410]"
-                            style={{ fontFamily: "'Comic Neue', cursive", fontSize: "12px" }}
+                            style={{ fontFamily: "'Comic Neue', cursive", fontSize: "12px", minHeight: "60px" }}
+                            rows={Math.max(3, Math.ceil(((editedDialogs[bubbleId] ?? displayDialog)?.length || 1) / 20))}
                             onClick={(e) => e.stopPropagation()}
                             placeholder="Text eingeben…"
                           />
@@ -817,7 +818,10 @@ export default function PanelView({ imageUrl, title, panels = [], panelPositions
           {/* Extra bubbles added by user */}
           {extraBubbles.map((bubble) => {
             const isEditing = editingExtra === bubble.id;
-            const { w: initW, h: initH } = initBubbleSize(bubble.dialog, bubble.speaker);
+            // When editing, use a comfortable minimum size so text is visible
+            const baseSize = initBubbleSize(bubble.dialog, bubble.speaker);
+            const initW = isEditing ? Math.max(baseSize.w, 200) : baseSize.w;
+            const initH = isEditing ? Math.max(baseSize.h, 100) : baseSize.h;
             return (
               <div
                 key={bubble.id}
@@ -867,7 +871,8 @@ export default function PanelView({ imageUrl, title, panels = [], panelPositions
                               }
                             }}
                             className="w-full flex-1 bg-transparent outline-none resize-none text-[#1A1410]"
-                            style={{ fontFamily: "'Comic Neue', cursive", fontSize: "12px" }}
+                            style={{ fontFamily: "'Comic Neue', cursive", fontSize: "12px", minHeight: "60px" }}
+                            rows={Math.max(3, Math.ceil((bubble.dialog.length || 1) / 20))}
                             onClick={(e) => e.stopPropagation()}
                             placeholder="Text eingeben…"
                           />
