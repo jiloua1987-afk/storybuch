@@ -222,9 +222,8 @@ async function createComicPDF(project) {
             bX = aX + (pos.left  / 100) * aW;
             bY = aY + (pos.top   / 100) * aH;
             if (pos.width && pos.height) {
-              // pos.width/height are % of the preview container
-              // Preview container has same aspect ratio as image (1024/1536)
-              // So % values map directly to the actual image area
+              // pos.width/height are % of the source image (1024×1536 native resolution).
+              // Both preview and PDF use the same image aspect ratio, so % maps directly.
               bW = (pos.width  / 100) * aW;
               bH = (pos.height / 100) * aH;
               // Sanity check: bubble must be at least readable

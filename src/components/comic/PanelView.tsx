@@ -409,11 +409,12 @@ export default function PanelView({ imageUrl, title, panels = [], panelPositions
       const lines = Math.ceil(text.length / 22);
       const hPx = Math.max(48, 28 + lines * 20);
       
+      // Store as % of source image (1024×1536) — consistent with resize handler
       return {
         top: 5 + (row * 25),
         left: col === 0 ? 5 : 55,
-        w: (wPx / 400) * 100,
-        h: (hPx / 600) * 100
+        w: (wPx / 1024) * 100,
+        h: (hPx / 1536) * 100
       };
     });
   }, [dialogPanels.length, hasDetectedPositions, panelPositions]); // Removed panels.length dependency
@@ -642,14 +643,14 @@ export default function PanelView({ imageUrl, title, panels = [], panelPositions
             
             let initW, initH;
             if (savedPos && savedPos.width && savedPos.height) {
-              // Use saved size (convert from % to px)
-              // Container uses aspect ratio 1024/1536, so we need to calculate actual px based on that
-              // Assuming container width is responsive, we use a reference width
+              // Sizes are stored as % of the source image (1024×1536).
+              // Convert back to px using the current container dimensions.
+              // This is correct because the container has the same 1024:1536 aspect ratio.
               const containerWidth = containerRef.current?.offsetWidth || 400;
               const containerHeight = containerRef.current?.offsetHeight || 600;
               initW = (savedPos.width / 100) * containerWidth;
               initH = (savedPos.height / 100) * containerHeight;
-              console.log(`📐 Bubble ${bubbleId}: Loading saved size ${savedPos.width}%×${savedPos.height}% = ${initW}×${initH}px`);
+              console.log(`📐 Bubble ${bubbleId}: ${savedPos.width.toFixed(1)}%×${savedPos.height.toFixed(1)}% → ${initW.toFixed(0)}×${initH.toFixed(0)}px`);
             } else {
               // Calculate from text
               const size = initBubbleSize(displayDialog, panel.speaker || "");
