@@ -1,258 +1,156 @@
 # ComicStyle.de - Roadmap
 
-**Letzte Aktualisierung:** 10. Mai 2025
+**Letzte Aktualisierung:** 14. Mai 2026
 
 ---
 
-## 🔥 KRITISCHE PROBLEME (Sofort)
+## 🔥 KRITISCHE PROBLEME (Sofort lösen)
 
-### ✅ 1. **Clothing-Consistency** (ERLEDIGT - 10. Mai 2025)
-**Problem:** Charaktere trugen unterschiedliche Kleidung auf verschiedenen Seiten derselben Szene
-- Seite 1 Geburtstag: Mama blaues Kleid
-- Seite 2 Geburtstag: Mama grünes Shirt ❌
+### 1. **PDF Bubble-Position & Größe stimmt nicht mit Vorschau überein** ⚠️ HOCH
+**Problem:** Sprechblasen im PDF haben andere Position und Größe als in der Vorschau
+- Vorschau: Bubble korrekt platziert, richtige Größe
+- PDF: Bubble an anderer Stelle, andere Größe
 
-**Lösung:** ✅ Implementiert
-- **Deterministische Kleidungsgenerierung:** Hash-basiert (Name + Location)
-- **Konsistent pro Szene:** Dieselbe Location → dieselbe Kleidung
-- **Keine Datenbank nötig:** Rein algorithmisch
-- **Verstärkte Prompts:** "MUST wear EXACTLY the clothing specified, IDENTICAL across all panels"
+**Root Cause:** Koordinaten-Mapping zwischen Vorschau-Container (variable Breite je nach Bildschirm) und PDF-Bildbereich (fix 510×765px nach Letterboxing) funktioniert nicht 1:1.
 
-**Status:** ✅ Deployed (Commit 682b6449)
-**Test:** Mit neuem Comic testen
+**Status:** ⏳ IN ARBEIT
+**Aufwand:** Mittel (2-3h)
 
 ---
 
-### ~~2. **Character-Presence-Check**~~ ❌ NICHT WICHTIG
-**User-Feedback:** "Nr. 3. ist nicht wichtig, er wurde in der Moment beschreibung auch nicht erwähnt"
-- Papa fehlt auf manchen Seiten → OK, wenn nicht in Story erwähnt
-- **Status:** Übersprungen per User-Anweisung
+### 2. **Kleidungs-Konsistenz** ⚠️ HOCH
+**Problem:** Charaktere tragen auf verschiedenen Seiten unterschiedliche Kleidung (z.B. Mama mal blaues Minikleid, mal langes Kleid)
+
+**Root Cause:** gpt-image-2 gewichtet Referenzbild stärker als Text-Prompt. Prompt-basierte Lösungen (getOutfit, Hash-Funktionen) funktionieren nicht zuverlässig — das Modell interpretiert Kleidung frei.
+
+**Bisherige Versuche (alle gescheitert):**
+- Hash-basierte deterministische Kleidung
+- Szenen-spezifische Kleidung
+- "CRITICAL CLOTHING RULES" im Prompt
+- visual_anchor ohne Kleidung
+
+**Ehrliche Einschätzung:** Nicht lösbar mit Prompt-Engineering allein. Fundamentale Limitation von gpt-image-2.
+
+**Mögliche Lösung:** FLUX.2 Kontext (bessere Konsistenz-Kontrolle)
+
+**Status:** ❌ NICHT GELÖST — Modell-Limitation
+**Aufwand:** Nur durch Modell-Wechsel lösbar
 
 ---
 
-### ✅ 3. **Duplicate Characters in Panel** (ERLEDIGT - 10. Mai 2025)
-**Problem:** GPT bildet manchmal eine Figur ZWEIMAL im gleichen Panel ab
-- Beispiel: Aymen erscheint links UND rechts im gleichen Panel ❌
+### 3. **Gesichts-/Stil-Konsistenz** ⚠️ HOCH
+**Problem:**
+- Nicht-Foto-Charaktere (Oma, Opa) sehen auf jeder Seite anders aus
+- Stil-Drift zwischen Seiten
+- Safety-Rejections erzwingen Fallback ohne Referenz → komplett andere Charaktere
 
-**Lösung:** ✅ Implementiert
-- Strikter Prompt: "Each character appears EXACTLY ONCE per panel"
-- "NEVER show the same character on left AND right side"
-- "Each person has ONE body, ONE position per panel"
+**Teilweise gelöst:**
+- ✅ Stärkere Face-Consistency Prompts
+- ✅ Cover als Referenz für alle Seiten
+- ❌ Nicht-Foto-Charaktere bleiben inkonsistent (kein Foto = kein Anker)
+- ❌ Safety-Rejections zerstören Konsistenz komplett
 
-**Status:** ✅ Deployed (bereits in vorherigem Commit)
-**Test:** Mit neuem Comic testen
-
----
-
-### ✅ 4. **Face-Consistency nimmt ab** (VERBESSERT - 10. Mai 2025)
-**Problem:** 
-- Cover: ✅ Perfekt
-- Seite 1: ✅ Gut
-- Seite 2+: ❌ Gesichter ändern sich immer mehr
-
-**Lösung:** ✅ Implementiert
-- **3x stärkere Prompts:** "ULTRA-CRITICAL FACE CONSISTENCY RULES"
-- **Explizite Details:** "EXACT SAME: eye shape, eye color, nose shape, mouth shape..."
-- **Anti-Drift:** "DO NOT let faces drift or change between panels"
-- **Wiederholung:** "If brown eyes in panel 1, MUST be brown eyes in panels 2, 3, 4"
-
-**Status:** ✅ Deployed (Commit 682b6449)
-**Test:** Mit neuem Comic testen - Gesichter sollten konsistenter bleiben
-**Hinweis:** OpenAI's image-edit hat inherenten "drift" - 100% Konsistenz schwierig
+**Status:** ⚠️ TEILWEISE GELÖST
+**Aufwand:** Nur durch Modell-Wechsel oder Panel-by-Panel vollständig lösbar
 
 ---
 
 ## 📋 WICHTIGE FEATURES (Bald)
 
-### 5. **Speaker bearbeiten** 📝 MITTEL
+### 4. **Speaker bearbeiten** 📝 MITTEL
 **Problem:** Beim Text-Bearbeiten kann man nur Dialog ändern, nicht den Speaker
-- User will "Papa:" → "Mama:" ändern können
 
-**Lösung:**
-- Input-Feld für Speaker im Edit-Modus hinzufügen
-- Speichern in `dialogs[].speaker`
-
-**Impact:** Mittel - Nice-to-have für Flexibilität
+**Lösung:** Input-Feld für Speaker im Edit-Modus
+**Status:** ⏳ OFFEN
 **Aufwand:** Niedrig (1-2h)
 
 ---
 
-### 6. **Comic-Schriftart in PDF-Sprechblasen** 🖋️ MITTEL
-**Problem:** PDF nutzt Helvetica → wirkt wie Office-Dokument, nicht wie Comic
+### 5. **GPT generiert Text ins Bild** � MITTEL
+**Problem:** Trotz "NO text" im Prompt generiert GPT manchmal Seitenangaben oder Text ins Bild (z.B. "Seite 1: Aufregung am Flughafen")
 
-**Lösung:**
-- Custom Font (`.ttf`) ins Backend laden (`backend-railway/public/fonts/`)
-- In `pdf-generator.js` einbinden via `doc.font('./fonts/...')`
-- Optionen: **Bangers** (klassisch-comic), **Comic Neue** (lesbarer)
-- Alle kostenlos via Google Fonts
-
-**Impact:** Mittel - verbessert professionellen Eindruck stark
-**Aufwand:** Niedrig (1h)
+**Status:** ⏳ OFFEN — schwer zu verhindern, Modell-Limitation
 
 ---
 
-### 7. **Bubble-Positionierung 100% perfekt** 📍 NIEDRIG
-**Problem:** Positionen werden "etwas besser" gespeichert, aber nicht 100% perfekt
+### 6. **Dialog-Zuordnung zu Panels** � NIEDRIG
+**Problem:** Dialoge passen manchmal nicht zum Panel-Inhalt (z.B. "Das riecht lecker" auf Panel ohne Essen)
 
-**Status:** Aktuell "gut genug" - einfaches 2-Spalten-Grid funktioniert
+**Root Cause:** GPT generiert 1 Bild pro Seite und interpretiert Panel-Beschreibungen frei. Dialoge sind fest zugeordnet, aber Bild-Inhalt weicht ab.
 
-**Lösung (falls nötig):**
-- Mehr Logging in `resolvedPositions`
-- `dragPositions` auch in Store speichern?
-
-**Impact:** Niedrig - funktioniert bereits "gut genug"
-**Aufwand:** Mittel (2-3h)
+**Lösung:** Nur durch Panel-by-Panel Generierung lösbar
+**Status:** ⏳ OFFEN — Langfristig
 
 ---
 
-## ✅ ERLEDIGTE FEATURES
+## ✅ ERLEDIGT
 
-### ✅ Clothing-Consistency (10. Mai 2025)
-- Deterministische Kleidungsgenerierung pro Szene
-- Hash-basiert: Name + Location → konsistente Farben
-- Verstärkte Prompts: "IDENTICAL across all panels"
-- **Status:** Deployed ✅
+### PDF-Export
+- ✅ Cover-Titel dynamische Schriftgröße + mittig zwischen Linien
+- ✅ Seitenzahl außerhalb des Bildes (rechts unten)
+- ✅ Bangers Comic-Font für Sprechblasen
+- ✅ Extra-Bubbles (user-hinzugefügte) werden exportiert
+- ✅ Hidden Bubbles werden gefiltert
+- ✅ fit:contain — Panels werden nicht abgeschnitten
+- ✅ Cover ohne schwarzen Balken (goldene Linien)
 
-### ✅ Face-Consistency Prompts (10. Mai 2025)
-- 3x stärkere Prompts mit expliziten Details
-- Anti-Drift Anweisungen
-- Wiederholung kritischer Features
-- **Status:** Deployed ✅ (Verbesserung, nicht 100% Lösung)
+### Sprechblasen (Frontend)
+- ✅ Text-Bearbeitung per Doppelklick
+- ✅ Größe speichern/laden
+- ✅ Hidden Bubbles persistieren über Seitenwechsel
+- ✅ Position per Drag&Drop
 
-### ✅ Duplicate Characters Fix (10. Mai 2025)
-- Ultra-strikte Prompts: "EXACTLY ONCE per panel"
-- "NEVER show same character twice"
-- **Status:** Deployed ✅
-
-### ✅ Bubble-Größe speichern (10. Mai 2025)
-- Frontend: `useEffect` in `ResizableBubble` aktualisiert State
-- Backend: PDF verwendet gespeicherte Größen
-- **Status:** Funktioniert ✅
-
-### ✅ Hidden Bubbles persistieren (10. Mai 2025)
-- `hiddenBubbles` Feld in Store
-- Gelöschte Bubbles bleiben gelöscht nach Navigation
-- PDF filtert hidden bubbles
-- **Status:** Funktioniert ✅
-
-### ✅ Text-Bearbeitung (10. Mai 2025)
-- Double-Click öffnet Edit-Modus
-- Textarea verwendet `editedDialogs` State (nicht `displayDialog`)
-- Speichert in Store
-- **Status:** Funktioniert ✅
-
-### ✅ PDF-Export (10. Mai 2025)
-- Cover ohne schwarzen Balken (nur goldene Linien)
-- Bubbles skaliert (70%) für PDF
-- Hidden bubbles gefiltert
-- Gespeicherte Größen verwendet
-- **Status:** Funktioniert ✅
-
-### ✅ CORS-Fix (10. Mai 2025)
-- Alle Vercel-Domains erlaubt
-- Dynamische Origin-Funktion
-- **Status:** Funktioniert ✅
+### Backend / Bildgenerierung
+- ✅ CORS fix
+- ✅ Duplicate Characters Prompt
+- ✅ Multi-Photo Composite Metadata Bug fix
+- ✅ Multi-Photo Fallback wählt szenen-passendes Foto
+- ✅ visual_anchor ohne Kleidung (nur Gesicht/Körper)
+- ✅ getOutfit() mit pageTitle + deutschen Keywords (Flughafen, Geburtstag etc.)
+- ✅ Safety-Rewriter
+- ✅ Face-Consistency Prompts verstärkt
 
 ---
 
-## 💡 IDEEN ZUM TESTEN (Sicher, ohne Production zu riskieren)
+## 💡 EVALUIEREN (Mittelfristig)
 
-### **Test: Seiten basieren auf Original-Fotos (statt Cover)**
-**Idee:** Aktuell basieren alle Seiten auf dem Cover als Reference. Früher gab es das Problem mit photorealistischen Figuren. Das Cover ist jetzt gut (scharf, nicht photorealistisch). Frage: Wären Seiten noch besser, wenn sie direkt auf den Original-Upload-Fotos basieren?
+### **FLUX.2 Kontext statt gpt-image-2**
+**Warum:** Löst potenziell Kleidungs- UND Gesichts-Konsistenz
+- ✅ Explizit für Character Consistency gebaut
+- ✅ 5-10x günstiger ($0.03 vs $0.15-0.41 pro Bild)
+- ✅ Weniger Safety-Rejections
+- ✅ Mehrere Referenzbilder gleichzeitig
+- ⚠️ Anderer API-Ansatz (kein images.edit)
+- ⚠️ 1-2 Tage Umbau
 
-**Erwartetes Ergebnis:**
-- ✅ Möglicherweise schärfere Gesichter (direkt vom Foto)
-- ⚠️ Risiko: Photorealismus kommt zurück (das alte Problem von vor 2 Wochen)
-- ⚠️ Risiko: Stil-Inkonsistenz zwischen Seiten
-
-**Sicherer Test-Ansatz (Railway Preview Deployment):**
-```bash
-# 1. Neuen Branch erstellen
-git checkout -b test-original-photos-for-pages
-
-# 2. In comic.js: Seiten-Strategie ändern
-#    reference = primaryRefUrl (Original-Foto) statt coverImageUrl (Cover)
-
-# 3. Pushen → Railway deployed automatisch auf separater Test-URL
-git push origin test-original-photos-for-pages
-# → https://storybuch-test-original-photos.up.railway.app
-
-# 4. Testen → wenn gut: merge, wenn schlecht: Branch löschen
-```
-
-**Alternativen:**
-- Feature-Flag: `USE_ORIGINAL_PHOTOS_FOR_PAGES=true` in Railway Env Variables
-- Lokaler Test-Server mit `npm start` im backend-railway Ordner
-
-**Status:** 💤 Idee gespeichert — noch nicht umgesetzt (zu riskant ohne sicheres Testing-Setup)
+**Ansatz:** Branch erstellen, Seiten-Generierung mit FLUX testen, Cover bei OpenAI lassen
+**Status:** 💤 Evaluieren wenn stabil
 
 ---
 
-## 🎯 LANGFRISTIGE VISION
-
-### Panel-by-Panel Generation
-**Idee:** Jedes Panel einzeln generieren statt ganze Seiten
-- **Pro:** Höhere Konsistenz, bessere Kontrolle
-- **Contra:** Langsamer, teurer
-- **Status:** Evaluieren
-
-### Face-Locking mit AI
-**Idee:** OpenAI's neue Consistency-Features nutzen
-- **Status:** Warten auf OpenAI-Updates
-
-### Clothing-Override per Panel
-**Idee:** User kann Kleidung pro Szene überschreiben
-- Beispiel: "Rania trägt Partykleid auf Geburtstag"
-- **Status:** Nice-to-have
+### **Panel-by-Panel Generierung**
+**Warum:** Löst Dialog-Zuordnung + bessere Kontrolle
+- Pro: Jedes Panel exakt wie beschrieben
+- Contra: 4x API-Calls, 4x Kosten, langsamer
+**Status:** 💤 Langfristig
 
 ---
 
-## 📊 Prioritäten-Matrix
-
-| Feature | Impact | Aufwand | Priorität | Status |
-|---------|--------|---------|-----------|--------|
-| Duplicate Characters Fix | Kritisch | Niedrig | 🔥 **SOFORT** | ✅ **ERLEDIGT** |
-| Clothing-Consistency | Hoch | Mittel | 🔥 **SOFORT** | ✅ **ERLEDIGT** |
-| Face-Consistency | Hoch | Hoch | ⚠️ **BALD** | ✅ **VERBESSERT** |
-| Speaker bearbeiten | Mittel | Niedrig | 📋 **BALD** | ⏳ **OFFEN** |
-| ~~Character-Presence~~ | ~~Hoch~~ | ~~Mittel~~ | ~~SOFORT~~ | ❌ **ÜBERSPRUNGEN** |
-| Bubble-Position 100% | Niedrig | Mittel | 💤 **SPÄTER** | ⏳ **OFFEN** |
-
----
-
-## 🚀 Nächste Schritte
-
-1. ✅ ~~**Duplicate Characters Fix**~~ (ERLEDIGT)
-   
-2. ✅ ~~**Clothing-Consistency**~~ (ERLEDIGT)
-
-3. ✅ ~~**Face-Consistency**~~ (VERBESSERT)
-
-4. **Speaker bearbeiten** (1-2h) - NÄCHSTES
-   - Input-Feld für Speaker im Edit-Modus
-   - Speichern in `dialogs[].speaker`
-   - Nur falls einfach möglich
-
-5. **Testing mit neuem Comic**
-   - Kleidung konsistent innerhalb Szene?
-   - Gesichter bleiben konsistent?
-   - Keine Duplikate mehr?
-
----
-
-**Geschätzte Zeit für kritische Fixes:** ~~6-8 Stunden~~ → ✅ **ERLEDIGT**  
-**Geschätzte Zeit für alle Features:** ~~12-15 Stunden~~ → **2-3 Stunden verbleibend**
+### **Testing-Environment**
+**Warum:** Änderungen sicher testen ohne Production zu riskieren
+- Railway Preview Deployments (Branch-basiert)
+- Oder Feature-Flags
+**Status:** 💤 Aufsetzen wenn nächster großer Umbau ansteht
 
 ---
 
 ## 🧹 TODO: Dokumentation aufräumen
-Zu viele separate Dateien entstanden. Zusammenführen in ROADMAP.md:
-- `PRODUCTION-ROADMAP-MAY-9.md`
-- `LAUNCH-ROADMAP-MAY-9.md`
-- `QUALITY-IMPROVEMENT-STATUS.md` (falls vorhanden)
-- Alle `*-FIX.md` und `*-COMPLETE.md` Dateien archivieren oder löschen
+Zu viele separate .md Dateien. Zusammenführen/archivieren:
+- PRODUCTION-ROADMAP-MAY-9.md
+- LAUNCH-ROADMAP-MAY-9.md
+- Alle *-FIX.md und *-COMPLETE.md Dateien
 
 ---
 
 **Erstellt:** 10. Mai 2025  
-**Letztes Update:** 10. Mai 2025, 14:40 Uhr  
-**Nächstes Review:** Nach Test mit neuem Comic
+**Letztes Update:** 14. Mai 2026
