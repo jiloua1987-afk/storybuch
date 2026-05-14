@@ -206,10 +206,13 @@ async function createComicPDF(project) {
         const fullText = speakerText + bubble.dialog;
 
         // Position bestimmen
-        let bX = aX + 20;
-        let bY = aY + 20 + idx * 80;
-        let bW = 100;
-        let bH = 40;
+        // Fallback: same grid as preview (alternating left/right columns, rows spread vertically)
+        const fallbackRow = Math.floor(idx / 2);
+        const fallbackCol = idx % 2;
+        let bX = aX + (fallbackCol === 0 ? 0.05 : 0.55) * aW;
+        let bY = aY + (0.05 + fallbackRow * 0.25) * aH;
+        let bW = aW * 0.20;  // 20% of image width — matches preview default
+        let bH = aH * 0.07;  // 7% of image height
 
         if (bubble.isExtra) {
           bX = aX + (bubble.extraLeft / 100) * aW;
