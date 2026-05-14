@@ -40,7 +40,7 @@ function sanitizePrompt(text) {
     
     // Feiern/Party
     'feiern': 'celebrating',
-    'party': 'celebration gathering',
+    // 'party' intentionally NOT replaced — too broad, blocks normal celebration scenes
     'tanzen': 'dancing together',
     'dancing': 'celebrating together',
     'club': 'festive venue',
@@ -307,9 +307,23 @@ Respond ONLY with JSON: {"characters":[{"name":"Name","age":30}]}`
       // Describe all characters from the family photo
       if (characters.length > 0) {
         console.log(`Describing ${characters.length} characters from family photo`);
-        const refImageContent = primaryRefUrl
-          ? { type: "image_url", image_url: { url: primaryRefUrl, detail: "high" } }
-          : { type: "image_url", image_url: { url: `data:image/jpeg;base64,${primaryRefBase64}`, detail: "high" } };
+        
+        // FIX: Always use base64 to avoid OpenAI timeout when fetching Supabase URLs
+        let refImageContent;
+        if (primaryRefUrl) {
+          try {
+            console.log(`  → Pre-fetching family photo to avoid OpenAI timeout: ${primaryRefUrl}`);
+            const photoBuffer = await fetchBuffer(primaryRefUrl);
+            const photoBase64 = photoBuffer.toString("base64");
+            refImageContent = { type: "image_url", image_url: { url: `data:image/jpeg;base64,${photoBase64}`, detail: "high" } };
+            console.log(`  → Photo pre-fetched successfully (${(photoBuffer.length / 1024).toFixed(0)} KB)`);
+          } catch (fetchErr) {
+            console.error(`  → Pre-fetch failed: ${fetchErr.message}, falling back to URL`);
+            refImageContent = { type: "image_url", image_url: { url: primaryRefUrl, detail: "high" } };
+          }
+        } else {
+          refImageContent = { type: "image_url", image_url: { url: `data:image/jpeg;base64,${primaryRefBase64}`, detail: "high" } };
+        }
         
         characters = await Promise.all(characters.map(async (char) => {
           try {
@@ -347,10 +361,21 @@ English only.` },
         if (matchedPhoto) {
           console.log(`  → Describing ${char.name} from their photo`);
           try {
+            // FIX: Pre-fetch photo to avoid OpenAI timeout when fetching Supabase URLs
+            let photoImageContent;
+            try {
+              console.log(`    → Pre-fetching photo for ${char.name} to avoid OpenAI timeout`);
+              const photoBuffer = await fetchBuffer(matchedPhoto.url);
+              const photoBase64 = photoBuffer.toString("base64");
+              photoImageContent = { type: "image_url", image_url: { url: `data:image/jpeg;base64,${photoBase64}`, detail: "high" } };
+            } catch (fetchErr) {
+              console.error(`    → Pre-fetch failed for ${char.name}: ${fetchErr.message}, falling back to URL`);
+              photoImageContent = { type: "image_url", image_url: { url: matchedPhoto.url, detail: "high" } };
+            }
             const r = await openai.chat.completions.create({
               model: "gpt-4.1",
               messages: [{ role: "user", content: [
-                { type: "image_url", image_url: { url: matchedPhoto.url, detail: "high" } },
+                photoImageContent,
                 { type: "text", text: `Describe ONLY the FACE AND BODY of this person — NO clothing, NO accessories.
 Write 40-50 words: age appearance, hair color/style, skin tone, eye color, face shape, distinctive facial features, body type/build.
 DO NOT mention: clothing, shirts, jackets, scarves, jewelry, accessories.
@@ -1919,9 +1944,37 @@ NO text, NO speech bubbles anywhere in image.`;
           }
         } catch (e2) {
           console.error(`  → Retry 2 failed:`, e2.message);
-          console.error(`  ❌ FATAL: Cannot generate page with cover reference`);
-          console.error(`  → Rejecting page generation - style consistency is CRITICAL`);
-          throw new Error(`Cannot generate page "${page.title}" with cover reference. Style consistency cannot be maintained. Please try regenerating this page with different scene descriptions.`);
+          console.warn(`  ⚠️ WARNING: All retries with cover reference failed — falling back to generate-only`);
+          console.warn(`  → Style consistency may be reduced for this page, but page will be generated`);
+          
+          // GRACEFUL DEGRADATION: Generate without reference rather than failing completely
+          // This is better than returning an error to the user
+          try {
+            const gracefulPrompt = `${COMIC_STYLE} ${mood}
+
+Comic page: "${page.title}" (family-friendly version)
+${panelCount} panels in ${layoutDesc}. Bold black borders between panels.
+
+CHARACTERS (draw EXACTLY as described):
+${charAnchors}
+
+${ageContext.modifier ? `AGE MODIFIER: ${ageContext.modifier}\n` : ""}
+CLOTHING — characters wear ${outfit}
+
+SCENE:
+${page.panels.map(p => `Panel ${p.nummer}: Characters spending quality time together in a warm, joyful moment`).join("\n")}
+
+Show characters in warm, joyful family moments. Focus on connection and happiness.
+NO text, NO speech bubbles anywhere in image.`;
+
+            const gracefulResult = await generateImage(gracefulPrompt, null);
+            console.log(`  ✓ Graceful fallback succeeded (no reference, style may differ)`);
+            rawUrl = gracefulResult.url;
+            usedReference = false;
+          } catch (gracefulErr) {
+            console.error(`  ❌ Graceful fallback also failed:`, gracefulErr.message);
+            throw new Error(`Cannot generate page "${page.title}". All generation attempts failed. Please try regenerating with different scene descriptions.`);
+          }
         }
       }
     }

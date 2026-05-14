@@ -79,10 +79,10 @@ function containsRiskyKeywords(text) {
     'danger', 'dangerous', 'threat', 'threatening', 'scary', 'terrifying',
     // Emotional intensity
     'screaming', 'scream', 'yelling', 'yell', 'shouting', 'shout', 'crying', 'cry',
-    // Chaos
-    'wild', 'crazy', 'chaotic', 'mob', 'crowd',
+    // Chaos (removed 'crowd' and 'wild' — too broad, triggers on normal scenes)
+    'chaotic', 'mob',
     // Party (can be risky with alcohol context)
-    'party', 'nightclub', 'club',
+    'nightclub', 'club',
     // Other
     'sexy', 'naked', 'undressed',
     'police', 'arrest', 'crime',
