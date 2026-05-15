@@ -109,7 +109,19 @@ function getAgeContext(pageTitle = "", panelDescriptions = "") {
 async function fetchBuffer(url) {
   const res = await fetch(url, { signal: AbortSignal.timeout(25000) });
   if (!res.ok) throw new Error(`Fetch failed: ${res.status}`);
-  return Buffer.from(await res.arrayBuffer());
+  const buf = Buffer.from(await res.arrayBuffer());
+  // Compress large images before sending to FLUX (DeepInfra has ~10MB limit but
+  // large buffers cause connection errors — keep under 1MB)
+  if (buf.length > 800 * 1024) {
+    const sharp = require('sharp');
+    const compressed = await sharp(buf)
+      .resize({ width: 1024, withoutEnlargement: true })
+      .jpeg({ quality: 80 })
+      .toBuffer();
+    console.log(`  → Compressed reference: ${(buf.length/1024).toFixed(0)}KB → ${(compressed.length/1024).toFixed(0)}KB`);
+    return compressed;
+  }
+  return buf;
 }
 
 // ── FLUX image generation ─────────────────────────────────────────────────────
