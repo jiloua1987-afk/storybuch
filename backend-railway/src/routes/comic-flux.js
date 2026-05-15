@@ -495,24 +495,24 @@ router.post("/page", async (req, res) => {
     // ── Build prompt — FLUX has a ~2048 char prompt limit ────────────────────
     // Keep it concise: style + characters + scene. No duplicate COMIC_STYLE.
     const styleNote = reference
-      ? `European Bande Dessinée comic style. Bold ink outlines, flat cel-shaded colors. Study the reference image and draw the EXACT SAME faces. IGNORE clothing from reference.`
-      : `European Bande Dessinée comic style. Bold ink outlines, flat cel-shaded colors. NOT manga, NOT photorealistic.`;
+      ? `Redraw the people from this photo as hand-drawn comic book characters in Franco-Belgian Bande Dessinée style. Bold ink outlines, flat cel-shaded colors, warm vivid tones. Keep faces accurate to the photo. NOT photorealistic, NOT manga.`
+      : `Hand-drawn comic book illustration in Franco-Belgian Bande Dessinée style. Bold ink outlines, flat cel-shaded colors, warm vivid tones. NOT photorealistic, NOT manga.`;
 
     const prompt = sanitizePrompt(`${styleNote}
 
-Comic page — ${panelCount} panels in ${layoutDesc}. Bold black borders between panels.
+Comic page — ${panelCount} panels arranged in ${layoutDesc}. Bold black borders between every panel.
 
-CHARACTERS (identical faces across all panels):
+Characters (draw with identical faces in every panel):
 ${charAnchors}
-${ageContext.modifier ? `\nAGE: ${ageContext.modifier}` : ""}
+${ageContext.modifier ? `\nAge note: ${ageContext.modifier}` : ""}
 
-CLOTHING: ${outfit}
+Clothing: ${outfit}
 
-PANELS:
+Panels:
 ${panelDescriptions}
-${reillustrationNote ? `\nUSER NOTE: ${reillustrationNote}` : ""}
+${reillustrationNote ? `\nAdjust based on this feedback: ${reillustrationNote}` : ""}
 
-NO text, NO speech bubbles, NO letters in image.`);
+No text, no speech bubbles, no letters anywhere in the image.`);
 
     console.log(`[FLUX] Generating page "${page.title}" (${panelCount} panels, ref: ${refSource})`);
 
