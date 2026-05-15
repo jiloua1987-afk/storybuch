@@ -9,8 +9,10 @@ import {
 } from "@/lib/dryRunData";
 
 // Dry-run mode: set NEXT_PUBLIC_DRY_RUN=true to test without API costs
-const DRY_RUN = process.env.NEXT_PUBLIC_DRY_RUN === "true";
+const DRY_RUN    = process.env.NEXT_PUBLIC_DRY_RUN === "true";
 const RAILWAY_URL = process.env.NEXT_PUBLIC_RAILWAY_URL || "";
+// FLUX test mode: set NEXT_PUBLIC_USE_FLUX=true to use /api/comic-flux instead of /api/comic
+const USE_FLUX   = process.env.NEXT_PUBLIC_USE_FLUX === "true";
 
 export default function Step4Generate() {
   const { setStep, project, updateProject } = useBookStore();
