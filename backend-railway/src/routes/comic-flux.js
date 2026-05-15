@@ -465,69 +465,91 @@ router.post("/page", async (req, res) => {
     if (reillustrationNote) console.log(`[FLUX]   → Re-illustration: "${reillustrationNote}"`);
 
     // ── Reference strategy for FLUX ───────────────────────────────────────────
-    // FLUX works best with the original user photo as reference.
-    // Generated cover images are too large and cause connection errors.
-    // Priority: user photo (small, original) > no reference
+    // Use cover as reference (compressed small) for character consistency.
+    // If no cover, fall back to user photo.
+    // Keep reference small to avoid DeepInfra connection errors.
     let reference = null;
     let refSource  = "none";
 
-    // Always prefer the original user photo — it's smaller and FLUX handles it better
-    if (primaryRefUrl) {
+    const sharp = require('sharp');
+
+    if (coverImageUrl) {
       try {
-        reference = await fetchBuffer(primaryRefUrl);
-        refSource = "user-photo";
-        console.log(`[FLUX]   → Using user photo as reference (${(reference.length/1024).toFixed(0)}KB)`);
+        const buf = await fetchBuffer(coverImageUrl);
+        // Compress aggressively — FLUX only needs face features, not full resolution
+        reference = await sharp(buf)
+          .resize({ width: 256, withoutEnlargement: true })
+          .jpeg({ quality: 60 })
+          .toBuffer();
+        refSource = "cover-compressed";
+        console.log(`[FLUX]   → Cover compressed to ${(reference.length/1024).toFixed(0)}KB for reference`);
+      } catch (e) {
+        console.warn(`[FLUX]   → Cover fetch failed: ${e.message}, trying user photo`);
+      }
+    }
+
+    if (!reference && primaryRefUrl) {
+      try {
+        const buf = await fetchBuffer(primaryRefUrl);
+        reference = await sharp(buf)
+          .resize({ width: 256, withoutEnlargement: true })
+          .jpeg({ quality: 60 })
+          .toBuffer();
+        refSource = "user-photo-compressed";
+        console.log(`[FLUX]   → User photo compressed to ${(reference.length/1024).toFixed(0)}KB for reference`);
       } catch (e) {
         console.warn(`[FLUX]   → User photo fetch failed: ${e.message}`);
       }
-    } else if (primaryRefBase64) {
-      reference = Buffer.from(primaryRefBase64.replace(/^data:image\/\w+;base64,/, ""), "base64");
-      refSource = "user-photo";
-      console.log(`[FLUX]   → Using user photo (base64) as reference`);
+    } else if (!reference && primaryRefBase64) {
+      const buf = Buffer.from(primaryRefBase64.replace(/^data:image\/\w+;base64,/, ""), "base64");
+      reference = await sharp(buf)
+        .resize({ width: 256, withoutEnlargement: true })
+        .jpeg({ quality: 60 })
+        .toBuffer();
+      refSource = "user-photo-compressed";
     }
 
-    // Fallback: no reference (FLUX generates from text only)
     if (!reference) {
       refSource = "generate-only";
       console.log(`[FLUX]   → No reference available, generating from text only`);
     }
 
     // ── Build prompt — FLUX has a ~2048 char prompt limit ────────────────────
-    // Keep it concise: style + characters + scene. No duplicate COMIC_STYLE.
     const styleNote = reference
-      ? `Redraw the people from this photo as hand-drawn comic book characters in Franco-Belgian Bande Dessinée style. Bold ink outlines, flat cel-shaded colors, warm vivid tones. Keep faces accurate to the photo. NOT photorealistic, NOT manga.`
-      : `Hand-drawn comic book illustration in Franco-Belgian Bande Dessinée style. Bold ink outlines, flat cel-shaded colors, warm vivid tones. NOT photorealistic, NOT manga.`;
+      ? `Use the reference image ONLY to identify the characters' faces. Do NOT copy the composition or layout of the reference.`
+      : ``;
 
-    const prompt = sanitizePrompt(`${styleNote}
+    const prompt = sanitizePrompt(`Create a Franco-Belgian Bande Dessinée comic page in the style of Blacksad or Largo Winch. ${styleNote}
 
-Comic page — ${panelCount} panels arranged in ${layoutDesc}. Bold black borders between every panel.
+LAYOUT: Divide the image into exactly ${panelCount} comic panels arranged as ${layoutDesc}. Each panel must have a thick black border (4-6px). Panels show different moments — NOT the same scene repeated.
 
-Characters (draw with identical faces in every panel):
+STYLE: Hand-drawn ink outlines on every figure. Flat cel-shaded colors with warm golden tones and vivid hues. Expressive stylized faces. NOT photorealistic. NOT manga. NOT a single portrait photo.
+
+CHARACTERS in every panel (keep faces consistent):
 ${charAnchors}
-${ageContext.modifier ? `\nAge note: ${ageContext.modifier}` : ""}
 
-Clothing: ${outfit}
+CLOTHING: ${outfit}
 
-Panels:
+PANEL CONTENT (each panel shows a different moment):
 ${panelDescriptions}
-${reillustrationNote ? `\nAdjust based on this feedback: ${reillustrationNote}` : ""}
+${ageContext.modifier ? `\nAge: ${ageContext.modifier}` : ""}
+${reillustrationNote ? `\nAdjust: ${reillustrationNote}` : ""}
 
-No text, no speech bubbles, no letters anywhere in the image.`);
+CRITICAL: This must look like a printed comic book page with multiple panels — NOT a single illustration or portrait. No text, no speech bubbles, no letters anywhere.`);
 
     console.log(`[FLUX] Generating page "${page.title}" (${panelCount} panels, ref: ${refSource})`);
 
     const hasPhotos = (photoMode === "family" || photoMode === "individual") && (primaryRefUrl || primaryRefBase64 || coverImageUrl);
 
     let { url: rawUrl, usedReference } = await generateImageFlux(prompt, reference).catch(async (err) => {
-      console.warn(`[FLUX] First attempt failed: ${err.message}, retrying with safe prompt`);
-      const safePrompt = `European Bande Dessinée comic style. Bold ink outlines, flat cel-shaded colors.
-
-Comic page: "${page.title}" — ${panelCount} panels in ${layoutDesc}.
-CHARACTERS: ${charAnchors}
-CLOTHING: ${outfit}
-SCENE: ${page.panels.map(p => `Panel ${p.nummer}: Warm family moment together`).join("\n")}
-NO text, NO speech bubbles.`;
-      return await generateImageFlux(safePrompt, reference);
+      console.warn(`[FLUX] First attempt failed: ${err.message}, retrying without reference`);
+      // Retry without reference to avoid any size/format issues
+      const safePrompt = `Franco-Belgian Bande Dessinée comic page. ${panelCount} panels in ${layoutDesc}. Thick black borders between panels. Hand-drawn ink style, flat cel-shaded colors.
+Characters: ${charAnchors}
+Clothing: ${outfit}
+Panels: ${page.panels.map(p => `Panel ${p.nummer}: ${p.szene || "scene"}`).join(" | ")}
+No text, no speech bubbles.`;
+      return await generateImageFlux(safePrompt, null);
     });
 
     // If reference wasn't used but we have photos — retry with safer prompt
