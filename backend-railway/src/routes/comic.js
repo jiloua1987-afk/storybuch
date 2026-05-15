@@ -1949,8 +1949,12 @@ NO text, NO speech bubbles anywhere in image.`;
           
           // GRACEFUL DEGRADATION: Generate without reference rather than failing completely
           // This is better than returning an error to the user
+          // BD_STYLE_ANCHOR_STRONG ensures Bande-Dessinée style even without reference image
           try {
-            const gracefulPrompt = `${COMIC_STYLE} ${mood}
+            const { BD_STYLE_ANCHOR_STRONG } = require('../lib/safety-rewriter');
+            const gracefulPrompt = `${BD_STYLE_ANCHOR_STRONG}
+
+${COMIC_STYLE} ${mood}
 
 Comic page: "${page.title}" (family-friendly version)
 ${panelCount} panels in ${layoutDesc}. Bold black borders between panels.
