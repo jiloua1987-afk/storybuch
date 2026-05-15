@@ -433,7 +433,11 @@ router.post("/page", async (req, res) => {
     }
 
     const mood       = MOOD_MOD[comicStyle] || MOOD_MOD.emotional;
-    const panelCount = page.panels.length;
+    const panelCount = (page.panels || []).length;
+    if (panelCount === 0) {
+      console.warn(`[FLUX] Page "${page.title}" has no panels — skipping`);
+      return res.status(400).json({ error: `Page "${page.title}" has no panels` });
+    }
     const layoutDesc = panelCount <= 2 ? "2 equal panels" : panelCount === 3 ? "1 large panel top, 2 smaller panels bottom" : "2×2 grid";
 
     // Safety rewrite
@@ -487,34 +491,27 @@ router.post("/page", async (req, res) => {
       else if (primaryRefBase64) { reference = Buffer.from(primaryRefBase64.replace(/^data:image\/\w+;base64,/, ""), "base64"); refSource = "user-photo"; }
     }
 
-    // ── Build prompt ──────────────────────────────────────────────────────────
-    const refNote = reference
-      ? `${COMIC_STYLE}\n\nCRITICAL: Study the reference image carefully. Draw the EXACT SAME faces as shown. Keep facial features, hair, skin tone identical across all panels. IGNORE clothing from reference — use the clothing specified below.\n\n`
-      : `${COMIC_STYLE}\n\nDraw in Franco-Belgian Bande Dessinée style. Bold ink outlines, flat cel-shaded colors.\n\n`;
+    // ── Build prompt — FLUX has a ~2048 char prompt limit ────────────────────
+    // Keep it concise: style + characters + scene. No duplicate COMIC_STYLE.
+    const styleNote = reference
+      ? `European Bande Dessinée comic style. Bold ink outlines, flat cel-shaded colors. Study the reference image and draw the EXACT SAME faces. IGNORE clothing from reference.`
+      : `European Bande Dessinée comic style. Bold ink outlines, flat cel-shaded colors. NOT manga, NOT photorealistic.`;
 
-    const prompt = sanitizePrompt(`${refNote}${COMIC_STYLE} ${mood}
+    const prompt = sanitizePrompt(`${styleNote}
 
-CLOTHING FOR THIS SCENE:
-${charClothing}
+Comic page — ${panelCount} panels in ${layoutDesc}. Bold black borders between panels.
 
-Comic page — ${panelCount} panels in ${layoutDesc}.
-CRITICAL: Bold black borders between all panels. Characters stay inside panel borders.
-
-CHARACTERS (draw with IDENTICAL faces across all ${panelCount} panels):
+CHARACTERS (identical faces across all panels):
 ${charAnchors}
+${ageContext.modifier ? `\nAGE: ${ageContext.modifier}` : ""}
 
-${ageContext.modifier ? `AGE: ${ageContext.modifier}\n` : ""}
+CLOTHING: ${outfit}
 
 PANELS:
 ${panelDescriptions}
+${reillustrationNote ? `\nUSER NOTE: ${reillustrationNote}` : ""}
 
-${reillustrationNote ? `USER FEEDBACK: ${reillustrationNote}\n` : ""}
-
-RULES:
-- Each panel shows a COMPLETELY DIFFERENT moment
-- Show CORRECT emotions per scene
-- Characters are IN THE SCENE, not posing for camera
-- NO text, NO speech bubbles, NO letters anywhere in image`);
+NO text, NO speech bubbles, NO letters in image.`);
 
     console.log(`[FLUX] Generating page "${page.title}" (${panelCount} panels, ref: ${refSource})`);
 
@@ -522,13 +519,13 @@ RULES:
 
     let { url: rawUrl, usedReference } = await generateImageFlux(prompt, reference).catch(async (err) => {
       console.warn(`[FLUX] First attempt failed: ${err.message}, retrying with safe prompt`);
-      const safePrompt = `${refNote}${COMIC_STYLE} ${mood}
+      const safePrompt = `European Bande Dessinée comic style. Bold ink outlines, flat cel-shaded colors.
 
 Comic page: "${page.title}" — ${panelCount} panels in ${layoutDesc}.
 CHARACTERS: ${charAnchors}
 CLOTHING: ${outfit}
-SCENE: ${page.panels.map(p => `Panel ${p.nummer}: Characters spending quality time together in a warm, joyful moment`).join("\n")}
-NO text, NO speech bubbles anywhere.`;
+SCENE: ${page.panels.map(p => `Panel ${p.nummer}: Warm family moment together`).join("\n")}
+NO text, NO speech bubbles.`;
       return await generateImageFlux(safePrompt, reference);
     });
 
