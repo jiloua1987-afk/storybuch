@@ -434,17 +434,14 @@ router.post("/page", async (req, res) => {
 
     const mood       = MOOD_MOD[comicStyle] || MOOD_MOD.emotional;
     const panelCount = (page.panels || []).length;
-    if (panelCount === 0) {
-      console.warn(`[FLUX] Page "${page.title}" has no panels — skipping`);
-      return res.status(400).json({ error: `Page "${page.title}" has no panels` });
-    }
     const layoutDesc = panelCount <= 2 ? "2 equal panels" : panelCount === 3 ? "1 large panel top, 2 smaller panels bottom" : "2×2 grid";
 
     // Safety rewrite
     const { rewriteIfRisky } = require('../lib/safety-rewriter');
-    const panelDescriptions = await rewriteIfRisky(
-      page.panels.map(p => `Panel ${p.nummer}: ${p.szene}`).join("\n")
-    );
+    const rawPanelDesc = (page.panels || []).length > 0
+      ? (page.panels || []).map(p => `Panel ${p.nummer}: ${p.szene || ""}`).join("\n")
+      : `A comic scene: ${page.title}`;
+    const panelDescriptions = await rewriteIfRisky(rawPanelDesc);
 
     const outfit      = getOutfit(page.location, panelDescriptions, page.title);
     const ageContext  = getAgeContext(page.title, panelDescriptions);
