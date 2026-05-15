@@ -148,6 +148,11 @@ export default function Step5Preview() {
   const [coverRegenNote, setCoverRegenNote] = useState("");
 
   const RAILWAY_URL = process.env.NEXT_PUBLIC_RAILWAY_URL || "";
+  const USE_FLUX    = process.env.NEXT_PUBLIC_USE_FLUX === "true";
+  const apiBase     = (path: string) => {
+    const route = USE_FLUX ? path.replace("/api/comic", "/api/comic-flux") : path;
+    return RAILWAY_URL ? `${RAILWAY_URL}${route}` : route;
+  };
 
   // Debug-Modus aktivieren mit ?debug=true in URL
   useEffect(() => {
@@ -224,7 +229,7 @@ export default function Step5Preview() {
   };
 
   async function regenPage(pageId: string, pageData: any, reillustrationNote?: string) {
-    const fullUrl = RAILWAY_URL ? `${RAILWAY_URL}/api/comic/page` : "/api/comic/page";
+    const fullUrl = apiBase("/api/comic/page");
     const res = await fetch(fullUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -300,7 +305,7 @@ export default function Step5Preview() {
     if (!project) return;
     setRegeneratingCover(true);
     try {
-      const fullUrl = RAILWAY_URL ? `${RAILWAY_URL}/api/comic/cover` : "/api/comic/cover";
+      const fullUrl = apiBase("/api/comic/cover");
       const res = await fetch(fullUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -430,7 +435,7 @@ export default function Step5Preview() {
   const handleExportPDF = async () => {
     setExportingPDF(true);
     try {
-      const fullUrl = RAILWAY_URL ? `${RAILWAY_URL}/api/comic/export-pdf` : "/api/comic/export-pdf";
+      const fullUrl = apiBase("/api/comic/export-pdf");
       
       // Filter out deleted pages before export
       const projectForExport = {

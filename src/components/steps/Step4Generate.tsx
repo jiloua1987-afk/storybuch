@@ -32,10 +32,12 @@ export default function Step4Generate() {
   }
 
   async function post(url: string, body: object): Promise<any> {
+    // Swap route prefix if FLUX mode is active
+    const routeUrl = USE_FLUX ? url.replace("/api/comic", "/api/comic-flux") : url;
     // Use Railway for image generation, Vercel for structure
-    const fullUrl = url.startsWith("/api/comic") && RAILWAY_URL
-      ? `${RAILWAY_URL}${url}`
-      : url;
+    const fullUrl = routeUrl.startsWith("/api/comic") && RAILWAY_URL
+      ? `${RAILWAY_URL}${routeUrl}`
+      : routeUrl;
     const res = await fetch(fullUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },

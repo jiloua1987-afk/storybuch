@@ -639,4 +639,50 @@ router.post("/export-pdf", async (req, res) => {
   }
 });
 
+// ─────────────────────────────────────────────────────────────────────────────
+// GET /api/comic-flux/health
+// Checks: DEEPINFRA_API_KEY set, DeepInfra reachable, correct model available
+// ─────────────────────────────────────────────────────────────────────────────
+router.get("/health", async (req, res) => {
+  const result = {
+    status: "ok",
+    model: FLUX_MODEL,
+    deepinfra_key: process.env.DEEPINFRA_API_KEY ? "✓ set" : "❌ MISSING",
+    openai_key:    process.env.OPENAI_API_KEY    ? "✓ set" : "❌ MISSING",
+    deepinfra_reachable: false,
+    error: null,
+  };
+
+  // Test DeepInfra with a minimal 1×1 white PNG — costs ~$0.000001
+  try {
+    const whitePng = Buffer.from(
+      "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwADhQGAWjR9awAAAABJRU5ErkJggg==",
+      "base64"
+    );
+    const blob = new Blob([whitePng], { type: "image/png" });
+    const file = new File([blob], "test.png", { type: "image/png" });
+
+    const testRes = await deepinfra.images.edit({
+      model:  FLUX_MODEL,
+      image:  file,
+      prompt: "A simple white square. Comic style.",
+      n:      1,
+      size:   "256x256",  // smallest size = cheapest
+    });
+
+    const item = (testRes.data || [])[0];
+    const hasImage = !!(item?.url || item?.b64_json);
+    result.deepinfra_reachable = hasImage;
+    result.test_image_returned = hasImage;
+  } catch (e) {
+    result.deepinfra_reachable = false;
+    result.error = e.message;
+    result.status = "error";
+  }
+
+  const httpStatus = result.status === "ok" ? 200 : 500;
+  console.log(`[FLUX] Health check: ${JSON.stringify(result)}`);
+  res.status(httpStatus).json(result);
+});
+
 module.exports = router;
