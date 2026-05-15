@@ -655,6 +655,19 @@ router.get("/health", async (req, res) => {
 
   // Only do live test if ?test=true is passed (avoids timeout on simple health checks)
   if (req.query.test === "true") {
+    // First: basic TCP/HTTP connectivity to DeepInfra
+    try {
+      const pingRes = await fetch("https://api.deepinfra.com/v1/openai/models", {
+        method: "GET",
+        headers: { "Authorization": `Bearer ${process.env.DEEPINFRA_API_KEY}` },
+        signal: AbortSignal.timeout(10000),
+      });
+      result.deepinfra_ping = `HTTP ${pingRes.status}`;
+    } catch (pingErr) {
+      result.deepinfra_ping = `FAILED: ${pingErr.message}`;
+    }
+
+    // Second: actual image generation
     try {
       const whitePng = Buffer.from(
         "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwADhQGAWjR9awAAAABJRU5ErkJggg==",
