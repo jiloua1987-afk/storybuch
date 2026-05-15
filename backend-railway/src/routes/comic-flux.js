@@ -371,16 +371,15 @@ router.post("/cover", async (req, res) => {
     if (coverRegenNote?.trim()) coverLocation = sanitizePrompt(coverRegenNote);
     console.log(`[FLUX] Cover location: "${coverLocation}"`);
 
-    const prompt = sanitizePrompt(`${COMIC_STYLE}
+    const prompt = sanitizePrompt(`Redraw the people from this photo as hand-drawn comic book characters in Franco-Belgian Bande Dessinée style, similar to Blacksad or Largo Winch.
 
-Comic book COVER illustration. ALL of these characters MUST be visible: ${charNames}.
-Show them together in ${coverLocation}.
+Style: bold ink outlines on every figure, flat cel-shaded colors with warm golden and vivid tones, expressive faces with clearly defined features, cinematic composition. NOT photorealistic. NOT manga.
 
-Characters (draw faces accurately from reference, IGNORE clothing from photo):
-${charDesc}
+Keep faces accurate to the photo. Draw all characters: ${charNames}.
+Setting: ${coverLocation} visible in the background.
+Characters in casual clothes appropriate for the location.
 
-Composition: dynamic group shot, characters prominently in foreground, vivid illustrated background.
-NO text, NO title, NO letters anywhere in the image.`);
+Absolutely no text, no words, no letters, no title anywhere in the image.`);
 
     // Fetch reference image
     const primaryRefUrl    = referenceImageUrls[0]?.url || null;
@@ -465,41 +464,32 @@ router.post("/page", async (req, res) => {
     console.log(`[FLUX]   → Age context: ${ageContext.ageContext} (useReference: ${ageContext.useReference})`);
     if (reillustrationNote) console.log(`[FLUX]   → Re-illustration: "${reillustrationNote}"`);
 
-    // ── Reference strategy (same priority as comic.js) ────────────────────────
+    // ── Reference strategy for FLUX ───────────────────────────────────────────
+    // FLUX works best with the original user photo as reference.
+    // Generated cover images are too large and cause connection errors.
+    // Priority: user photo (small, original) > no reference
     let reference = null;
     let refSource  = "none";
 
-    const hasIndividualPhotos = referenceImageUrls.length > 1;
-    const hasCharNotInPhoto   = finalCharacters.some(c => c.inPhoto === false && (panelDescriptions.toLowerCase().includes(c.name.toLowerCase())));
-    const hasManyPeople       = ["gäste","guests","crowd","people","viele"].some(k => panelDescriptions.toLowerCase().includes(k));
-
-    if (!ageContext.useReference && coverImageUrl) {
-      try { reference = await fetchBuffer(coverImageUrl); refSource = `cover-age-${ageContext.ageContext}`; }
-      catch (e) {
-        if (primaryRefUrl) { try { reference = await fetchBuffer(primaryRefUrl); refSource = "user-photo-age-fallback"; } catch (_) {} }
-        else if (primaryRefBase64) { reference = Buffer.from(primaryRefBase64.replace(/^data:image\/\w+;base64,/, ""), "base64"); refSource = "user-photo-age-fallback"; }
+    // Always prefer the original user photo — it's smaller and FLUX handles it better
+    if (primaryRefUrl) {
+      try {
+        reference = await fetchBuffer(primaryRefUrl);
+        refSource = "user-photo";
+        console.log(`[FLUX]   → Using user photo as reference (${(reference.length/1024).toFixed(0)}KB)`);
+      } catch (e) {
+        console.warn(`[FLUX]   → User photo fetch failed: ${e.message}`);
       }
-    } else if (!ageContext.useReference) {
-      if (primaryRefUrl) { try { reference = await fetchBuffer(primaryRefUrl); refSource = "user-photo-age-fallback"; } catch (_) {} }
-      else if (primaryRefBase64) { reference = Buffer.from(primaryRefBase64.replace(/^data:image\/\w+;base64,/, ""), "base64"); refSource = "user-photo-age-fallback"; }
-    } else if (hasIndividualPhotos && coverImageUrl) {
-      try { reference = await fetchBuffer(coverImageUrl); refSource = "cover-individual-photos"; }
-      catch (e) { refSource = "generate-only"; }
-    } else if (coverImageUrl && !hasCharNotInPhoto) {
-      try { reference = await fetchBuffer(coverImageUrl); refSource = "cover"; }
-      catch (e) {}
+    } else if (primaryRefBase64) {
+      reference = Buffer.from(primaryRefBase64.replace(/^data:image\/\w+;base64,/, ""), "base64");
+      refSource = "user-photo";
+      console.log(`[FLUX]   → Using user photo (base64) as reference`);
     }
 
-    if (!reference && hasManyPeople && coverImageUrl) {
-      try { reference = await fetchBuffer(coverImageUrl); refSource = "cover-with-crowd"; } catch (_) {}
-    }
-    if (!reference && hasCharNotInPhoto) {
-      if (primaryRefUrl) { try { reference = await fetchBuffer(primaryRefUrl); refSource = "user-photo-style"; } catch (_) {} }
-      else if (primaryRefBase64) { reference = Buffer.from(primaryRefBase64.replace(/^data:image\/\w+;base64,/, ""), "base64"); refSource = "user-photo-style"; }
-    }
+    // Fallback: no reference (FLUX generates from text only)
     if (!reference) {
-      if (primaryRefUrl) { try { reference = await fetchBuffer(primaryRefUrl); refSource = "user-photo"; } catch (_) {} }
-      else if (primaryRefBase64) { reference = Buffer.from(primaryRefBase64.replace(/^data:image\/\w+;base64,/, ""), "base64"); refSource = "user-photo"; }
+      refSource = "generate-only";
+      console.log(`[FLUX]   → No reference available, generating from text only`);
     }
 
     // ── Build prompt — FLUX has a ~2048 char prompt limit ────────────────────
