@@ -128,17 +128,15 @@ async function fetchBuffer(url) {
 // FLUX.1 Kontext always uses images.edit() — it's an edit/context model.
 // For text-only (no reference): we pass a minimal white placeholder image.
 // Returns { url, usedReference: boolean }
-async function generateImageFlux(prompt, referenceBuffer = null, size = "1024x1536") {
+async function generateImageFlux(prompt, referenceBuffer = null, size = "1024x1024") {
   const attempt = async () => {
     let imageFile;
 
     if (referenceBuffer) {
-      // Use the actual reference image
       const blob = new Blob([referenceBuffer], { type: "image/png" });
       imageFile = new File([blob], "reference.png", { type: "image/png" });
     } else {
-      // No reference: create a minimal white 64×64 PNG as placeholder
-      // FLUX Kontext ignores it when the prompt is purely generative
+      // No reference: minimal white placeholder
       const whitePng = Buffer.from(
         "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwADhQGAWjR9awAAAABJRU5ErkJggg==",
         "base64"
@@ -148,15 +146,19 @@ async function generateImageFlux(prompt, referenceBuffer = null, size = "1024x15
     }
 
     const res = await deepinfra.images.edit({
-      model:   FLUX_MODEL,
-      image:   imageFile,
+      model:           FLUX_MODEL,
+      image:           imageFile,
       prompt,
-      n:       1,
+      n:               1,
       size,
+      response_format: "b64_json", // DeepInfra only supports b64_json
     });
 
     const item = (res.data || [])[0];
-    const url  = item?.url || (item?.b64_json ? `data:image/png;base64,${item.b64_json}` : null);
+    // DeepInfra always returns b64_json, never url
+    const url = item?.b64_json
+      ? `data:image/png;base64,${item.b64_json}`
+      : item?.url || null;
     if (!url) throw new Error("FLUX: No image returned");
     return { url, usedReference: !!referenceBuffer };
   };
@@ -392,7 +394,7 @@ NO text, NO title, NO letters anywhere in the image.`);
       refBuffer = Buffer.from(primaryRefBase64.replace(/^data:image\/\w+;base64,/, ""), "base64");
     }
 
-    const { url: rawUrl } = await generateImageFlux(prompt, refBuffer);
+    const { url: rawUrl } = await generateImageFlux(prompt, refBuffer, "1024x1024");
     const coverUrl = await saveImage(rawUrl, projectId, `cover-${Date.now()}`);
     await saveCharacterRefs(projectId, characters, coverUrl || rawUrl, referenceImageUrls);
 
