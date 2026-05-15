@@ -371,12 +371,17 @@ router.post("/cover", async (req, res) => {
     if (coverRegenNote?.trim()) coverLocation = sanitizePrompt(coverRegenNote);
     console.log(`[FLUX] Cover location: "${coverLocation}"`);
 
-    const prompt = sanitizePrompt(`Redraw the people from this photo as hand-drawn comic book characters in Franco-Belgian Bande Dessinée style, similar to Blacksad or Largo Winch.
+    const prompt = sanitizePrompt(`Comic book cover illustration. Redraw the people from this photo as hand-drawn comic characters.
 
-Style: bold ink outlines on every figure, flat cel-shaded colors with warm golden and vivid tones, expressive faces with clearly defined features, cinematic composition. NOT photorealistic. NOT manga.
+VISUAL STYLE — apply exactly:
+- Thick black ink outlines 3-4px wide on every figure and edge
+- Flat cel-shaded color fills with NO gradients, NO photographic lighting
+- Warm vivid colors: golden yellows, deep blues, rich reds
+- Expressive stylized faces with clearly defined ink features
+- NOT photorealistic, NOT manga, NOT a photo filter
 
-Keep faces accurate to the photo. Draw all characters: ${charNames}.
-Setting: ${coverLocation} visible in the background.
+Keep faces recognizable from the photo. Draw all characters: ${charNames}.
+Setting: ${coverLocation} visible in the background as an illustrated scene.
 Characters in casual clothes appropriate for the location.
 
 Absolutely no text, no words, no letters, no title anywhere in the image.`);
@@ -515,27 +520,34 @@ router.post("/page", async (req, res) => {
     }
 
     // ── Build prompt — FLUX has a ~2048 char prompt limit ────────────────────
-    const styleNote = reference
-      ? `Use the reference image ONLY to identify the characters' faces. Do NOT copy the composition or layout of the reference.`
+    const faceNote = reference
+      ? `Use the reference image ONLY to identify the characters' faces and hair. Do NOT copy the photo composition or layout.`
       : ``;
 
-    const prompt = sanitizePrompt(`Create a Franco-Belgian Bande Dessinée comic page in the style of Blacksad or Largo Winch. ${styleNote}
+    const prompt = sanitizePrompt(`Comic book page. ${faceNote}
 
-LAYOUT: Divide the image into exactly ${panelCount} comic panels arranged as ${layoutDesc}. Each panel must have a thick black border (4-6px). Panels show different moments — NOT the same scene repeated.
+VISUAL STYLE — apply exactly:
+- Thick black ink outlines 3-4px wide on every figure, object and panel border
+- Flat cel-shaded color fills with NO gradients, NO photographic lighting
+- Halftone dot shadows in dark areas
+- Warm vivid colors: golden yellows, deep blues, rich reds
+- Expressive stylized faces — NOT photorealistic faces
+- White gutters between panels
+- Printed comic book paper look
 
-STYLE: Hand-drawn ink outlines on every figure. Flat cel-shaded colors with warm golden tones and vivid hues. Expressive stylized faces. NOT photorealistic. NOT manga. NOT a single portrait photo.
+LAYOUT: Exactly ${panelCount} panels in ${layoutDesc}. Each panel separated by thick black borders. Every panel shows a DIFFERENT moment — NOT the same scene from different angles.
 
-CHARACTERS in every panel (keep faces consistent):
+CHARACTERS (identical stylized faces in every panel):
 ${charAnchors}
 
 CLOTHING: ${outfit}
-
-PANEL CONTENT (each panel shows a different moment):
-${panelDescriptions}
 ${ageContext.modifier ? `\nAge: ${ageContext.modifier}` : ""}
+
+PANELS:
+${panelDescriptions}
 ${reillustrationNote ? `\nAdjust: ${reillustrationNote}` : ""}
 
-CRITICAL: This must look like a printed comic book page with multiple panels — NOT a single illustration or portrait. No text, no speech bubbles, no letters anywhere.`);
+No text, no speech bubbles, no letters anywhere in the image.`);
 
     console.log(`[FLUX] Generating page "${page.title}" (${panelCount} panels, ref: ${refSource})`);
 
