@@ -730,17 +730,17 @@ export default function PanelView({ imageUrl, title, panels = [], panelPositions
                   initH={initH} 
                   style={{}}
                   onResize={(w, h) => {
-                    // Get actual container dimensions for accurate percentage calculation
-                    const containerWidth = containerRef.current?.offsetWidth || 400;
-                    const containerHeight = containerRef.current?.offsetHeight || 600;
+                    // CRITICAL: Always normalize to 400×600 reference container.
+                    // This ensures PDF and preview use the same base for % calculations.
+                    // w/h are in actual container pixels — convert to % of 400×600 reference.
+                    const REF_W = 400;
+                    const REF_H = 600;
                     
                     // Update resolved positions immediately for this bubble
                     const updatedPositions: PanelPosition[] = dialogPanels.map((p, idx) => {
                       const bid = p.bubbleId ?? `${p.originalIndex}-0`;
                       const dragPos = dragPositions[bid];
                       const resolved = resolvedPositions[idx];
-                      
-                      // If this is the bubble being resized, use new dimensions
                       const isCurrentBubble = bid === bubbleId;
                       
                       return {
@@ -748,14 +748,16 @@ export default function PanelView({ imageUrl, title, panels = [], panelPositions
                         bubbleIndex: p.bubbleIndex,
                         top: dragPos?.top ?? resolved?.top ?? 5,
                         left: dragPos?.left ?? resolved?.left ?? 2,
-                        width: isCurrentBubble ? (w / containerWidth) * 100 : (resolved?.w ?? 20),
-                        height: isCurrentBubble ? (h / containerHeight) * 100 : (resolved?.h ?? 10),
+                        width:  isCurrentBubble ? (w / REF_W) * 100 : (resolved?.w ?? 20),
+                        height: isCurrentBubble ? (h / REF_H) * 100 : (resolved?.h ?? 10),
                       };
                     });
                     
                     // Save immediately
                     if (onPositionsChange) {
-                      console.log(`📏 Bubble ${bubbleId} resized to ${w}×${h}px (${((w / containerWidth) * 100).toFixed(1)}%×${((h / containerHeight) * 100).toFixed(1)}%), saving NOW...`);
+                      const REF_W = 400;
+                      const REF_H = 600;
+                      console.log(`📏 Bubble ${bubbleId} resized to ${w}×${h}px → ${((w / REF_W) * 100).toFixed(1)}%×${((h / REF_H) * 100).toFixed(1)}% (of 400×600 ref), saving NOW...`);
                       onPositionsChange(updatedPositions);
                       
                       // VERIFY

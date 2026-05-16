@@ -225,10 +225,18 @@ async function createComicPDF(project) {
             bX = aX + (pos.left  / 100) * aW;
             bY = aY + (pos.top   / 100) * aH;
             if (pos.width && pos.height) {
-              // pos.width/height are % of reference container (400×600px).
-              // Scale to actual PDF image area dimensions.
-              bW = (pos.width  / 100) * aW;
-              bH = (pos.height / 100) * aH;
+              // pos.width/height are % of reference container (400×600px) — same as preview.
+              // The preview renders: initW = (width% / 100) * containerWidth
+              // At max-width (510px), containerWidth = 510, containerHeight = 765.
+              // PDF image area is also 510×765pt → same reference → direct mapping.
+              // But if user edited on a smaller screen, we must normalize via 400×600 first:
+              // preview px = (width% / 100) * 400 * (containerWidth / 400) = (width% / 100) * containerWidth
+              // PDF pt     = (width% / 100) * 400 * (aW / 400) = (width% / 100) * aW
+              // Both scale from the same 400×600 base → consistent regardless of screen size.
+              const REF_W = 400;
+              const REF_H = 600;
+              bW = (pos.width  / 100) * REF_W * (aW / REF_W);  // = (pos.width  / 100) * aW
+              bH = (pos.height / 100) * REF_H * (aH / REF_H);  // = (pos.height / 100) * aH
               // Sanity check: bubble must be at least readable
               bW = Math.max(bW, 60);
               bH = Math.max(bH, 25);
@@ -237,9 +245,11 @@ async function createComicPDF(project) {
           }
         }
 
-        // Schriftgröße + Padding proportional zur Bubble-Höhe
-        const fontSize = Math.min(11, Math.max(7, bH * 0.14));
-        const pad = Math.max(4, bH * 0.07);
+        // Schriftgröße + Padding — fest wie in der Vorschau (12px Bangers)
+        // CSS 12px ≈ 9pt in PDF (1pt = 1.333px). Bangers ist eine Display-Schrift,
+        // bei 9pt sieht sie ähnlich aus wie 12px im Browser.
+        const fontSize = 9;
+        const pad = 5;
 
         // Bounds — Bubble bleibt im Bild (inkl. Tail 12px)
         bX = Math.min(Math.max(bX, aX + 2), aX + aW - bW - 2);
