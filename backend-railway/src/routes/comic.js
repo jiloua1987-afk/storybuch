@@ -1479,54 +1479,35 @@ RULES:
     let refSource = "none";
 
     // ── STRATEGY 0: Age-based reference decision ──────────────────────────────
-    // For young/middle-age scenes with cover available, use cover + age modifier
-    // This keeps facial features consistent while making characters younger
-    if (!ageContext.useReference && coverImageUrl) {
-      try {
-        reference = await fetchBuffer(coverImageUrl);
-        refSource = `cover-age-${ageContext.ageContext}`;
-        console.log(`  → Historical scene (${ageContext.ageContext}), using cover with age modifier`);
-        console.log(`  → This keeps facial features consistent while making characters younger`);
-      } catch (e) {
-        console.warn("  → Cover fetch failed, falling back to user photo:", e.message);
-        // FALLBACK: Use user photo instead of generate-only
-        if (primaryRefUrl) {
-          try {
-            reference = await fetchBuffer(primaryRefUrl);
-            refSource = "user-photo-age-fallback";
-            console.log(`  → Using user photo as fallback (characters won't look younger, but faces will be correct)`);
-          } catch (e2) {
-            console.warn("  → User photo fetch also failed:", e2.message);
-            refSource = "generate-only-age-modified";
-          }
-        } else if (primaryRefBase64) {
-          reference = primaryRefBase64;
-          refSource = "user-photo-age-fallback";
-          console.log(`  → Using user photo as fallback (characters won't look younger, but faces will be correct)`);
-        } else {
-          refSource = "generate-only-age-modified";
-        }
-      }
-    } else if (!ageContext.useReference) {
-      // No cover available - FALLBACK: use user photo instead of generate-only
-      console.log(`  → Historical scene (${ageContext.ageContext}), no cover available`);
-      
-      // FALLBACK: Try user photo instead of generate-only
+    // For young/middle-age scenes: use user photo directly (NOT cover).
+    // Reason: cover may be photorealistic → using it as reference causes style drift.
+    // User photo is the original face reference — age modifier in prompt handles the "younger" look.
+    if (!ageContext.useReference) {
       if (primaryRefUrl) {
         try {
           reference = await fetchBuffer(primaryRefUrl);
-          refSource = "user-photo-age-fallback";
-          console.log(`  → FALLBACK: Using user photo (characters won't look younger, but faces will be correct)`);
+          refSource = `user-photo-age-${ageContext.ageContext}`;
+          console.log(`  → Historical scene (${ageContext.ageContext}), using user photo directly (avoids cover style drift)`);
         } catch (e) {
           console.warn("  → User photo fetch failed:", e.message);
-          refSource = "generate-only-age-modified";
+          if (coverImageUrl) {
+            try {
+              reference = await fetchBuffer(coverImageUrl);
+              refSource = `cover-age-${ageContext.ageContext}`;
+              console.log(`  → Fallback to cover for age-modified scene`);
+            } catch (e2) { refSource = "generate-only-age-modified"; }
+          } else { refSource = "generate-only-age-modified"; }
         }
       } else if (primaryRefBase64) {
-        reference = primaryRefBase64;
-        refSource = "user-photo-age-fallback";
-        console.log(`  → FALLBACK: Using user photo (characters won't look younger, but faces will be correct)`);
+        reference = Buffer.from(primaryRefBase64.replace(/^data:image\/\w+;base64,/, ""), "base64");
+        refSource = `user-photo-age-${ageContext.ageContext}`;
+        console.log(`  → Historical scene (${ageContext.ageContext}), using user photo (base64)`);
+      } else if (coverImageUrl) {
+        try {
+          reference = await fetchBuffer(coverImageUrl);
+          refSource = `cover-age-${ageContext.ageContext}`;
+        } catch (e) { refSource = "generate-only-age-modified"; }
       } else {
-        console.log(`  → No user photo available - generate-only (may invent faces)`);
         refSource = "generate-only-age-modified";
       }
     } else {

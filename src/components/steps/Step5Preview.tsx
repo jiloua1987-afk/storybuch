@@ -530,7 +530,7 @@ export default function Step5Preview() {
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: direction * -40 }}
             transition={{ duration: 0.35 }}
-            className="bg-white rounded-2xl overflow-hidden shadow-xl border border-gray-100"
+            className="bg-white rounded-2xl overflow-hidden shadow-xl border border-gray-100 max-w-[510px] mx-auto w-full"
           >
             {isCover ? (
               <>
