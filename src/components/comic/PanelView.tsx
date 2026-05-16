@@ -135,15 +135,19 @@ function ResizableBubble({
     console.log(`🔄 ResizableBubble: Size updated to ${initW}×${initH}px`);
   }, [initW, initH]);
 
-  const onResizeMouseDown = useCallback((e: React.MouseEvent, dir: string) => {
+  const onResizeMouseDown = useCallback((e: React.MouseEvent | React.TouchEvent, dir: string) => {
     e.stopPropagation();
     e.preventDefault();
-    resizing.current = { dir, startX: e.clientX, startY: e.clientY, startW: size.w, startH: size.h };
+    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+    resizing.current = { dir, startX: clientX, startY: clientY, startW: size.w, startH: size.h };
 
-    const onMove = (ev: MouseEvent) => {
+    const onMove = (ev: MouseEvent | TouchEvent) => {
       if (!resizing.current) return;
-      const dx = ev.clientX - resizing.current.startX;
-      const dy = ev.clientY - resizing.current.startY;
+      const cx = 'touches' in ev ? ev.touches[0].clientX : (ev as MouseEvent).clientX;
+      const cy = 'touches' in ev ? ev.touches[0].clientY : (ev as MouseEvent).clientY;
+      const dx = cx - resizing.current.startX;
+      const dy = cy - resizing.current.startY;
       const { dir: d, startW, startH } = resizing.current;
       let newW = startW;
       let newH = startH;
@@ -158,28 +162,35 @@ function ResizableBubble({
       resizing.current = null;
       window.removeEventListener("mousemove", onMove);
       window.removeEventListener("mouseup", onUp);
+      window.removeEventListener("touchmove", onMove);
+      window.removeEventListener("touchend", onUp);
     };
     window.addEventListener("mousemove", onMove);
     window.addEventListener("mouseup", onUp);
+    window.addEventListener("touchmove", onMove, { passive: false });
+    window.addEventListener("touchend", onUp);
   }, [size, onResize]);
 
   const handleStyle = (cursor: string): React.CSSProperties => ({
-    position: "absolute", width: 10, height: 10,
+    position: "absolute", width: 16, height: 16,
     background: "#C9963A", border: "1.5px solid white",
-    borderRadius: 2, cursor, zIndex: 30,
+    borderRadius: 3, cursor, zIndex: 30,
+    touchAction: "none", // prevent scroll interference on touch
   });
 
   return (
     <div style={{ ...style, position: "absolute", width: size.w, height: size.h }}>
       {children(size.w, size.h)}
       {/* Resize handles — only visible on hover via group */}
-      <div className="opacity-0 group-hover:opacity-100 transition-opacity">
-        <div style={{ ...handleStyle("nw-resize"), top: -5, left: -5 }} onMouseDown={(e) => onResizeMouseDown(e, "nw")} />
-        <div style={{ ...handleStyle("ne-resize"), top: -5, right: -5 }} onMouseDown={(e) => onResizeMouseDown(e, "ne")} />
-        <div style={{ ...handleStyle("se-resize"), bottom: -5, right: -5 }} onMouseDown={(e) => onResizeMouseDown(e, "se")} />
-        <div style={{ ...handleStyle("sw-resize"), bottom: -5, left: -5 }} onMouseDown={(e) => onResizeMouseDown(e, "sw")} />
-        <div style={{ ...handleStyle("e-resize"), top: "50%", right: -5, transform: "translateY(-50%)" }} onMouseDown={(e) => onResizeMouseDown(e, "e")} />
-        <div style={{ ...handleStyle("s-resize"), bottom: -5, left: "50%", transform: "translateX(-50%)" }} onMouseDown={(e) => onResizeMouseDown(e, "s")} />
+      {/* Resize handles — visible on hover (desktop) or always on touch devices */}
+      <div className="opacity-0 group-hover:opacity-100 sm:opacity-0 touch-device:opacity-100 transition-opacity" style={{ opacity: undefined }} 
+           ref={(el) => { if (el) { const isTouchDevice = window.matchMedia('(pointer: coarse)').matches; if (isTouchDevice) el.style.opacity = '1'; } }}>
+        <div style={{ ...handleStyle("nw-resize"), top: -8, left: -8 }} onMouseDown={(e) => onResizeMouseDown(e, "nw")} onTouchStart={(e) => onResizeMouseDown(e, "nw")} />
+        <div style={{ ...handleStyle("ne-resize"), top: -8, right: -8 }} onMouseDown={(e) => onResizeMouseDown(e, "ne")} onTouchStart={(e) => onResizeMouseDown(e, "ne")} />
+        <div style={{ ...handleStyle("se-resize"), bottom: -8, right: -8 }} onMouseDown={(e) => onResizeMouseDown(e, "se")} onTouchStart={(e) => onResizeMouseDown(e, "se")} />
+        <div style={{ ...handleStyle("sw-resize"), bottom: -8, left: -8 }} onMouseDown={(e) => onResizeMouseDown(e, "sw")} onTouchStart={(e) => onResizeMouseDown(e, "sw")} />
+        <div style={{ ...handleStyle("e-resize"), top: "50%", right: -8, transform: "translateY(-50%)" }} onMouseDown={(e) => onResizeMouseDown(e, "e")} onTouchStart={(e) => onResizeMouseDown(e, "e")} />
+        <div style={{ ...handleStyle("s-resize"), bottom: -8, left: "50%", transform: "translateX(-50%)" }} onMouseDown={(e) => onResizeMouseDown(e, "s")} onTouchStart={(e) => onResizeMouseDown(e, "s")} />
       </div>
     </div>
   );
@@ -409,12 +420,16 @@ export default function PanelView({ imageUrl, title, panels = [], panelPositions
       const lines = Math.ceil(text.length / 22);
       const hPx = Math.max(48, 28 + lines * 20);
       
-      // Store as % of source image (1024×1536) — consistent with resize handler
+      // Store as % of a reference container width (400px = typical mobile width)
+      // The container always has 1024:1536 aspect ratio, so 400px wide = 600px tall
+      // This gives reasonable bubble sizes across all screen sizes
+      const REF_W = 400;
+      const REF_H = 600;
       return {
         top: 5 + (row * 25),
         left: col === 0 ? 5 : 55,
-        w: (wPx / 1024) * 100,
-        h: (hPx / 1536) * 100
+        w: (wPx / REF_W) * 100,
+        h: (hPx / REF_H) * 100
       };
     });
   }, [dialogPanels.length, hasDetectedPositions, panelPositions]); // Removed panels.length dependency
@@ -643,13 +658,15 @@ export default function PanelView({ imageUrl, title, panels = [], panelPositions
             
             let initW, initH;
             if (savedPos && savedPos.width && savedPos.height) {
-              // Sizes are stored as % of the source image (1024×1536).
-              // Convert back to px using the current container dimensions.
-              // This is correct because the container has the same 1024:1536 aspect ratio.
+              // Sizes stored as % of reference container (400×600px).
+              // Convert back to px using actual container dimensions.
               const containerWidth = containerRef.current?.offsetWidth || 400;
               const containerHeight = containerRef.current?.offsetHeight || 600;
-              initW = (savedPos.width / 100) * containerWidth;
-              initH = (savedPos.height / 100) * containerHeight;
+              // Scale from reference (400×600) to actual container
+              const scaleX = containerWidth / 400;
+              const scaleY = containerHeight / 600;
+              initW = (savedPos.width / 100) * 400 * scaleX;
+              initH = (savedPos.height / 100) * 600 * scaleY;
               console.log(`📐 Bubble ${bubbleId}: ${savedPos.width.toFixed(1)}%×${savedPos.height.toFixed(1)}% → ${initW.toFixed(0)}×${initH.toFixed(0)}px`);
             } else {
               // Calculate from text
@@ -778,7 +795,7 @@ export default function PanelView({ imageUrl, title, panels = [], panelPositions
                               }
                             }}
                             className="w-full flex-1 bg-transparent outline-none resize-none text-[#1A1410]"
-                            style={{ fontFamily: "'Comic Neue', cursive", fontSize: "12px", minHeight: "60px" }}
+                            style={{ fontFamily: "'Bangers', cursive", fontSize: "12px", minHeight: "60px" }}
                             rows={Math.max(3, Math.ceil(((editedDialogs[bubbleId] ?? displayDialog)?.length || 1) / 20))}
                             onClick={(e) => e.stopPropagation()}
                             placeholder="Text eingeben…"
@@ -794,7 +811,7 @@ export default function PanelView({ imageUrl, title, panels = [], panelPositions
                       ) : (
                         <p
                           className="text-[#1A1410] leading-snug select-none cursor-text hover:bg-yellow-50/30 transition-colors rounded px-1"
-                          style={{ fontFamily: "'Comic Neue', cursive", fontSize: "12px", fontWeight: 500 }}
+                          style={{ fontFamily: "'Bangers', cursive", fontSize: "12px", fontWeight: 500 }}
                           onDoubleClick={(e) => { 
                             e.stopPropagation(); 
                             console.log(`✏️ Double-click detected on bubble ${bubbleId}`);
@@ -856,7 +873,7 @@ export default function PanelView({ imageUrl, title, panels = [], panelPositions
                             onChange={(e) => setExtraBubbles(prev => prev.map(b => b.id === bubble.id ? { ...b, speaker: e.target.value } : b))}
                             placeholder="Sprecher (optional)"
                             className="bg-transparent outline-none text-[#1A1410] border-b border-[#C9963A]/40 text-xs font-bold w-full"
-                            style={{ fontFamily: "'Comic Neue', cursive", fontSize: "11px" }}
+                            style={{ fontFamily: "'Bangers', cursive", fontSize: "11px" }}
                             onClick={(e) => e.stopPropagation()}
                             onKeyDown={(e) => e.key === "Tab" && e.preventDefault()}
                           />
@@ -871,7 +888,7 @@ export default function PanelView({ imageUrl, title, panels = [], panelPositions
                               }
                             }}
                             className="w-full flex-1 bg-transparent outline-none resize-none text-[#1A1410]"
-                            style={{ fontFamily: "'Comic Neue', cursive", fontSize: "12px", minHeight: "60px" }}
+                            style={{ fontFamily: "'Bangers', cursive", fontSize: "12px", minHeight: "60px" }}
                             rows={Math.max(3, Math.ceil((bubble.dialog.length || 1) / 20))}
                             onClick={(e) => e.stopPropagation()}
                             placeholder="Text eingeben…"
@@ -889,7 +906,7 @@ export default function PanelView({ imageUrl, title, panels = [], panelPositions
                       ) : (
                         <p
                           className="text-[#1A1410] leading-snug select-none"
-                          style={{ fontFamily: "'Comic Neue', cursive", fontSize: "12px", fontWeight: 500 }}
+                          style={{ fontFamily: "'Bangers', cursive", fontSize: "12px", fontWeight: 500 }}
                           onDoubleClick={(e) => { e.stopPropagation(); setEditingExtra(bubble.id); }}
                         >
                           {bubble.speaker && (
