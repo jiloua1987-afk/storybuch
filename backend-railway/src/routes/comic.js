@@ -128,8 +128,9 @@ function getAgeContext(pageTitle = "", panelDescriptions = "") {
     "first met", "kennenlernen", "erste treffen", "jugend", "youth", "young",
     "schule", "school", "university", "universität", "studium", "student",
     "erste liebe", "first love", "teenager", "zwanzig", "twenties",
-    "kindheit", "childhood", "kind sein", "als kind", "früher", "damals",
-    "erinnerungen", "memories", "aufgewachsen", "grew up",
+    "kindheit", "childhood", "als kind", "früher", "damals",
+    "aufgewachsen", "grew up", "erinnerungen an", "memories of",
+    "jugendtage", "jugendjahre", "schulzeit", "schuljahre",
   ];
   
   // Middle-age keywords
@@ -1052,20 +1053,36 @@ ${multiPhotoPrompt}`);
         const res2 = await openai.images.edit({
           model: "gpt-image-2",
           image: refFile,
-          prompt: sanitizePrompt(`${COMIC_STYLE}
+          prompt: sanitizePrompt(`COMIC BOOK ILLUSTRATION — NOT A PHOTOGRAPH.
 
-REDRAW the person in this photo as a hand-drawn comic book character. This MUST look like a printed comic book page — NOT a photograph, NOT photorealistic, NOT a photo filter.
-Bold black ink outlines on every edge. Flat cel-shaded colors. Expressive stylized cartoon face. NO photographic lighting, NO realistic skin textures, NO photo-realistic rendering.
+This image MUST look like a hand-drawn page from a printed Franco-Belgian comic album (Bande Dessinée).
+MANDATORY VISUAL STYLE:
+- Thick black ink outlines (3-4px) on every figure, face, and object
+- Flat cel-shaded color fills — NO gradients, NO photographic shading
+- Warm vivid colors: golden yellows, deep blues, rich reds
+- Expressive stylized faces — NOT photorealistic faces
+- Visible ink linework on every edge
+- Printed comic book paper look
+
+STRICTLY FORBIDDEN:
+- NO photorealism
+- NO photographic skin textures or lighting
+- NO CGI or 3D render look
+- NO watercolor or painting style
+- NO manga or anime style
+
+Use the reference photo ONLY to identify the character's face and hair. 
+Redraw them completely in the comic style above — do NOT copy the photographic look.
 
 ${characters.length === 1
-  ? `IMPORTANT: Draw ONLY ONE character — ${charNames}. Do NOT add any other people, partners, or invented characters. This is a solo cover.`
+  ? `Draw ONLY ONE character — ${charNames}. Do NOT add any other people or invented characters. Solo cover.`
   : `Draw ALL characters: ${charNames}.`
 }
-Setting: ${coverLocation} as an illustrated comic background.
-Character descriptions: ${charDesc}
+Setting: ${coverLocation} as a vivid illustrated comic background.
+Character: ${charDesc}
 
-CLOTHING: Stylish casual attire. IGNORE clothing from the photo.
-Composition: ${characters.length === 1 ? 'single character prominently in foreground, dynamic pose, vivid illustrated background' : 'dynamic group shot, characters in foreground, vivid illustrated background'}.
+Clothing: stylish casual attire appropriate for the setting. IGNORE clothing from the photo.
+Composition: ${characters.length === 1 ? 'single character prominently in foreground, dynamic confident pose, detailed illustrated background' : 'dynamic group shot, characters in foreground, vivid illustrated background'}.
 NO text, NO title, NO letters anywhere in the image.`),
           size: "1024x1536",
           quality: "high",
