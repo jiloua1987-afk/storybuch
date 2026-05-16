@@ -65,11 +65,11 @@ async function createComicPDF(project) {
       const titleH = doc.heightOfString(title, { width: maxW, fontSize, lineGap: 3 });
       
       // Gesamthöhe des Overlay-Blocks: Linie + Abstand + Text + Abstand + Linie
-      const lineGap = 12;  // Abstand zwischen Linie und Text
+      const lineGap = 24;  // Mindestabstand zwischen Linie und Text (vorher 12 — zu eng)
       const blockH = lineGap + titleH + lineGap;
       
-      // Block vertikal zentriert im unteren Bereich
-      const blockY = A4_H - 140 - blockH / 2;
+      // Block im unteren Bereich, etwas höher für mehr Luft
+      const blockY = A4_H - 160 - blockH / 2;
       const line1Y = blockY;
       const textY  = blockY + lineGap;
       const line2Y = blockY + lineGap + titleH + lineGap;
@@ -306,29 +306,41 @@ async function createComicPDF(project) {
     doc.fontSize(11).font('Helvetica').fillColor('#C9963A')
        .text('WIDMUNG', 50, 140, { width: A4_W - 100, align: 'center', characterSpacing: 3 });
 
-    doc.fontSize(17).font('Helvetica-Oblique').fillColor('#1A1410')
-       .text(project.endingData.endingText, 80, 220, {
-         width: A4_W - 160, align: 'center', lineGap: 10
+    // Widmungstext: Schriftgröße dynamisch reduzieren wenn Text zu lang
+    // Maximal verfügbarer Platz: von Y=220 bis Y=A4_H-200 (Platz für Von: + THE END)
+    const maxTextH = A4_H - 200 - 220;
+    let textFontSize = 17;
+    let endingText = project.endingData.endingText;
+    // Kürze Text wenn nötig (max 400 Zeichen)
+    if (endingText.length > 400) endingText = endingText.substring(0, 397) + '…';
+    // Reduziere Schriftgröße bis Text passt
+    while (textFontSize > 11) {
+      const h = doc.fontSize(textFontSize).heightOfString(endingText, { width: A4_W - 160, lineGap: 8 });
+      if (h <= maxTextH) break;
+      textFontSize -= 1;
+    }
+
+    doc.fontSize(textFontSize).font('Helvetica-Oblique').fillColor('#1A1410')
+       .text(endingText, 80, 220, {
+         width: A4_W - 160, align: 'center', lineGap: 8
        });
 
-    const midY = 220 + doc.heightOfString(project.endingData.endingText, { width: A4_W - 160, lineGap: 10 }) + 40;
+    const textH = doc.fontSize(textFontSize).heightOfString(endingText, { width: A4_W - 160, lineGap: 8 });
+    const midY = 220 + textH + 40;
+
     doc.moveTo(A4_W / 2 - 40, midY).lineTo(A4_W / 2 + 40, midY)
        .lineWidth(2).strokeColor('#C9963A').stroke();
 
-    if (project.endingData.dedication) {
-      doc.fontSize(13).font('Helvetica-Oblique').fillColor('#8B7355')
-         .text(`"${project.endingData.dedication}"`, 80, midY + 30, {
-           width: A4_W - 160, align: 'center'
-         });
-    }
+    // "dedication" Feld (z.B. "Maria") wird NICHT mehr angezeigt — Text ist aussagekräftig genug
+    // Nur noch "Von: ..." anzeigen
     if (project.endingData.dedicationFrom) {
-      const fromY = midY + (project.endingData.dedication ? 80 : 30);
       doc.fontSize(12).font('Helvetica').fillColor('#8B7355')
-         .text(`Von: ${project.endingData.dedicationFrom}`, 80, fromY, {
+         .text(`Von: ${project.endingData.dedicationFrom}`, 80, midY + 30, {
            width: A4_W - 160, align: 'center'
          });
     }
 
+    // THE END immer am unteren Rand — fest positioniert
     doc.fontSize(11).font('Helvetica').fillColor('#C9963A')
        .text('THE END', 50, A4_H - 120, { width: A4_W - 100, align: 'center', characterSpacing: 3 });
     doc.moveTo(A4_W / 2 - 50, A4_H - 100).lineTo(A4_W / 2 + 50, A4_H - 100)
