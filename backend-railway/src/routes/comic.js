@@ -127,7 +127,9 @@ function getAgeContext(pageTitle = "", panelDescriptions = "") {
   const youngKeywords = [
     "first met", "kennenlernen", "erste treffen", "jugend", "youth", "young",
     "schule", "school", "university", "universität", "studium", "student",
-    "erste liebe", "first love", "teenager", "zwanzig", "twenties"
+    "erste liebe", "first love", "teenager", "zwanzig", "twenties",
+    "kindheit", "childhood", "kind sein", "als kind", "früher", "damals",
+    "erinnerungen", "memories", "aufgewachsen", "grew up",
   ];
   
   // Middle-age keywords
@@ -1052,18 +1054,18 @@ ${multiPhotoPrompt}`);
           image: refFile,
           prompt: sanitizePrompt(`${COMIC_STYLE}
 
-REDRAW everyone in this photo as hand-drawn comic book characters. This must look like a page from a printed comic book, NOT a photograph or photo-manipulation.
-Bold ink outlines on every person. Flat cel-shaded colors. Expressive cartoon faces. NO photographic lighting, NO realistic skin textures, NO photo-realistic details.
-Draw ALL characters: ${charNames}.
-For characters not in the photo, draw them from their description.
-Setting: ${coverLocation}.
+REDRAW the person in this photo as a hand-drawn comic book character. This MUST look like a printed comic book page — NOT a photograph, NOT photorealistic, NOT a photo filter.
+Bold black ink outlines on every edge. Flat cel-shaded colors. Expressive stylized cartoon face. NO photographic lighting, NO realistic skin textures, NO photo-realistic rendering.
+
+${characters.length === 1
+  ? `IMPORTANT: Draw ONLY ONE character — ${charNames}. Do NOT add any other people, partners, or invented characters. This is a solo cover.`
+  : `Draw ALL characters: ${charNames}.`
+}
+Setting: ${coverLocation} as an illustrated comic background.
 Character descriptions: ${charDesc}
 
-CLOTHING: Draw characters in casual everyday clothes appropriate for a cover photo.
-IGNORE the specific clothing from the photo — use stylish casual attire instead.
-Examples: nice shirts, blouses, jeans, casual dresses. Make it look good for a comic book cover.
-
-Composition: dynamic group shot, characters in foreground, vivid illustrated background.
+CLOTHING: Stylish casual attire. IGNORE clothing from the photo.
+Composition: ${characters.length === 1 ? 'single character prominently in foreground, dynamic pose, vivid illustrated background' : 'dynamic group shot, characters in foreground, vivid illustrated background'}.
 NO text, NO title, NO letters anywhere in the image.`),
           size: "1024x1536",
           quality: "high",
