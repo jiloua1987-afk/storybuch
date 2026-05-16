@@ -328,7 +328,7 @@ export default function PanelView({ imageUrl, title, panels = [], panelPositions
         const newText = editedDialogs[editingBubbleId];
         if (newText !== undefined && onDialogChange) {
           const panel = dialogPanels.find(p => (p.bubbleId ?? `${p.originalIndex}-0`) === editingBubbleId);
-          if (panel) onDialogChange(panel.originalIndex, panel.bubbleIndex, newText);
+          if (panel) onDialogChange(panel.originalIndex, newText, panel.bubbleIndex);
         }
       }
       // Close extra bubble editing
