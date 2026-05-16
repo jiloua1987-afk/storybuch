@@ -1,104 +1,104 @@
 # ComicStyle.de - Roadmap
 
-**Letzte Aktualisierung:** 14. Mai 2026
+**Letzte Aktualisierung:** 16. Mai 2026
 
 ---
 
 ## 🔥 KRITISCHE PROBLEME (Sofort lösen)
 
-### 1. **PDF Bubble-Position & Größe stimmt nicht mit Vorschau überein** ⚠️ HOCH
-**Problem:** Sprechblasen im PDF haben andere Position und Größe als in der Vorschau
-- Vorschau: Bubble korrekt platziert, richtige Größe
-- PDF: Bubble an anderer Stelle, andere Größe
+### 1. **PDF Bubble-Position & Größe** ⚠️ HOCH
+**Problem:** Sprechblasen im PDF haben andere Größe als in der Vorschau
 
-**Root Cause:** Koordinaten-Mapping zwischen Vorschau-Container (variable Breite je nach Bildschirm) und PDF-Bildbereich (fix 510×765px nach Letterboxing) funktioniert nicht 1:1.
-
-**Status:** ⏳ IN ARBEIT
-**Aufwand:** Mittel (2-3h)
-
----
-
-### 2. **Kleidungs-Konsistenz** ⚠️ HOCH
-**Problem:** Charaktere tragen auf verschiedenen Seiten unterschiedliche Kleidung (z.B. Mama mal blaues Minikleid, mal langes Kleid)
-
-**Root Cause:** gpt-image-2 gewichtet Referenzbild stärker als Text-Prompt. Prompt-basierte Lösungen (getOutfit, Hash-Funktionen) funktionieren nicht zuverlässig — das Modell interpretiert Kleidung frei.
-
-**Bisherige Versuche (alle gescheitert):**
-- Hash-basierte deterministische Kleidung
-- Szenen-spezifische Kleidung
-- "CRITICAL CLOTHING RULES" im Prompt
-- visual_anchor ohne Kleidung
-
-**Ehrliche Einschätzung:** Nicht lösbar mit Prompt-Engineering allein. Fundamentale Limitation von gpt-image-2.
-
-**Mögliche Lösung:** FLUX.2 Kontext (bessere Konsistenz-Kontrolle)
-
-**Status:** ❌ NICHT GELÖST — Modell-Limitation
-**Aufwand:** Nur durch Modell-Wechsel lösbar
-
----
-
-### 3. **Gesichts-/Stil-Konsistenz** ⚠️ HOCH
-**Problem:**
-- Nicht-Foto-Charaktere (Oma, Opa) sehen auf jeder Seite anders aus
-- Stil-Drift zwischen Seiten
-- Safety-Rejections erzwingen Fallback ohne Referenz → komplett andere Charaktere
-
-**Teilweise gelöst:**
-- ✅ Stärkere Face-Consistency Prompts
-- ✅ Cover als Referenz für alle Seiten
-- ❌ Nicht-Foto-Charaktere bleiben inkonsistent (kein Foto = kein Anker)
-- ❌ Safety-Rejections zerstören Konsistenz komplett
-
-**Status:** ⚠️ TEILWEISE GELÖST
-**Aufwand:** Nur durch Modell-Wechsel oder Panel-by-Panel vollständig lösbar
+**Status:** ⚠️ IN ARBEIT — Position verbessert, Größe noch nicht vollständig verifiziert
+**Nächster Schritt:** Test mit `?debug=true` nach aktuellem Deploy
 
 ---
 
 ## 📋 WICHTIGE FEATURES (Bald)
 
-### 4. **Speaker bearbeiten** 📝 MITTEL
-**Problem:** Beim Text-Bearbeiten kann man nur Dialog ändern, nicht den Speaker
+### 2. **Mehr Seiten generieren** 📝 HOCH
+**Problem:** 3 Momente = 3 Seiten — zu wenig für ein echtes Comic-Buch. Kunden zahlen nicht für 3 Seiten.
 
-**Lösung:** Input-Feld für Speaker im Edit-Modus
-**Status:** ⏳ OFFEN
-**Aufwand:** Niedrig (1-2h)
+**Empfohlene Lösung: Hybrid-Ansatz**
+- Jeden Moment automatisch in 2 Seiten aufteilen: Seite 1 = Aufbau/Ankunft, Seite 2 = Höhepunkt/Reaktion
+- Automatische Intro-Seite (Charaktervorstellung) + Outro-Seite (Rückblick) = immer +2 Seiten ohne User-Input
+- Ergebnis: 3 Momente → 8 Seiten, 5 Momente → 12 Seiten
 
----
-
-### 5. **GPT generiert Text ins Bild** � MITTEL
-**Problem:** Trotz "NO text" im Prompt generiert GPT manchmal Seitenangaben oder Text ins Bild (z.B. "Seite 1: Aufregung am Flughafen")
-
-**Status:** ⏳ OFFEN — schwer zu verhindern, Modell-Limitation
+**Aufwand:** Mittel (Backend GPT-Prompt + Frontend)
+**Status:** ❌ OFFEN
 
 ---
 
-### 6. **Dialog-Zuordnung zu Panels** � NIEDRIG
-**Problem:** Dialoge passen manchmal nicht zum Panel-Inhalt (z.B. "Das riecht lecker" auf Panel ohne Essen)
+### 3. **Seiten in der Vorschau ergänzen** 📝 MITTEL
+**Problem:** User kann nach der Generierung keine neue Seite hinzufügen
 
-**Root Cause:** GPT generiert 1 Bild pro Seite und interpretiert Panel-Beschreibungen frei. Dialoge sind fest zugeordnet, aber Bild-Inhalt weicht ab.
+**Lösung:** "Seite hinzufügen" Button in Step5Preview — öffnet Moment-Input, generiert neue Seite und fügt sie ein
+**Aufwand:** ~1 Tag (Frontend + Backend)
+**Status:** ❌ OFFEN
 
-**Lösung:** Nur durch Panel-by-Panel Generierung lösbar
-**Status:** ⏳ OFFEN — Langfristig
+---
+
+### 4. **Geschwindigkeit erhöhen** ⚡ HOCH
+**Problem:** Generierung dauert sehr lange
+
+**Maßnahmen (Priorität nach Impact):**
+1. `quality: "standard"` statt `"high"` bei gpt-image-2 → halbiert Generierungszeit, Qualitätsunterschied bei Comic-Stil minimal
+2. Verifizieren dass alle Seiten wirklich parallel generiert werden (nicht sequenziell)
+3. Structure-Call cachen bei Neu-Illustrierung (Struktur muss nicht neu generiert werden)
+
+**Aufwand:** Niedrig (1-2h für quality-Flag)
+**Status:** ❌ OFFEN
+
+---
+
+### 5. **Dramaturgie verbessern (große Splash-Panels)** 🎨 MITTEL
+**Problem:** Alle Panels gleich groß, keine visuelle Dramaturgie. Frühere Implementierung mit `size: splash` hat Probleme verursacht weil gpt-image-2 Panel-Größen-Anweisungen ignoriert.
+
+**Lösung:** Splash-Panels als **separate Seite** generieren (1 Panel = ganze Seite), nicht als Teil einer Multi-Panel-Seite. Das ist zuverlässig weil gpt-image-2 dann einfach ein einzelnes Bild macht.
+**Aufwand:** Mittel
+**Status:** ❌ OFFEN — vorherige Implementierung war kaputt, neu angehen
+
+---
+
+## 💰 PREISMODELL
+
+**Empfehlung:**
+
+| Paket | Seiten | Preis | Zielgruppe |
+|-------|--------|-------|------------|
+| Mini | 5 | €39 | Testen, kleines Geschenk |
+| Standard | 8 | €59 | Hauptprodukt ⭐ |
+| Premium | 12 | €79 | Besondere Anlässe |
+
+- Kein 3-Seiten-Starter — wirkt zu dünn, rechtfertigt Preis nicht
+- PDF-Download als optionales Add-on für €9 (viele Kunden wollen digitale Nutzung)
+- Hardcover-Upgrade: +€15 (später)
+- Extra Kopien: -20% ab 2. Exemplar (später)
+
+**Status:** ⏳ Entscheidung ausstehend
 
 ---
 
 ## ✅ ERLEDIGT
 
 ### PDF-Export
-- ✅ Cover-Titel dynamische Schriftgröße + mittig zwischen Linien
+- ✅ Cover-Titel dynamische Schriftgröße + mittig zwischen goldenen Linien (lineGap 24pt)
 - ✅ Seitenzahl außerhalb des Bildes (rechts unten)
-- ✅ Bangers Comic-Font für Sprechblasen
+- ✅ Bangers Comic-Font für Sprechblasen (Preview + PDF identisch)
 - ✅ Extra-Bubbles (user-hinzugefügte) werden exportiert
 - ✅ Hidden Bubbles werden gefiltert
 - ✅ fit:contain — Panels werden nicht abgeschnitten
 - ✅ Cover ohne schwarzen Balken (goldene Linien)
+- ✅ Bubble-Fallback-Position: gleiches Grid wie Vorschau (nicht mehr gestapelt)
+- ✅ Widmung: "dedication"-Feld entfernt, Schriftgröße passt sich Textlänge an, THE END fest am unteren Rand
 
 ### Sprechblasen (Frontend)
 - ✅ Text-Bearbeitung per Doppelklick
-- ✅ Größe speichern/laden
+- ✅ Größe speichern/laden (% von Referenz-Container 400×600px)
 - ✅ Hidden Bubbles persistieren über Seitenwechsel
 - ✅ Position per Drag&Drop
+- ✅ Touch-Resize für Mobile (Handles 16×16px, immer sichtbar auf Touch-Geräten)
+- ✅ Neue Bubbles: Mindestgröße beim Bearbeiten, Textarea wächst mit Text
 
 ### Backend / Bildgenerierung
 - ✅ CORS fix
@@ -106,51 +106,56 @@
 - ✅ Multi-Photo Composite Metadata Bug fix
 - ✅ Multi-Photo Fallback wählt szenen-passendes Foto
 - ✅ visual_anchor ohne Kleidung (nur Gesicht/Körper)
-- ✅ getOutfit() mit pageTitle + deutschen Keywords (Flughafen, Geburtstag etc.)
-- ✅ Safety-Rewriter
+- ✅ getOutfit() mit pageTitle + deutschen Keywords
+- ✅ Safety-Rewriter (4 Schichten: Sanitize → Classify → Style Guard → GPT-Rewrite)
+- ✅ BD_STYLE_ANCHOR_STRONG in Tier-3 Graceful Fallback
 - ✅ Face-Consistency Prompts verstärkt
+- ✅ Supabase Timeout Fix (Foto als Base64 an OpenAI, kein URL-Fetch durch OpenAI)
+- ✅ Safety-Block graceful degradation (kein harter Fehler mehr)
+- ✅ Safety-Keywords bereinigt (crowd, wild, party nicht mehr geblockt)
+
+### FLUX.1 Kontext (experimentell)
+- ✅ `/api/comic-flux` Route gebaut (Production unberührt)
+- ✅ Health-Check Endpoint `/api/comic-flux/health`
+- ⚠️ Qualität nicht ausreichend für Production (Multi-Panel-Problem, Stil-Drift)
+- 💤 Deaktiviert (`NEXT_PUBLIC_USE_FLUX=false`)
+
+---
+
+## ❌ BEKANNTE LIMITATIONEN (kein Fix möglich mit gpt-image-2)
+
+### Kleidungs-Konsistenz
+Charaktere tragen auf verschiedenen Seiten unterschiedliche Kleidung. gpt-image-2 gewichtet Referenzbild stärker als Text-Prompt. Prompt-Engineering löst das nicht zuverlässig.
+**Lösung nur durch Modell-Wechsel** (FLUX.1 Kontext pro wenn Qualität besser wird)
+
+### Nicht-Foto-Charaktere inkonsistent
+Charaktere ohne Foto (Oma, Opa) sehen auf jeder Seite anders aus — kein visueller Anker.
+**Lösung:** Referenzfoto für alle Charaktere anfordern (UX-Änderung)
+
+### Dialog-Zuordnung zu Panels
+Dialoge passen manchmal nicht zum Panel-Inhalt. Nur durch Panel-by-Panel Generierung lösbar (4x teurer, langsamer).
+**Status:** Langfristig / nicht prioritär
 
 ---
 
 ## 💡 EVALUIEREN (Mittelfristig)
 
-### **FLUX.2 Kontext statt gpt-image-2**
-**Warum:** Löst potenziell Kleidungs- UND Gesichts-Konsistenz
-- ✅ Explizit für Character Consistency gebaut
-- ✅ 5-10x günstiger ($0.03 vs $0.15-0.41 pro Bild)
-- ✅ Weniger Safety-Rejections
-- ✅ Mehrere Referenzbilder gleichzeitig
-- ⚠️ Anderer API-Ansatz (kein images.edit)
-- ⚠️ 1-2 Tage Umbau
+### FLUX.1 Kontext pro (BFL API)
+Wenn die Qualität des pro-Modells besser ist als dev, könnte es Kleidungs- und Gesichts-Konsistenz lösen. ~$0.05/Bild (ähnlich wie gpt-image-2 standard).
+**Ansatz:** Cover weiter mit gpt-image-2, Seiten mit FLUX pro testen
 
-**Ansatz:** Branch erstellen, Seiten-Generierung mit FLUX testen, Cover bei OpenAI lassen
-**Status:** 💤 Evaluieren wenn stabil
-
----
-
-### **Panel-by-Panel Generierung**
-**Warum:** Löst Dialog-Zuordnung + bessere Kontrolle
-- Pro: Jedes Panel exakt wie beschrieben
-- Contra: 4x API-Calls, 4x Kosten, langsamer
-**Status:** 💤 Langfristig
-
----
-
-### **Testing-Environment**
-**Warum:** Änderungen sicher testen ohne Production zu riskieren
-- Railway Preview Deployments (Branch-basiert)
-- Oder Feature-Flags
-**Status:** 💤 Aufsetzen wenn nächster großer Umbau ansteht
+### Testing-Environment
+Railway Preview Deployments (Branch-basiert) oder Feature-Flags für sichere Tests ohne Production-Risiko.
 
 ---
 
 ## 🧹 TODO: Dokumentation aufräumen
-Zu viele separate .md Dateien. Zusammenführen/archivieren:
-- PRODUCTION-ROADMAP-MAY-9.md
-- LAUNCH-ROADMAP-MAY-9.md
-- Alle *-FIX.md und *-COMPLETE.md Dateien
+Zu viele separate .md Dateien im Root. Archivieren:
+- Alle `*-FIX.md`, `*-COMPLETE.md`, `*-DEPLOYED.md` Dateien
+- `QUALITY-IMPROVEMENTS-STATUS.md` (in diese Roadmap integriert)
+- `DRUCK-UND-PREISMODELL.md` (in diese Roadmap integriert)
 
 ---
 
-**Erstellt:** 10. Mai 2025  
-**Letztes Update:** 14. Mai 2026
+**Erstellt:** 10. Mai 2026
+**Letztes Update:** 16. Mai 2026
