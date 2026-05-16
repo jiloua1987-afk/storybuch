@@ -83,6 +83,15 @@ const GERMAN_SOFT_REPLACEMENTS = [
   { pattern: /\bschreien\b/gi,  replacement: 'exclaiming enthusiastically' },
   { pattern: /\bbrüllt\b/gi,    replacement: 'calls out happily' },
   { pattern: /\bweint\b/gi,     replacement: 'has tears of happiness' },
+  // Essen / Trinken (Safety-Trigger bei Fotos)
+  { pattern: /\bheiße suppe\b/gi,  replacement: 'warm meal at the table' },
+  { pattern: /\bheisse suppe\b/gi, replacement: 'warm meal at the table' },
+  { pattern: /\bsuppe\b/gi,        replacement: 'meal' },
+  { pattern: /\bessen\b/gi,        replacement: 'enjoying food together' },
+  { pattern: /\bisst\b/gi,         replacement: 'enjoys the food' },
+  { pattern: /\bschmeckt\b/gi,     replacement: 'tries the food' },
+  { pattern: /\btrinken\b/gi,      replacement: 'having beverages' },
+  { pattern: /\btrinkt\b/gi,       replacement: 'has a beverage' },
   // Bewegung (Kinder)
   { pattern: /\bkind rennt\b/gi,           replacement: 'child walks quickly with excitement' },
   { pattern: /\bkind springt\b/gi,         replacement: 'child stands on tiptoes, excited' },

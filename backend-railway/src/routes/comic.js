@@ -296,7 +296,13 @@ router.post("/structure", async (req, res) => {
         model: "gpt-4.1",
         messages: [{
           role: "system",
-          content: `Extract ALL characters from the story. Include grandparents, parents, children, friends — everyone mentioned.
+          content: `Extract ALL named characters from the story. Include grandparents, parents, children, friends — everyone mentioned BY NAME.
+IMPORTANT RULES:
+- Only extract REAL CHARACTER NAMES (e.g. "Ray", "Tek", "Jil", "Oma", "Papa")
+- Do NOT extract positional descriptions as names (e.g. "Links", "Rechts", "Mitte", "Oben", "Unten" are NOT names)
+- Do NOT extract generic labels (e.g. "Person 1", "Mann", "Frau" are NOT names unless used as the character's identifier)
+- If the text says "Links ist Jil" → extract "Jil", NOT "Links"
+- If the text says "Mitte: Tek" → extract "Tek", NOT "Mitte"
 For each write: name, approximate age.
 Respond ONLY with JSON: {"characters":[{"name":"Name","age":30}]}`
         }, {
@@ -308,6 +314,14 @@ Respond ONLY with JSON: {"characters":[{"name":"Name","age":30}]}`
       
       const charRes = await charPromise;
       characters = JSON.parse(charRes.choices[0].message.content || "{}").characters || [];
+      
+      // Filter out positional labels that GPT sometimes extracts as character names
+      const positionLabels = ["links", "rechts", "mitte", "oben", "unten", "vorne", "hinten", "left", "right", "middle", "center", "top", "bottom", "front", "back", "person 1", "person 2", "person 3", "person 4"];
+      const beforeCount = characters.length;
+      characters = characters.filter(c => !positionLabels.includes((c.name || "").toLowerCase().trim()));
+      if (characters.length < beforeCount) {
+        console.log(`  → Filtered out ${beforeCount - characters.length} positional labels from character list`);
+      }
       
       // Describe all characters from the family photo
       if (characters.length > 0) {
@@ -1080,7 +1094,7 @@ Do NOT copy the photographic look — this must look DRAWN, not filtered.
 
 ${characters.length === 1
   ? `Draw ONLY ONE character — ${charNames}. Do NOT add any other people or invented characters. Solo cover.`
-  : `Draw ALL characters: ${charNames}.`
+  : `Draw EXACTLY ${characters.length} characters — ${charNames}. Do NOT add any other people. Do NOT invent additional characters. ONLY these ${characters.length} people exist in this image.`
 }
 Setting: ${coverLocation} as a vivid illustrated comic background.
 Character: ${charDesc}
@@ -1918,10 +1932,11 @@ NO text, NO speech bubbles anywhere in image.`;
       const sanitizedPanelDescs = page.panels
         .map(p => `Panel ${p.nummer}: ${(p.szene || "")
           // Remove risky words that trigger safety
-          .replace(/\b(essen|eating|eat|feed|bite|chew|swallow|mouth|taste)\b/gi, "enjoying meal")
-          .replace(/\b(drunk|beer|wine|alcohol|intoxicated)\b/gi, "celebrating")
+          .replace(/\b(essen|eating|eat|feed|bite|chew|swallow|mouth|taste|suppe|soup)\b/gi, "sitting at table with food")
+          .replace(/\b(heiß|hot|scharf|spicy|brennt|burning|verbrennt)\b/gi, "warm")
+          .replace(/\b(drunk|beer|wine|alcohol|intoxicated|bier|wein|trinken|drink)\b/gi, "having beverages")
           .replace(/\b(fight|punch|hit|weapon|blood|violence|attack)\b/gi, "playing")
-          .replace(/\b(screaming|scream|yelling|yell|shouting|shout)\b/gi, "talking excitedly")
+          .replace(/\b(screaming|scream|yelling|yell|shouting|shout|jubeln|jubel)\b/gi, "cheering")
           .replace(/\b(crying|cry|sobbing|sob)\b/gi, "feeling emotional")
           .replace(/\b(wild|crazy|chaotic|chaos)\b/gi, "lively")
           .trim()}`)
@@ -1969,11 +1984,25 @@ NO text, NO speech bubbles anywhere in image.`;
       } catch (e1) {
         console.error(`  → Retry 1 failed:`, e1.message);
         
-        // Retry 2: Even more aggressive sanitization
+        // Retry 2: Even more aggressive sanitization but KEEP panel variety
         try {
           console.log(`  → Retry attempt 2: Ultra-safe prompt WITH cover reference`);
           const ultraSafePanelDescs = page.panels
-            .map(p => `Panel ${p.nummer}: Characters spending quality time together in a warm, joyful moment`)
+            .map((p, i) => {
+              // Keep the basic action but make it safe
+              const safeAction = (p.szene || "")
+                .replace(/\b(essen|eating|eat|feed|bite|chew|swallow|mouth|taste|suppe|soup)\b/gi, "sitting at table")
+                .replace(/\b(drunk|beer|wine|alcohol|intoxicated|bier|wein)\b/gi, "having drinks")
+                .replace(/\b(fight|punch|hit|weapon|blood|violence|attack)\b/gi, "playing together")
+                .replace(/\b(screaming|scream|yelling|yell|shouting|shout|jubel|jubeln)\b/gi, "cheering happily")
+                .replace(/\b(crying|cry|sobbing|sob)\b/gi, "feeling emotional")
+                .replace(/\b(wild|crazy|chaotic|chaos)\b/gi, "lively")
+                .replace(/\b(heiß|hot|scharf|spicy|brennt|burning)\b/gi, "warm")
+                .trim();
+              // Ensure each panel has a DIFFERENT composition
+              const angles = ["wide shot showing full scene", "medium close-up of characters talking", "over-the-shoulder view", "bird's eye view of the table/scene"];
+              return `Panel ${p.nummer}: ${safeAction || "Characters enjoying time together"} — ${angles[i % angles.length]}`;
+            })
             .join("\n");
           
           const ultraSafePrompt = `${refNote}${COMIC_STYLE} ${mood}
@@ -1986,10 +2015,14 @@ ${charAnchors}
 
 CLOTHING — characters wear ${outfit}
 
-ULTRA-SAFE FAMILY SCENE:
+SCENE (safe family-friendly version):
 ${ultraSafePanelDescs}
 
-Show characters in warm, joyful family moments. Focus on connection and happiness.
+CRITICAL: Each panel MUST show a COMPLETELY DIFFERENT camera angle and moment.
+- Panel 1: DIFFERENT composition from all others
+- Panel 2: DIFFERENT composition from all others  
+- Panel 3: DIFFERENT composition from all others
+NEVER repeat the same framing or pose across panels.
 
 NO text, NO speech bubbles anywhere in image.`;
           
