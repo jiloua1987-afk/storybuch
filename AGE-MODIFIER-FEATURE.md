@@ -58,23 +58,35 @@ Mature but youthful, minimal gray hair, fewer wrinkles."
 
 ### 3. Referenzfoto-Strategie
 
-**Kritisch:** Bei jungen Szenen wird **KEIN** Referenzfoto verwendet!
+**AKTUALISIERT (16. Mai 2026):** Bei allen Szenen wird das Referenzfoto verwendet!
 
-**Warum?** gpt-image-2 kann Alter nur begrenzt modifizieren wenn ein Foto als Referenz dient. Ohne Foto kann es freier aus der Text-Beschreibung generieren.
+**Warum?** Ohne Foto erfindet gpt-image-2 neue Charaktere (falsches Geschlecht, falsche Ethnie). Das Foto sichert die Identität, der Prompt steuert das Alter und den Stil.
 
 ```javascript
-// Junge Szene → KEIN Foto
+// Junge Szene → MIT Foto (für Identität) + starker Age-Modifier + Stil-Enforcement
 if (ageContext === "young") {
-  reference = null;  // Nur Text-Beschreibung
-  refSource = "generate-only-age-modified";
+  reference = userPhoto;  // Foto für Gesichtsstruktur & Geschlecht
+  refSource = "user-photo-age-young";
+  // refNote enthält: "SAME gender, SAME face structure" + "REDRAW in comic style"
 }
 
-// Aktuelle Szene → MIT Foto
+// Mittleres Alter → MIT Foto + Age-Modifier
+if (ageContext === "middle") {
+  reference = userPhoto;
+  refSource = "user-photo-age-middle";
+}
+
+// Aktuelle Szene → MIT Foto (wie bisher)
 if (ageContext === "current") {
-  reference = coverImageUrl;  // Foto als Referenz
+  reference = coverImageUrl;  // Cover als Referenz
   refSource = "cover";
 }
 ```
+
+**Wichtig:** Der `refNote` für age-modified Szenen enthält jetzt:
+- Explizite Identitäts-Bewahrung (Geschlecht, Ethnie, Gesichtsstruktur)
+- Starke Stil-Enforcement ("REDRAW completely in ink+color style")
+- Klare Trennung: "Reference is ONLY for identifying WHO — not HOW to render"
 
 ---
 
@@ -163,12 +175,18 @@ Das erste Kennenlernen|Unsere Hochzeit|Geburt unserer Kinder|Heute mit den Enkel
 ### 2. gpt-image-2 Interpretation
 - Alters-Modifikatoren sind Vorschläge, keine Garantie
 - gpt-image-2 interpretiert "20 Jahre jünger" unterschiedlich
+- Mit Referenzfoto: Gesicht bleibt korrekt, aber Alter-Reduktion ist subtiler
 - Ergebnis kann variieren
 
 ### 3. Konsistenz über Seiten
-- Junge Szenen haben KEIN Referenzfoto → weniger konsistent
-- Charaktere können zwischen jungen Szenen leicht variieren
-- Aktuelle Szenen MIT Foto → sehr konsistent
+- Alle Szenen verwenden jetzt das Referenzfoto → bessere Konsistenz als vorher
+- Junge Szenen: Gesicht erkennbar, aber Alter-Modifikation ist begrenzt (Foto dominiert)
+- Trade-off: Lieber richtiges Geschlecht/Gesicht mit weniger Alters-Effekt als falscher Charakter
+
+### 4. Photorealismus bei Close-up-Fotos
+- `images.edit()` mit Close-up-Fotos tendiert zu photorealistischem Output
+- Verstärkte Stil-Prompts helfen, aber eliminieren das Problem nicht vollständig
+- **Workaround:** Fotos mit mehr Abstand (Halbkörper statt Gesichts-Close-up) liefern bessere Comic-Stilisierung
 
 ---
 

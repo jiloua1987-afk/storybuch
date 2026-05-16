@@ -14,6 +14,27 @@
 
 ---
 
+### 2. **Age-Mode: Geschlecht/Identität beibehalten** ✅ GEFIXT
+**Problem:** Bei Kindheits-Szenen wurde das Referenzfoto übersprungen → gpt-image-2 erfand neue Charaktere (z.B. Mädchen statt Junge)
+
+**Lösung (16. Mai 2026):**
+- Age-Mode verwendet jetzt IMMER das User-Foto als Referenz (für Identität: Geschlecht, Gesichtsstruktur)
+- Neuer dedizierter `refNote`-Block für `user-photo-age-*` mit expliziten Identitäts-Regeln
+- Age-Modifier betont: "SAME gender, SAME face structure, SAME ethnicity"
+- Stil-Enforcement im refNote: "REDRAW completely in ink+color style — reference is ONLY for identity"
+
+### 3. **Cover zu photorealistisch** ✅ VERBESSERT
+**Problem:** `images.edit()` mit Close-up-Foto übernimmt den fotografischen Look zu stark
+
+**Lösung (16. Mai 2026):**
+- Cover-Prompt massiv verstärkt: explizite "TRANSFORMATION INSTRUCTION" 
+- Detaillierte Verbotsliste: keine Hauttextur, keine Foto-Beleuchtung, keine Tiefenunschärfe
+- Positive Anweisungen: "simplify face into bold ink lines", "replace skin with flat color + ink outlines"
+- `COMIC_STYLE`-Konstante erweitert: Haar als "solid color shapes", max 2-3 Farbwerte pro Fläche, keine weichen Gradienten
+- **Limitation:** Bei extremen Close-ups bleibt ein gewisser Foto-Einfluss — das ist eine Eigenschaft von `images.edit()`. Für maximale Stilisierung: Foto mit mehr Abstand verwenden.
+
+---
+
 ## 📋 WICHTIGE FEATURES (Bald)
 
 ### 2. **Mehr Seiten generieren** 📝 HOCH

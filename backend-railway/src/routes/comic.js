@@ -9,13 +9,15 @@ const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 // Placed FIRST in every prompt — gpt-image-2 weights early instructions more heavily
 const COMIC_STYLE = [
   "EUROPEAN BANDE DESSINÉE ILLUSTRATION — Franco-Belgian comic book style, similar to Blacksad or Bastien Vivès.",
-  "Bold clean ink outlines on every figure and object. Flat cel-shaded color areas, NOT photographic gradients.",
-  "Warm cinematic colors: golden tones, rich shadows, vivid saturated hues.",
-  "Expressive stylized faces — clearly drawn eyes, nose, mouth. NOT photographic faces.",
+  "Bold clean ink outlines (4-5px) on every figure, face, hair, and object. Flat cel-shaded color areas with HARD EDGES, NOT photographic gradients.",
+  "Warm cinematic colors: golden tones, rich shadows, vivid saturated hues. Maximum 2-3 color values per surface (light/shadow/midtone).",
+  "Expressive stylized faces — clearly drawn ink lines for eyes, nose, mouth. Simplified features, NOT photographic faces.",
   "Realistic human proportions. Western comic book anatomy.",
+  "Hair rendered as SOLID COLOR SHAPES with ink line detail — NOT individual realistic strands.",
   "STRICT PROHIBITION: NOT manga. NOT anime. NOT Japanese comic style. NOT big anime eyes. NOT speed lines.",
-  "STRICT PROHIBITION: NOT photorealistic. NOT a photograph. NOT CGI render. NOT watercolor painting.",
-  "This must look like a page printed in a European comic album — ink outlines visible on every edge.",
+  "STRICT PROHIBITION: NOT photorealistic. NOT a photograph. NOT CGI render. NOT watercolor painting. NOT digital painting with soft gradients.",
+  "STRICT PROHIBITION: NO photographic skin texture (pores, fine wrinkles). NO realistic lighting (rim light, ambient occlusion). NO depth-of-field blur.",
+  "This must look like a page printed in a European comic album — ink outlines visible on every edge, flat color fills, stylized faces.",
   "Every page in this comic MUST look identical in style. Consistent ink weight, color palette, and character design.",
 ].join(" ");
 
@@ -148,8 +150,8 @@ function getAgeContext(pageTitle = "", panelDescriptions = "") {
   // Check for young scene
   if (youngKeywords.some(k => text.includes(k))) {
     return {
-      modifier: "Draw characters 20-30 years younger than their current age. Youthful appearance, smooth skin, darker hair (no gray), energetic posture.",
-      useReference: false, // Don't use photo for young scenes
+      modifier: "AGE MODIFICATION: Draw the SAME characters 20-30 years younger. Keep SAME gender, SAME face structure, SAME ethnicity. Changes: youthful appearance, smooth skin, darker/fuller hair (no gray), energetic posture, slightly rounder face. This is the SAME person as a young adult — NOT a different character.",
+      useReference: true, // USE photo to maintain identity (gender, face structure)
       ageContext: "young"
     };
   }
@@ -157,8 +159,8 @@ function getAgeContext(pageTitle = "", panelDescriptions = "") {
   // Check for middle-age scene
   if (middleKeywords.some(k => text.includes(k))) {
     return {
-      modifier: "Draw characters 10-15 years younger than their current age. Mature but youthful, minimal gray hair, fewer wrinkles.",
-      useReference: false, // Don't use photo for middle-age scenes
+      modifier: "AGE MODIFICATION: Draw the SAME characters 10-15 years younger. Keep SAME gender, SAME face structure, SAME ethnicity. Changes: mature but youthful, minimal gray hair, fewer wrinkles, slightly more energetic posture. This is the SAME person slightly younger — NOT a different character.",
+      useReference: true, // USE photo to maintain identity
       ageContext: "middle"
     };
   }
@@ -1062,17 +1064,19 @@ MANDATORY VISUAL STYLE:
 - Warm vivid colors: golden yellows, deep blues, rich reds
 - Expressive stylized faces — NOT photorealistic faces
 - Visible ink linework on every edge
+- Hair as solid color shapes with ink detail — NOT individual photo-realistic strands
 - Printed comic book paper look
 
 STRICTLY FORBIDDEN:
-- NO photorealism
-- NO photographic skin textures or lighting
+- NO photorealistic skin texture (pores, subsurface scattering)
+- NO photographic lighting (soft shadows, rim light, depth-of-field)
 - NO CGI or 3D render look
 - NO watercolor or painting style
 - NO manga or anime style
 
-Use the reference photo ONLY to identify the character's face and hair. 
-Redraw them completely in the comic style above — do NOT copy the photographic look.
+TRANSFORMATION: Use the reference photo ONLY to identify the character's face structure and hair style.
+Redraw them completely in the comic style above — simplify features into ink lines and flat color.
+Do NOT copy the photographic look — this must look DRAWN, not filtered.
 
 ${characters.length === 1
   ? `Draw ONLY ONE character — ${charNames}. Do NOT add any other people or invented characters. Solo cover.`
@@ -1479,15 +1483,17 @@ RULES:
     let refSource = "none";
 
     // ── STRATEGY 0: Age-based reference decision ──────────────────────────────
-    // For young/middle-age scenes: use user photo directly (NOT cover).
-    // Reason: cover may be photorealistic → using it as reference causes style drift.
-    // User photo is the original face reference — age modifier in prompt handles the "younger" look.
-    if (!ageContext.useReference) {
+    // For young/middle-age scenes: use user photo as reference for face structure,
+    // but with strong age-modification prompts. The photo ensures we draw the RIGHT
+    // person (correct gender, face shape) while the prompt handles making them younger.
+    // Previously we skipped the reference entirely, which caused gender/identity errors.
+    if (ageContext.ageContext === "young" || ageContext.ageContext === "middle") {
+      // Age-modified scene: ALWAYS use user photo for identity, never skip it
       if (primaryRefUrl) {
         try {
           reference = await fetchBuffer(primaryRefUrl);
           refSource = `user-photo-age-${ageContext.ageContext}`;
-          console.log(`  → Historical scene (${ageContext.ageContext}), using user photo directly (avoids cover style drift)`);
+          console.log(`  → Historical scene (${ageContext.ageContext}), using user photo for face identity (age modifier in prompt)`);
         } catch (e) {
           console.warn("  → User photo fetch failed:", e.message);
           if (coverImageUrl) {
@@ -1594,7 +1600,53 @@ RULES:
       }
     }
 
-    const refNote = refSource.startsWith("cover-age-")
+    const refNote = refSource.startsWith("user-photo-age-")
+      ? `${COMIC_STYLE}
+
+CRITICAL IDENTITY & AGE RULES (Age-Modified Scene — User Photo Reference):
+This photo shows the character at their CURRENT age. You must:
+1. Keep the SAME person's identity: same gender, same face bone structure, same ethnicity
+2. Draw them YOUNGER as specified below
+3. Draw in COMIC BOOK STYLE — NOT photorealistic
+
+${finalCharacters.map(c => `${c.name}: ${c.visual_anchor}`).join("\n")}
+
+${ageContext.modifier}
+
+IDENTITY PRESERVATION (CRITICAL — DO NOT CHANGE):
+- SAME gender as in the photo — if the photo shows a man, draw a man. If a woman, draw a woman.
+- SAME face bone structure: jawline shape, cheekbone position, forehead shape
+- SAME ethnicity and skin tone
+- SAME eye shape and eye color
+- SAME nose shape (bridge width, tip shape)
+- SAME mouth shape
+
+AGE MODIFICATION (apply these changes):
+- Smoother skin, fewer/no wrinkles
+- Fuller, darker hair (reduce or remove gray)
+- More youthful energy and posture
+- Slightly rounder face (less angular than older version)
+
+STYLE ENFORCEMENT (CRITICAL — OVERRIDE PHOTO LOOK):
+- This MUST look like a hand-drawn European comic book illustration
+- Bold black ink outlines (3-4px) on EVERY figure, face, and object
+- Flat cel-shaded color fills — NO photographic gradients or realistic lighting
+- Stylized expressive face — clearly drawn ink lines for eyes, nose, mouth
+- DO NOT copy the photographic look of the reference — REDRAW completely in ink+color style
+- The reference is ONLY for identifying WHO this person is, not HOW to render them
+
+CRITICAL: IGNORE the clothing from the photo.
+Draw the clothing specified in the CRITICAL CLOTHING RULES section instead.
+
+NATURAL SCENE BEHAVIOR:
+- Characters are IN THE SCENE, not posing for a photo
+- They interact with each other and their environment
+- NO direct eye contact with viewer/camera
+- Show them from various angles: 3/4 view, profile, back view, action shots
+- They are LIVING the moment, not posing for it
+
+DO NOT invent new characters. DO NOT change gender. These must be the SAME people, just younger and in comic style.\n\n`
+      : refSource.startsWith("cover-age-")
       ? `${COMIC_STYLE}
 
 CRITICAL FACE CONSISTENCY RULES (Age-Modified Scene):
@@ -1608,9 +1660,16 @@ ${ageContext.modifier}
 MANDATORY:
 - Keep the SAME facial features from the cover: eye shape, nose shape, mouth shape, face bone structure
 - Keep the SAME face proportions and overall facial structure
+- Keep the SAME gender — do NOT change or invent different characters
 - Only change: smoother skin, darker/fuller hair (no gray), fewer wrinkles, more youthful energy
 - Draw ${finalCharacters.map(c => c.name).join(" and ")} so they are recognizable as the SAME people from the cover, just younger
 - Match the art style and color palette of the cover exactly
+
+STYLE ENFORCEMENT:
+- Bold black ink outlines on every figure and object
+- Flat cel-shaded colors — NOT photographic
+- Stylized expressive faces in European comic style
+- DO NOT let the cover's photographic elements bleed into this page
 
 CRITICAL: IGNORE the clothing from the cover photo.
 The cover shows everyday clothing, but this scene requires different attire.
@@ -1624,7 +1683,7 @@ NATURAL SCENE BEHAVIOR:
 - Show them from various angles: 3/4 view, profile, back view, action shots
 - They are LIVING the moment, not posing for it
 
-DO NOT invent new faces. These must be the SAME people from the cover, just at a younger age.\n\n`
+DO NOT invent new faces. DO NOT change gender. These must be the SAME people from the cover, just at a younger age.\n\n`
       : refSource === "user-photo-age-fallback"
       ? `${COMIC_STYLE}
 
