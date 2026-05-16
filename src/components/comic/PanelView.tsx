@@ -315,39 +315,6 @@ export default function PanelView({ imageUrl, title, panels = [], panelPositions
     setEditingExtra(null);
   }, [pageId, imageUrl]); // Also reset when image changes
 
-  // ── Click-outside: close editing when clicking outside a bubble ───────────
-  useEffect(() => {
-    if (editingBubbleId === null && editingExtra === null) return;
-    const handleClickOutside = (e: MouseEvent) => {
-      const target = e.target as HTMLElement;
-      if (target.closest('[data-bubble-editing]')) return;
-      // Close panel bubble editing
-      if (editingBubbleId !== null) {
-        setEditingBubbleId(null);
-        // Persist the edited text
-        const newText = editedDialogs[editingBubbleId];
-        if (newText !== undefined && onDialogChange) {
-          const panel = dialogPanels.find(p => (p.bubbleId ?? `${p.originalIndex}-0`) === editingBubbleId);
-          if (panel) onDialogChange(panel.originalIndex, newText, panel.bubbleIndex);
-        }
-      }
-      // Close extra bubble editing
-      if (editingExtra !== null) {
-        setEditingExtra(null);
-        setTimeout(() => {
-          const { updateChapter } = useBookStore.getState();
-          if (pageId) {
-            const project = useBookStore.getState().project;
-            const currentPageData = project?.chapters?.find(c => c.id === pageId);
-            if (currentPageData) updateChapter(pageId, { extraBubbles: extraBubbles });
-          }
-        }, 100);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside, true);
-    return () => document.removeEventListener('mousedown', handleClickOutside, true);
-  }, [editingBubbleId, editingExtra, editedDialogs, dialogPanels, extraBubbles, pageId, onDialogChange]);
-
   const isValidDialog = (d?: string | null) =>
     d && d.trim().length > 0 && d.trim().toLowerCase() !== "null";
 
@@ -403,6 +370,38 @@ export default function PanelView({ imageUrl, title, panels = [], panelPositions
     }
     return [];
   }).filter((p) => !hiddenBubbles.has(p.bubbleId ?? ""));
+
+  // ── Click-outside: close editing when clicking outside a bubble ───────────
+  useEffect(() => {
+    if (editingBubbleId === null && editingExtra === null) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (target.closest('[data-bubble-editing]')) return;
+      // Close panel bubble editing
+      if (editingBubbleId !== null) {
+        setEditingBubbleId(null);
+        const newText = editedDialogs[editingBubbleId];
+        if (newText !== undefined && onDialogChange) {
+          const panel = dialogPanels.find(p => (p.bubbleId ?? `${p.originalIndex}-0`) === editingBubbleId);
+          if (panel) onDialogChange(panel.originalIndex, newText, panel.bubbleIndex);
+        }
+      }
+      // Close extra bubble editing
+      if (editingExtra !== null) {
+        setEditingExtra(null);
+        setTimeout(() => {
+          if (pageId) {
+            const { updateChapter } = useBookStore.getState();
+            const project = useBookStore.getState().project;
+            const currentPageData = project?.chapters?.find(c => c.id === pageId);
+            if (currentPageData) updateChapter(pageId, { extraBubbles: extraBubbles });
+          }
+        }, 100);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside, true);
+    return () => document.removeEventListener('mousedown', handleClickOutside, true);
+  }, [editingBubbleId, editingExtra, editedDialogs, dialogPanels, extraBubbles, pageId, onDialogChange]);
 
   const hasDetectedPositions = panelPositions && panelPositions.length > 0;
 
