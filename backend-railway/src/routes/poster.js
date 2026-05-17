@@ -96,6 +96,9 @@ router.post("/structure", async (req, res) => {
 
     const charNames = characters.map(c => c.name).join(", ");
 
+    // Sanitize the moment text before using it in prompts
+    const safeMoment = sanitizePrompt(moment || "");
+
     const structRes = await openai.chat.completions.create({
       model: "gpt-4.1",
       messages: [{
@@ -138,7 +141,7 @@ Respond ONLY with JSON:
 }`
       }, {
         role: "user",
-        content: `Scene to illustrate: ${moment}\nCharacters: ${charNames}`,
+        content: `Scene to illustrate: ${safeMoment}\nCharacters: ${charNames}`,
       }],
       response_format: { type: "json_object" },
       temperature: 0.8,
@@ -192,6 +195,13 @@ router.post("/generate", async (req, res) => {
       .join("\n");
     const panelDescriptions = await rewriteIfRisky(originalPanelDesc);
 
+    // Sanitize location — replace specific park/ride names that trigger safety
+    const safeLocation = sanitizePrompt(location)
+      .replace(/\b(europapark|europa-park|disneyland|disney|legoland|phantasialand|heide park|holiday park)\b/gi, "amusement park")
+      .replace(/\b(achterbahn|roller coaster|coaster|ride|fahrgeschäft|karussell|carousel)\b/gi, "park attraction")
+      .replace(/\b(wildwasser|water ride|log flume)\b/gi, "water attraction")
+      .replace(/\b(geisterbahn|haunted)\b/gi, "fun attraction");
+
     const imageSize = orientation === "landscape" ? "1536x1024" : "1024x1536";
 
     const prompt = sanitizePrompt(`${POSTER_STYLE} ${mood}
@@ -220,7 +230,7 @@ CAMERA RULES (CRITICAL):
 PANELS:
 ${panelDescriptions}
 
-LOCATION: ${location}
+LOCATION: ${safeLocation}
 
 RULES:
 - Each panel shows a DIFFERENT moment/action — NEVER repeat the same scene
@@ -273,18 +283,56 @@ ${prompt}`,
       }
     }
 
-    // Fallback: generate without reference
+    // Fallback: generate without reference — use ultra-safe prompt
     if (!imageUrl) {
       console.log(`🎨 Generating poster (${panelCount} panels, ${orientation}, ref: none)`);
-      const res3 = await openai.images.generate({
-        model: "gpt-image-2",
-        prompt,
-        n: 1,
-        size: imageSize,
-        quality: "high",
-      });
-      const item = (res3.data || [])[0];
-      imageUrl = item?.url || (item?.b64_json ? `data:image/png;base64,${item.b64_json}` : null);
+
+      // Ultra-safe fallback prompt — strip specific locations/activities
+      const safePrompt = sanitizePrompt(`${POSTER_STYLE} ${mood}
+
+POSTER LAYOUT: ${layoutDesc}
+THICK BLACK BORDERS between all panels.
+
+CHARACTERS:
+${charAnchors}
+
+PANELS:
+${panelDescriptions}
+
+LOCATION: cheerful outdoor setting with families enjoying their day
+
+RULES:
+- Each panel shows a DIFFERENT moment
+- Panel 1: Wide shot of characters together in a happy setting
+- Panel 2: Medium shot, characters interacting warmly
+${panelCount === 3 ? "- Panel 3: Close-up of joyful expressions" : ""}
+- NO text, NO speech bubbles, NO letters anywhere in the image
+- Characters wear casual comfortable clothes`);
+
+      try {
+        const res3 = await openai.images.generate({
+          model: "gpt-image-2",
+          prompt: safePrompt,
+          n: 1,
+          size: imageSize,
+          quality: "high",
+        });
+        const item = (res3.data || [])[0];
+        imageUrl = item?.url || (item?.b64_json ? `data:image/png;base64,${item.b64_json}` : null);
+      } catch (e2) {
+        console.error(`  → generate() also failed: ${e2.message}`);
+        // Last resort: completely generic safe prompt
+        const lastResort = `${POSTER_STYLE} ${mood} Comic poster with ${panelCount} panels showing a happy family spending quality time together outdoors. Bold ink outlines, flat colors. NO text anywhere.`;
+        const res4 = await openai.images.generate({
+          model: "gpt-image-2",
+          prompt: lastResort,
+          n: 1,
+          size: imageSize,
+          quality: "high",
+        });
+        const item = (res4.data || [])[0];
+        imageUrl = item?.url || (item?.b64_json ? `data:image/png;base64,${item.b64_json}` : null);
+      }
     }
 
     if (!imageUrl) {

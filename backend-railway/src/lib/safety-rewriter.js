@@ -92,6 +92,18 @@ const GERMAN_SOFT_REPLACEMENTS = [
   { pattern: /\bschmeckt\b/gi,     replacement: 'tries the food' },
   { pattern: /\btrinken\b/gi,      replacement: 'having beverages' },
   { pattern: /\btrinkt\b/gi,       replacement: 'has a beverage' },
+  // Freizeitpark (Safety-Trigger)
+  { pattern: /\beuropapark\b/gi,   replacement: 'amusement park' },
+  { pattern: /\beuropa-park\b/gi,  replacement: 'amusement park' },
+  { pattern: /\bdisneyland\b/gi,   replacement: 'theme park' },
+  { pattern: /\bdisney\b/gi,       replacement: 'theme park' },
+  { pattern: /\blegoland\b/gi,     replacement: 'theme park' },
+  { pattern: /\bphantasialand\b/gi, replacement: 'amusement park' },
+  { pattern: /\bachterbahn\b/gi,   replacement: 'park attraction' },
+  { pattern: /\broller coaster\b/gi, replacement: 'park attraction' },
+  { pattern: /\bwildwasser\b/gi,   replacement: 'water attraction' },
+  { pattern: /\bgeisterbahn\b/gi,  replacement: 'fun attraction' },
+  { pattern: /\bkarussell\b/gi,    replacement: 'park ride' },
   // Bewegung (Kinder)
   { pattern: /\bkind rennt\b/gi,           replacement: 'child walks quickly with excitement' },
   { pattern: /\bkind springt\b/gi,         replacement: 'child stands on tiptoes, excited' },
