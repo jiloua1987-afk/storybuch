@@ -34,6 +34,7 @@ app.use(express.json({ limit: "50mb" }));
 
 app.use("/api/comic", require("./routes/comic"));
 app.use("/api/comic-flux", require("./routes/comic-flux")); // FLUX.1 Kontext test route
+app.use("/api/poster", require("./routes/poster")); // Poster-Produkt (getrennt von Comic-Buch)
 
 app.get("/health", (_, res) => res.json({ status: "ok", service: "MyComicStory Backend" }));
 
