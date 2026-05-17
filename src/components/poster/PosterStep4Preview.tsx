@@ -1,16 +1,19 @@
 "use client";
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { motion } from "framer-motion";
 import { usePosterStore } from "@/store/posterStore";
+import { useBookStore } from "@/store/bookStore";
 import PanelView from "@/components/comic/PanelView";
 import Button from "@/components/ui/Button";
 import toast from "react-hot-toast";
 import type { PanelPosition } from "@/store/bookStore";
 
 const RAILWAY_URL = process.env.NEXT_PUBLIC_RAILWAY_URL || "";
+const POSTER_PAGE_ID = "poster-main";
 
 export default function PosterStep4Preview() {
   const { project, updateProject, setStep } = usePosterStore();
+  const { setProject: setBookProject } = useBookStore();
   const [regenerating, setRegenerating] = useState(false);
   const [regenNote, setRegenNote] = useState("");
   const [exportingPDF, setExportingPDF] = useState(false);
@@ -18,8 +21,37 @@ export default function PosterStep4Preview() {
 
   if (!project) return null;
 
+  // Sync poster panels into bookStore so PanelView can save hiddenBubbles/extraBubbles there
+  // PanelView always reads/writes via bookStore.updateChapter(pageId)
+  useEffect(() => {
+    if (!project) return;
+    setBookProject({
+      id: project.id,
+      title: project.title,
+      storyInput: "",
+      guidedAnswers: { characters: "", location: "", timeframe: "", specialMoments: "" },
+      tone: "humorvoll" as any,
+      design: "kinderbuch" as any,
+      characters: [],
+      chapters: [{
+        id: POSTER_PAGE_ID,
+        title: project.title,
+        content: "",
+        imageUrl: project.imageUrl,
+        panels: project.panels || [],
+        panelPositions: project.panelPositions || null,
+        hiddenBubbles: project.hiddenBubbles || [],
+        extraBubbles: project.extraBubbles || [],
+      }],
+      status: "preview",
+      createdAt: project.createdAt,
+    });
+  }, [project.id, project.imageUrl, project.panels]);
+
   const handlePositionsChange = useCallback((positions: PanelPosition[]) => {
     updateProject({ panelPositions: positions });
+    // Also sync to bookStore so PanelView reads them back correctly
+    useBookStore.getState().updateChapter(POSTER_PAGE_ID, { panelPositions: positions });
   }, [updateProject]);
 
   const handleDialogChange = useCallback((panelIndex: number, newDialog: string, bubbleIndex?: number) => {
@@ -97,7 +129,10 @@ export default function PosterStep4Preview() {
     try {
       const url = RAILWAY_URL ? `${RAILWAY_URL}/api/comic/export-pdf` : "/api/comic/export-pdf";
 
-      // Build a minimal project structure compatible with the PDF generator
+      // Read the current state from bookStore — PanelView writes hiddenBubbles/extraBubbles there
+      const bookState = useBookStore.getState();
+      const posterPageFromBook = bookState.project?.chapters?.find(c => c.id === POSTER_PAGE_ID);
+
       const pdfProject = {
         title: project.title,
         isPoster: true,
@@ -105,13 +140,13 @@ export default function PosterStep4Preview() {
         posterDedicationFrom: project.dedicationFrom || "",
         posterDedicationPosition: project.dedicationPosition || "bottom",
         chapters: [{
-          id: "poster-page",
+          id: POSTER_PAGE_ID,
           title: project.title,
           imageUrl: project.imageUrl,
-          panels: project.panels || [],
-          panelPositions: project.panelPositions || null,
-          extraBubbles: project.extraBubbles || [],
-          hiddenBubbles: project.hiddenBubbles || [],
+          panels: posterPageFromBook?.panels || project.panels || [],
+          panelPositions: posterPageFromBook?.panelPositions || project.panelPositions || null,
+          extraBubbles: posterPageFromBook?.extraBubbles || [],
+          hiddenBubbles: posterPageFromBook?.hiddenBubbles || [],
         }],
         endingData: null,
       };
