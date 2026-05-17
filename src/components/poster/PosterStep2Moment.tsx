@@ -18,13 +18,16 @@ export default function PosterStep2Moment() {
   const { setStep, project, updateProject } = usePosterStore();
   const [title, setTitle] = useState(project?.title || "");
   const [moment, setMoment] = useState(project?.moment || "");
+  const [dedication, setDedication] = useState(project?.dedication || "");
+  const [dedicationFrom, setDedicationFrom] = useState(project?.dedicationFrom || "");
+  const [dedicationPosition, setDedicationPosition] = useState<"top" | "bottom">(project?.dedicationPosition || "bottom");
 
   const suggestions = MOMENT_SUGGESTIONS[project?.category || "sonstiges"] || [];
 
   const handleNext = () => {
     if (!title.trim()) { toast.error("Bitte gib deinem Poster einen Titel."); return; }
     if (!moment.trim()) { toast.error("Bitte beschreibe den Moment."); return; }
-    updateProject({ title, moment });
+    updateProject({ title, moment, dedication, dedicationFrom, dedicationPosition });
     setStep(2);
   };
 
@@ -83,6 +86,38 @@ export default function PosterStep2Moment() {
           </div>
         </div>
       )}
+
+      {/* Widmung */}
+      <div className="space-y-4 border-t border-gray-100 pt-6">
+        <div className="flex items-center justify-between">
+          <label className="text-sm font-semibold text-gray-900">
+            Widmung <span className="font-normal text-gray-400">(optional)</span>
+          </label>
+        </div>
+        <textarea value={dedication} onChange={(e) => setDedication(e.target.value)}
+          placeholder="z.B. Für Ray, zum Geburtstag — dieser Moment gehört dir!"
+          rows={2}
+          className="w-full p-3.5 rounded-xl border border-gray-200 focus:border-brand-500 focus:ring-1 focus:ring-brand-500 focus:outline-none text-gray-900 bg-white resize-none" />
+        <input value={dedicationFrom} onChange={(e) => setDedicationFrom(e.target.value)}
+          placeholder="Von wem? z.B. Jil & Tek"
+          className="w-full p-3.5 rounded-xl border border-gray-200 focus:border-brand-500 focus:ring-1 focus:ring-brand-500 focus:outline-none text-gray-900 bg-white" />
+
+        {dedication && (
+          <div className="space-y-2">
+            <label className="text-sm font-semibold text-gray-700">Position der Widmung</label>
+            <div className="flex gap-3">
+              {(["top", "bottom"] as const).map((pos) => (
+                <button key={pos} onClick={() => setDedicationPosition(pos)}
+                  className={`flex-1 py-2.5 rounded-xl border text-sm font-medium transition-all ${
+                    dedicationPosition === pos ? "border-brand-600 bg-brand-50 text-brand-700" : "border-gray-200 bg-white text-gray-600 hover:border-brand-400"
+                  }`}>
+                  {pos === "top" ? "⬆️ Oben" : "⬇️ Unten"}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
 
       <div className="flex gap-3">
         <Button variant="secondary" onClick={() => setStep(0)}>← Zurück</Button>

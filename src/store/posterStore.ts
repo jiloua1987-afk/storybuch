@@ -40,6 +40,9 @@ export interface PosterProject {
   id: string;
   title: string;
   moment: string;               // Der eine Moment (z.B. "Scharfe Suppe im Restaurant")
+  dedication?: string;          // Widmungstext (optional)
+  dedicationFrom?: string;      // "Von: ..." (optional)
+  dedicationPosition?: "top" | "bottom"; // Position der Widmung auf dem Poster
   category: string;
   comicStyle: PosterComicStyle;
   orientation: PosterOrientation;

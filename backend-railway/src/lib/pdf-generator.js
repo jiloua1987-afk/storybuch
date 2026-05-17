@@ -91,6 +91,52 @@ async function createComicPDF(project) {
          .lineTo(A4_W / 2 + 60, line2Y)
          .lineWidth(3).strokeColor('#C9963A').stroke();
 
+      // ── Poster-Widmung (optional) ──────────────────────────────────────────
+      // Wird als elegantes Overlay oben oder unten auf dem Poster gerendert
+      if (project.posterDedication) {
+        const dedText = project.posterDedication;
+        const dedFrom = project.posterDedicationFrom || "";
+        const dedPos  = project.posterDedicationPosition || "bottom";
+        const dedMaxW = A4_W - 80;
+        const dedFontSize = 13;
+        const dedH = doc.fontSize(dedFontSize).heightOfString(dedText, { width: dedMaxW, lineGap: 4 });
+        const fromH = dedFrom ? doc.fontSize(11).heightOfString(`— ${dedFrom}`, { width: dedMaxW }) + 6 : 0;
+        const totalDedH = 12 + dedH + fromH + 12; // padding + text + from + padding
+
+        // Semi-transparent gradient overlay
+        const gradY = dedPos === "top" ? 0 : A4_H - totalDedH - 20;
+        doc.save();
+        doc.rect(0, gradY, A4_W, totalDedH + 20).fillOpacity(0.6).fill('#000000');
+        doc.restore();
+
+        // Golden line
+        const lineY = dedPos === "top" ? gradY + 10 : gradY + 10;
+        doc.moveTo(A4_W / 2 - 40, lineY)
+           .lineTo(A4_W / 2 + 40, lineY)
+           .lineWidth(2).strokeColor('#C9963A').stroke();
+
+        // Dedication text (italic)
+        const textStartY = lineY + 8;
+        doc.fillOpacity(1)
+           .fontSize(dedFontSize)
+           .font('Helvetica-Oblique')
+           .fillColor('#FFFFFF')
+           .text(dedText, 40, textStartY, { width: dedMaxW, align: 'center', lineGap: 4 });
+
+        // "Von:" line
+        if (dedFrom) {
+          const fromY = textStartY + dedH + 4;
+          doc.fontSize(11).font('Helvetica').fillColor('#C9963A')
+             .text(`— ${dedFrom}`, 40, fromY, { width: dedMaxW, align: 'center' });
+        }
+
+        // Golden line bottom
+        const line2DedY = gradY + totalDedH + 8;
+        doc.moveTo(A4_W / 2 - 40, line2DedY)
+           .lineTo(A4_W / 2 + 40, line2DedY)
+           .lineWidth(2).strokeColor('#C9963A').stroke();
+      }
+
     } catch (e) {
       console.error('Cover error:', e.message);
       doc.rect(0, 0, A4_W, A4_H).fill('#FFFFFF');

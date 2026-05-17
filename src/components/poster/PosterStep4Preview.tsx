@@ -101,6 +101,9 @@ export default function PosterStep4Preview() {
       const pdfProject = {
         title: project.title,
         coverImageUrl: project.imageUrl, // Poster image as "cover"
+        posterDedication: project.dedication || "",
+        posterDedicationFrom: project.dedicationFrom || "",
+        posterDedicationPosition: project.dedicationPosition || "bottom",
         chapters: [{
           id: "poster-page",
           title: project.title,
@@ -139,6 +142,8 @@ export default function PosterStep4Preview() {
 
   const aspectRatio = project.orientation === "landscape" ? "1536 / 1024" : "1024 / 1536";
   const maxWidth = project.orientation === "landscape" ? "max-w-2xl" : "max-w-[510px]";
+  const hasDedication = !!project.dedication?.trim();
+  const dedicationPos = project.dedicationPosition || "bottom";
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="max-w-3xl mx-auto space-y-6">
@@ -161,7 +166,7 @@ export default function PosterStep4Preview() {
         </p>
       </div>
 
-      {/* Poster mit Bubbles */}
+      {/* Poster mit Bubbles + Widmungs-Overlay */}
       <div className={`bg-white rounded-2xl overflow-hidden shadow-xl border border-gray-100 ${maxWidth} mx-auto w-full`}>
         {regenerating ? (
           <div className="flex flex-col items-center justify-center gap-3 py-20" style={{ aspectRatio }}>
@@ -169,14 +174,52 @@ export default function PosterStep4Preview() {
             <p className="text-[#8B7355] font-medium text-sm">Poster wird neu generiert…</p>
           </div>
         ) : (
-          <PanelView
-            imageUrl={project.imageUrl || ""}
-            panels={project.panels || []}
-            panelPositions={project.panelPositions}
-            pageId="poster-main"
-            onPositionsChange={handlePositionsChange}
-            onDialogChange={handleDialogChange}
-          />
+          <div className="relative">
+            <PanelView
+              imageUrl={project.imageUrl || ""}
+              panels={project.panels || []}
+              panelPositions={project.panelPositions}
+              pageId="poster-main"
+              onPositionsChange={handlePositionsChange}
+              onDialogChange={handleDialogChange}
+            />
+
+            {/* Widmungs-Overlay */}
+            {hasDedication && (
+              <div className={`absolute inset-x-0 ${dedicationPos === "top" ? "top-0" : "bottom-0"} pointer-events-none`}>
+                <div className={`flex flex-col items-center px-6 ${dedicationPos === "top" ? "pt-4 pb-3" : "pb-4 pt-3"}`}
+                  style={{ background: dedicationPos === "top"
+                    ? "linear-gradient(to bottom, rgba(0,0,0,0.65) 0%, transparent 100%)"
+                    : "linear-gradient(to top, rgba(0,0,0,0.65) 0%, transparent 100%)" }}>
+                  {dedicationPos === "top" && (
+                    <div className="w-16 h-[2px] bg-[#C9963A] rounded mb-2" />
+                  )}
+                  <p className="text-white text-center leading-snug"
+                    style={{
+                      fontFamily: "'Playfair Display', Georgia, serif",
+                      fontSize: "clamp(10px, 2.2vw, 13px)",
+                      fontStyle: "italic",
+                      textShadow: "1px 1px 3px rgba(0,0,0,0.8)",
+                    }}>
+                    {project.dedication}
+                  </p>
+                  {project.dedicationFrom && (
+                    <p className="text-[#C9963A] text-center mt-1"
+                      style={{
+                        fontFamily: "'Playfair Display', Georgia, serif",
+                        fontSize: "clamp(9px, 1.8vw, 11px)",
+                        textShadow: "1px 1px 2px rgba(0,0,0,0.8)",
+                      }}>
+                      — {project.dedicationFrom}
+                    </p>
+                  )}
+                  {dedicationPos === "bottom" && (
+                    <div className="w-16 h-[2px] bg-[#C9963A] rounded mt-2" />
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
         )}
 
         {/* Regen controls */}
