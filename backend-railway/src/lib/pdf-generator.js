@@ -70,28 +70,11 @@ async function createComicPDF(project) {
 
         // CRITICAL: Bubble positions are stored as % of the preview container (510×765px).
         // The poster PDF image area is 561×842 (full A4, no header).
-        // We must scale bubble coordinates from the 510×765 preview reference to 561×842 PDF.
         // Scale factors: scaleW = aW/510, scaleH = aH/765
         const PREVIEW_W = 510;
         const PREVIEW_H = 765;
         const bubbleScaleW = aW / PREVIEW_W;
         const bubbleScaleH = aH / PREVIEW_H;
-        // Titel-Overlay (wie Cover)
-        const title = project.title.toUpperCase();
-        const maxW = A4_W - 80;
-        let titleFontSize = 28;
-        doc.font('Helvetica-Bold');
-        while (titleFontSize > 12 && doc.widthOfString(title, { fontSize: titleFontSize }) > maxW) titleFontSize -= 2;
-        const titleTextH = doc.heightOfString(title, { width: maxW, fontSize: titleFontSize, lineGap: 3 });
-        const titleLineGap = 18;
-        const titleBlockY = aY + aH - 140 - (titleLineGap + titleTextH + titleLineGap) / 2;
-        doc.moveTo(A4_W / 2 - 50, titleBlockY).lineTo(A4_W / 2 + 50, titleBlockY)
-           .lineWidth(2.5).strokeColor('#C9963A').stroke();
-        doc.fillOpacity(1).fontSize(titleFontSize).font('Helvetica-Bold').fillColor('#FFFFFF')
-           .text(title, 40, titleBlockY + titleLineGap, { width: maxW, align: 'center', lineGap: 3 });
-        doc.moveTo(A4_W / 2 - 50, titleBlockY + titleLineGap + titleTextH + titleLineGap)
-           .lineTo(A4_W / 2 + 50, titleBlockY + titleLineGap + titleTextH + titleLineGap)
-           .lineWidth(2.5).strokeColor('#C9963A').stroke();
 
         // Widmung-Overlay — kein schwarzer Balken, nur Text + goldene Linien
         if (project.posterDedication) {
