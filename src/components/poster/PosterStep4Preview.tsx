@@ -222,13 +222,12 @@ export default function PosterStep4Preview() {
             {/* Widmungs-Overlay */}
             {hasDedication && (
               <div className={`absolute inset-x-0 ${dedicationPos === "top" ? "top-0" : "bottom-0"} pointer-events-none`}>
-                <div className={`flex flex-col items-center px-6 ${dedicationPos === "top" ? "pt-4 pb-3" : "pb-4 pt-3"}`}
+                <div className={`flex flex-col items-center px-6 ${dedicationPos === "top" ? "pt-5 pb-8" : "pb-5 pt-8"}`}
                   style={{ background: dedicationPos === "top"
-                    ? "linear-gradient(to bottom, rgba(0,0,0,0.65) 0%, transparent 100%)"
-                    : "linear-gradient(to top, rgba(0,0,0,0.65) 0%, transparent 100%)" }}>
-                  {dedicationPos === "top" && (
-                    <div className="w-16 h-[2px] bg-[#C9963A] rounded mb-2" />
-                  )}
+                    ? "linear-gradient(to bottom, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.3) 70%, transparent 100%)"
+                    : "linear-gradient(to top, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.3) 70%, transparent 100%)" }}>
+                  {/* Goldene Linie oben — immer sichtbar, mit Abstand */}
+                  <div className="w-16 h-[2px] bg-[#C9963A] rounded mb-4" />
                   <p className="text-white text-center leading-snug"
                     style={{
                       fontFamily: "'Playfair Display', Georgia, serif",
@@ -239,18 +238,19 @@ export default function PosterStep4Preview() {
                     {project.dedication}
                   </p>
                   {project.dedicationFrom && (
-                    <p className="text-[#C9963A] text-center mt-1"
+                    <p className="text-[#C9963A] text-center mt-3"
                       style={{
                         fontFamily: "'Playfair Display', Georgia, serif",
                         fontSize: "clamp(9px, 1.8vw, 11px)",
                         textShadow: "1px 1px 2px rgba(0,0,0,0.8)",
+                        textAlign: "center",
+                        width: "100%",
                       }}>
                       — {project.dedicationFrom}
                     </p>
                   )}
-                  {dedicationPos === "bottom" && (
-                    <div className="w-16 h-[2px] bg-[#C9963A] rounded mt-2" />
-                  )}
+                  {/* Goldene Linie unten — immer sichtbar, mit Abstand */}
+                  <div className="w-16 h-[2px] bg-[#C9963A] rounded mt-4" />
                 </div>
               </div>
             )}

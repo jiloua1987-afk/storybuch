@@ -93,30 +93,27 @@ async function createComicPDF(project) {
            .lineTo(A4_W / 2 + 50, titleBlockY + titleLineGap + titleTextH + titleLineGap)
            .lineWidth(2.5).strokeColor('#C9963A').stroke();
 
-        // Widmung-Overlay
+        // Widmung-Overlay — kein schwarzer Balken, nur Text + goldene Linien
         if (project.posterDedication) {
           const dedText = project.posterDedication;
           const dedFrom = project.posterDedicationFrom || "";
           const dedPos  = project.posterDedicationPosition || "bottom";
-          const dedMaxW = A4_W - 80;
-          const dedFontSize = 12;
-          const dedH = doc.fontSize(dedFontSize).heightOfString(dedText, { width: dedMaxW, lineGap: 4 });
-          const fromH = dedFrom ? doc.fontSize(10).heightOfString(`— ${dedFrom}`, { width: dedMaxW }) + 6 : 0;
-          const totalDedH = 10 + dedH + fromH + 10;
-          const gradY = dedPos === "top" ? aY : aY + aH - totalDedH - 16;
-          doc.save();
-          doc.rect(0, gradY, A4_W, totalDedH + 16).fillOpacity(0.6).fill('#000000');
-          doc.restore();
-          const dedLineY = gradY + 8;
-          doc.moveTo(A4_W / 2 - 35, dedLineY).lineTo(A4_W / 2 + 35, dedLineY)
-             .lineWidth(1.5).strokeColor('#C9963A').stroke();
+          const dedFontSize = 13;
+          const dedH   = doc.fontSize(dedFontSize).heightOfString(dedText, { width: A4_W - 80, lineGap: 3 });
+          const fromH  = dedFrom ? doc.fontSize(11).heightOfString(`— ${dedFrom}`, { width: A4_W - 80 }) + 10 : 0;
+          const blockH = 16 + dedH + fromH + 16;
+          const blockY = dedPos === "top" ? aY + 20 : aY + aH - 20 - blockH;
+
+          doc.moveTo(A4_W / 2 - 40, blockY).lineTo(A4_W / 2 + 40, blockY)
+             .lineWidth(2).strokeColor('#C9963A').stroke();
           doc.fillOpacity(1).fontSize(dedFontSize).font('Helvetica-Oblique').fillColor('#FFFFFF')
-             .text(dedText, 40, dedLineY + 6, { width: dedMaxW, align: 'center', lineGap: 4 });
+             .text(dedText, 40, blockY + 16, { width: A4_W - 80, align: 'center', lineGap: 3 });
           if (dedFrom) {
-            const fromY = dedLineY + 6 + dedH + 3;
-            doc.fontSize(10).font('Helvetica').fillColor('#C9963A')
-               .text(`— ${dedFrom}`, 40, fromY, { width: dedMaxW, align: 'center' });
+            doc.fontSize(11).font('Helvetica').fillColor('#C9963A')
+               .text(`— ${dedFrom}`, 40, blockY + 16 + dedH + 10, { width: A4_W - 80, align: 'center' });
           }
+          doc.moveTo(A4_W / 2 - 40, blockY + blockH).lineTo(A4_W / 2 + 40, blockY + blockH)
+             .lineWidth(2).strokeColor('#C9963A').stroke();
         }
 
         // ── Sprechblasen — identisch mit Comic-Buch-Logik ─────────────────
