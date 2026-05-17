@@ -453,6 +453,17 @@ Respond ONLY with JSON: {"characters":[{"name":"Name","age":30,"visual_anchor":"
     // Step 2: Structure pages
     // If moments provided → one GPT call PER moment (guaranteed mapping)
     // If no moments → one call for all pages
+    const categoryMap = {
+      liebe: "love story / romance",
+      familie: "family story",
+      urlaub: "travel / vacation",
+      feier: "celebration / event",
+      biografie: "biography / life story",
+      freunde: "friendship",
+      sonstiges: "personal story",
+    };
+    const categoryEn = categoryMap[category] || "personal story";
+
     let pageStructures = [];
 
     if (momentsList.length > 0) {
@@ -465,7 +476,7 @@ Respond ONLY with JSON: {"characters":[{"name":"Name","age":30,"visual_anchor":"
           messages: [{
             role: "system",
             content: `You create ONE comic book page for a personal comic in ${lang}.
-Tone: ${toneEn}. Style: ${comicStyle}.
+Genre: ${categoryEn}. Tone: ${toneEn}. Style: ${comicStyle}.
 
 You are a COMIC ART DIRECTOR creating natural conversations, not a story summarizer.
 
@@ -741,7 +752,7 @@ IMPORTANT:
         model: "gpt-4.1",
         messages: [{
           role: "system",
-          content: `Create a ${numPages}-page comic structure in ${lang}. Tone: ${toneEn}.
+          content: `Create a ${numPages}-page comic structure in ${lang}. Genre: ${categoryEn}. Tone: ${toneEn}.
 Each page: 2-5 panels. Vary panel count based on scene complexity.
 Show correct emotions — not everyone smiles in every panel.
 All characters must appear across the comic.

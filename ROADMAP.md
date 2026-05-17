@@ -37,7 +37,25 @@
 
 ## 📋 WICHTIGE FEATURES (Bald)
 
-### 2. **Mehr Seiten generieren** 📝 HOCH
+### 2. **Prompt-Reduktion mit klarer Hierarchie** 🎨 HOCH
+**Problem:** Seiten-Prompt hat ~800 Wörter. gpt-image-2 gewichtet frühe Instruktionen stärker — alles nach Panel 3 wird teilweise ignoriert. Zu viele redundante Regeln, doppelte Verbote, lange Erklärungen.
+
+**Lösung:** Prompt auf ~300 Wörter reduzieren mit fester Hierarchie:
+1. CHARACTER IDENTITY (50 Wörter) — wer sind die Personen
+2. STYLE (30 Wörter) — Bande Dessinée, ink outlines, flat colors
+3. SCENE (50 Wörter) — was passiert, wo, welche Emotion
+4. CLOTHING (20 Wörter) — was tragen sie
+5. PANELS (100 Wörter) — konkrete visuelle Beschreibungen, shot types
+6. VERBOTE (50 Wörter) — kein Kamera-Blick, kein Manga, kein Text
+
+Alles raus: lange Erklärungen warum etwas wichtig ist, BAD/GOOD-Beispiele, doppelte Verbote.
+
+**Aufwand:** Mittel (1 Tag)
+**Status:** ❌ OFFEN
+
+---
+
+### 3. **Mehr Seiten generieren** 📝 HOCH
 **Problem:** 3 Momente = 3 Seiten — zu wenig für ein echtes Comic-Buch. Kunden zahlen nicht für 3 Seiten.
 
 **Empfohlene Lösung: Hybrid-Ansatz**
