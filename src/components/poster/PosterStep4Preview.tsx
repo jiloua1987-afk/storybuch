@@ -81,7 +81,7 @@ export default function PosterStep4Preview() {
       updateProject({
         imageUrl: result.imageUrl,
         panels: result.panels || project.panels,
-        panelPositions: null, // Reset positions on regen
+        panelPositions: undefined, // Reset positions on regen
       });
       setRegenNote("");
       toast.success("Poster neu generiert! 🎨");
