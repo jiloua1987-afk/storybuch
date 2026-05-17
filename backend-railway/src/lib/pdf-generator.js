@@ -68,6 +68,14 @@ async function createComicPDF(project) {
         }
         console.log(`  → Poster image area: ${aW.toFixed(0)}×${aH.toFixed(0)} at (${aX.toFixed(0)},${aY.toFixed(0)})`);
 
+        // CRITICAL: Bubble positions are stored as % of the preview container (510×765px).
+        // The poster PDF image area is 561×842 (full A4, no header).
+        // We must scale bubble coordinates from the 510×765 preview reference to 561×842 PDF.
+        // Scale factors: scaleW = aW/510, scaleH = aH/765
+        const PREVIEW_W = 510;
+        const PREVIEW_H = 765;
+        const bubbleScaleW = aW / PREVIEW_W;
+        const bubbleScaleH = aH / PREVIEW_H;
         // Titel-Overlay (wie Cover)
         const title = project.title.toUpperCase();
         const maxW = A4_W - 80;
@@ -146,29 +154,34 @@ async function createComicPDF(project) {
           let bH = aH * 0.07;
 
           if (bubble.isExtra) {
-            bX = aX + (bubble.extraLeft / 100) * aW;
-            bY = aY + (bubble.extraTop  / 100) * aH;
+            // Extra bubbles: % of preview container → scale to PDF
+            bX = aX + (bubble.extraLeft / 100) * PREVIEW_W * bubbleScaleW;
+            bY = aY + (bubble.extraTop  / 100) * PREVIEW_H * bubbleScaleH;
           } else {
             const pos = (posterPage.panelPositions || []).find(p => p.nummer === bubble.nummer && p.bubbleIndex === bubble.bubbleIndex);
             if (pos) {
-              bX = aX + (pos.left  / 100) * aW;
-              bY = aY + (pos.top   / 100) * aH;
+              // pos.left/top are % of preview container (510×765px)
+              // Scale to PDF: multiply by (aW/510) and (aH/765)
+              bX = aX + (pos.left / 100) * PREVIEW_W * bubbleScaleW;
+              bY = aY + (pos.top  / 100) * PREVIEW_H * bubbleScaleH;
               if (pos.width && pos.height) {
                 const isDefaultSize = pos.width === 20 && pos.height === 10;
                 if (isDefaultSize) {
+                  // Calculate from text, scale to PDF
                   const textLen = (bubble.speaker ? bubble.speaker + ': ' : '').length + (bubble.dialog || '').length;
                   const wPx = Math.min(220, Math.max(100, 80 + textLen * 3.2));
                   const lines = Math.ceil(textLen / 22);
                   const hPx = Math.max(48, 28 + lines * 20);
-                  bW = (wPx / 400) * aW;
-                  bH = (hPx / 600) * aH;
+                  bW = wPx * bubbleScaleW;
+                  bH = hPx * bubbleScaleH;
                 } else {
-                  bW = (pos.width  / 100) * aW;
-                  bH = (pos.height / 100) * aH;
+                  // pos.width/height are % of preview container → scale to PDF
+                  bW = (pos.width  / 100) * PREVIEW_W * bubbleScaleW;
+                  bH = (pos.height / 100) * PREVIEW_H * bubbleScaleH;
                 }
                 bW = Math.max(bW, 60);
                 bH = Math.max(bH, 25);
-                console.log(`  → Bubble ${bubble.nummer}-${bubble.bubbleIndex}: pos=${pos.left.toFixed(1)}%,${pos.top.toFixed(1)}% size=${pos.width.toFixed(1)}%×${pos.height.toFixed(1)}% → ${bW.toFixed(0)}×${bH.toFixed(0)}px`);
+                console.log(`  → Bubble ${bubble.nummer}-${bubble.bubbleIndex}: pos=${pos.left.toFixed(1)}%,${pos.top.toFixed(1)}% size=${pos.width.toFixed(1)}%×${pos.height.toFixed(1)}% → ${bW.toFixed(0)}×${bH.toFixed(0)}pt`);
               }
             }
           }
