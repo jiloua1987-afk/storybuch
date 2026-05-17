@@ -225,22 +225,26 @@ async function createComicPDF(project) {
             bX = aX + (pos.left  / 100) * aW;
             bY = aY + (pos.top   / 100) * aH;
             if (pos.width && pos.height) {
-              // pos.width/height are % of reference container (400×600px) — same as preview.
-              // The preview renders: initW = (width% / 100) * containerWidth
-              // At max-width (510px), containerWidth = 510, containerHeight = 765.
-              // PDF image area is also 510×765pt → same reference → direct mapping.
-              // But if user edited on a smaller screen, we must normalize via 400×600 first:
-              // preview px = (width% / 100) * 400 * (containerWidth / 400) = (width% / 100) * containerWidth
-              // PDF pt     = (width% / 100) * 400 * (aW / 400) = (width% / 100) * aW
-              // Both scale from the same 400×600 base → consistent regardless of screen size.
-              const REF_W = 400;
-              const REF_H = 600;
-              bW = (pos.width  / 100) * REF_W * (aW / REF_W);  // = (pos.width  / 100) * aW
-              bH = (pos.height / 100) * REF_H * (aH / REF_H);  // = (pos.height / 100) * aH
-              // Sanity check: bubble must be at least readable
+              // Check if this is the old default value (20×10) — if so, calculate from text instead.
+              // Old defaults were stored before proper text-based sizing was implemented.
+              const isDefaultSize = pos.width === 20 && pos.height === 10;
+              if (isDefaultSize) {
+                // Calculate from text — same formula as preview
+                const textLen = (bubble.speaker ? bubble.speaker + ': ' : '').length + (bubble.dialog || '').length;
+                const wPx = Math.min(220, Math.max(100, 80 + textLen * 3.2));
+                const lines = Math.ceil(textLen / 22);
+                const hPx = Math.max(48, 28 + lines * 20);
+                // Scale from 400×600 reference to PDF image area
+                bW = (wPx / 400) * aW;
+                bH = (hPx / 600) * aH;
+              } else {
+                // Use saved size — stored as % of container width/height
+                bW = (pos.width  / 100) * aW;
+                bH = (pos.height / 100) * aH;
+              }
               bW = Math.max(bW, 60);
               bH = Math.max(bH, 25);
-              console.log(`    → Bubble ${bubble.nummer}-${bubble.bubbleIndex}: pos=${pos.left.toFixed(1)}%,${pos.top.toFixed(1)}% size=${pos.width.toFixed(1)}%×${pos.height.toFixed(1)}% → ${bW.toFixed(0)}×${bH.toFixed(0)}px`);
+              console.log(`    → Bubble ${bubble.nummer}-${bubble.bubbleIndex}: pos=${pos.left.toFixed(1)}%,${pos.top.toFixed(1)}% size=${pos.width.toFixed(1)}%×${pos.height.toFixed(1)}% → ${bW.toFixed(0)}×${bH.toFixed(0)}px${isDefaultSize ? ' (text-calc)' : ''}`);
             }
           }
         }
