@@ -1,4 +1,5 @@
 "use client";
+import { useEffect } from "react";
 import { usePosterStore } from "@/store/posterStore";
 import Navbar from "@/components/Navbar";
 import PosterStep1Basics from "@/components/poster/PosterStep1Basics";
@@ -17,7 +18,16 @@ const STEPS = [
 const STEP_LABELS = ["Grundlagen", "Moment", "Erstellen", "Vorschau"];
 
 export default function PosterPage() {
-  const { currentStep } = usePosterStore();
+  const { currentStep, project, resetProject } = usePosterStore();
+
+  // If stuck on generation step (e.g. previous run failed/aborted), reset to start
+  useEffect(() => {
+    if (currentStep === 2 && project?.status !== "preview") {
+      console.log("Poster: stuck on generation step, resetting...");
+      resetProject();
+    }
+  }, []);
+
   const StepComponent = STEPS[currentStep] ?? PosterStep1Basics;
 
   return (

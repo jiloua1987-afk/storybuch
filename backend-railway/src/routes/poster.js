@@ -106,16 +106,17 @@ router.post("/structure", async (req, res) => {
         content: `You create a COMIC POSTER structure for a single scene in ${lang}.
 Genre: ${categoryEn}. Tone: ${toneEn}. Style: ${comicStyle}.
 
-A comic poster shows ONE moment in 2-3 panels. It is printed as a single image.
+A comic poster shows ONE moment in 3-4 panels. It is printed as a single image.
 
-PANEL COUNT:
-- 2 panels: simple moment, 2 characters max, clear action-reaction
-- 3 panels: richer moment, multiple characters, beginning-middle-end
+PANEL COUNT — always use 3 or 4 panels:
+- 3 panels: clear beginning → middle → end, strong emotional arc
+- 4 panels: richer scene with multiple characters and interactions (PREFERRED for family/group scenes)
 
-SHOT VARIATION (REQUIRED):
-- Panel 1: Wide shot — establish location and all characters
-- Panel 2: Medium shot — main action or interaction
-- Panel 3 (if used): Close-up — emotional reaction or punchline
+SHOT VARIATION (REQUIRED — each panel MUST use a different shot type):
+- Panel 1: Wide shot — establish location and ALL characters together
+- Panel 2: Medium shot — main action or key interaction between characters
+- Panel 3: Close-up — emotional reaction, funny expression, or dramatic moment
+- Panel 4 (if 4 panels): Medium shot — resolution, punchline, or warm group moment
 
 DIALOGS:
 - Each panel can have 1-2 speech bubbles
@@ -129,7 +130,7 @@ Respond ONLY with JSON:
 {
   "title": "Short poster title in ${lang}",
   "location": "English location description",
-  "panelCount": 2,
+  "panelCount": 3,
   "panels": [
     {
       "nummer": 1,
@@ -184,6 +185,8 @@ router.post("/generate", async (req, res) => {
     // Layout description based on panel count
     const layoutDesc = panelCount === 2
       ? "2 panels side by side (left and right, equal width)"
+      : panelCount === 4
+      ? "4 panels: 2 panels on top row, 2 panels on bottom row (2×2 grid)"
       : "3 panels: 1 wide panel on top, 2 smaller panels side by side on bottom";
 
     const charNames = characters.map(c => c.name).join(", ");

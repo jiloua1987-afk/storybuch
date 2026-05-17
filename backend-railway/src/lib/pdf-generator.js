@@ -42,6 +42,179 @@ async function createComicPDF(project) {
   const A4_W = 595;
   const A4_H = 842;
 
+  // ── POSTER-MODUS: 1 Seite, Vollbild, kein Cover, kein Header ─────────────
+  if (project.isPoster) {
+    const posterPage = project.chapters[0];
+    if (posterPage?.imageUrl) {
+      doc.addPage();
+      try {
+        const buf = await fetchImageBuffer(posterPage.imageUrl);
+        // Vollbild — ganzes A4 ausgefüllt, fit:contain damit Panels nicht abgeschnitten
+        const img = await sharp(buf)
+          .resize(A4_W * 2, A4_H * 2, { fit: 'contain', position: 'center', background: { r: 255, g: 255, b: 255, alpha: 1 } })
+          .png().toBuffer();
+        doc.image(img, 0, 0, { width: A4_W, height: A4_H });
+
+        // Tatsächliche Bildgröße nach Letterboxing — identisch mit Comic-Buch-Logik
+        const srcRatio = 1024 / 1536;
+        const ctnRatio = A4_W / A4_H;
+        let aW, aH, aX, aY;
+        if (srcRatio < ctnRatio) {
+          aH = A4_H; aW = A4_H * srcRatio;
+          aX = (A4_W - aW) / 2; aY = 0;
+        } else {
+          aW = A4_W; aH = A4_W / srcRatio;
+          aX = 0; aY = (A4_H - aH) / 2;
+        }
+        console.log(`  → Poster image area: ${aW.toFixed(0)}×${aH.toFixed(0)} at (${aX.toFixed(0)},${aY.toFixed(0)})`);
+
+        // Titel-Overlay (wie Cover)
+        const title = project.title.toUpperCase();
+        const maxW = A4_W - 80;
+        let titleFontSize = 28;
+        doc.font('Helvetica-Bold');
+        while (titleFontSize > 12 && doc.widthOfString(title, { fontSize: titleFontSize }) > maxW) titleFontSize -= 2;
+        const titleTextH = doc.heightOfString(title, { width: maxW, fontSize: titleFontSize, lineGap: 3 });
+        const titleLineGap = 18;
+        const titleBlockY = aY + aH - 140 - (titleLineGap + titleTextH + titleLineGap) / 2;
+        doc.moveTo(A4_W / 2 - 50, titleBlockY).lineTo(A4_W / 2 + 50, titleBlockY)
+           .lineWidth(2.5).strokeColor('#C9963A').stroke();
+        doc.fillOpacity(1).fontSize(titleFontSize).font('Helvetica-Bold').fillColor('#FFFFFF')
+           .text(title, 40, titleBlockY + titleLineGap, { width: maxW, align: 'center', lineGap: 3 });
+        doc.moveTo(A4_W / 2 - 50, titleBlockY + titleLineGap + titleTextH + titleLineGap)
+           .lineTo(A4_W / 2 + 50, titleBlockY + titleLineGap + titleTextH + titleLineGap)
+           .lineWidth(2.5).strokeColor('#C9963A').stroke();
+
+        // Widmung-Overlay
+        if (project.posterDedication) {
+          const dedText = project.posterDedication;
+          const dedFrom = project.posterDedicationFrom || "";
+          const dedPos  = project.posterDedicationPosition || "bottom";
+          const dedMaxW = A4_W - 80;
+          const dedFontSize = 12;
+          const dedH = doc.fontSize(dedFontSize).heightOfString(dedText, { width: dedMaxW, lineGap: 4 });
+          const fromH = dedFrom ? doc.fontSize(10).heightOfString(`— ${dedFrom}`, { width: dedMaxW }) + 6 : 0;
+          const totalDedH = 10 + dedH + fromH + 10;
+          const gradY = dedPos === "top" ? aY : aY + aH - totalDedH - 16;
+          doc.save();
+          doc.rect(0, gradY, A4_W, totalDedH + 16).fillOpacity(0.6).fill('#000000');
+          doc.restore();
+          const dedLineY = gradY + 8;
+          doc.moveTo(A4_W / 2 - 35, dedLineY).lineTo(A4_W / 2 + 35, dedLineY)
+             .lineWidth(1.5).strokeColor('#C9963A').stroke();
+          doc.fillOpacity(1).fontSize(dedFontSize).font('Helvetica-Oblique').fillColor('#FFFFFF')
+             .text(dedText, 40, dedLineY + 6, { width: dedMaxW, align: 'center', lineGap: 4 });
+          if (dedFrom) {
+            const fromY = dedLineY + 6 + dedH + 3;
+            doc.fontSize(10).font('Helvetica').fillColor('#C9963A')
+               .text(`— ${dedFrom}`, 40, fromY, { width: dedMaxW, align: 'center' });
+          }
+        }
+
+        // ── Sprechblasen — identisch mit Comic-Buch-Logik ─────────────────
+        const hiddenBubbles = new Set(posterPage.hiddenBubbles || []);
+        const allBubbles = [];
+        (posterPage.panels || []).forEach((panel, panelIdx) => {
+          if (panel.dialogs && panel.dialogs.length > 0) {
+            panel.dialogs.forEach((d, bIdx) => {
+              const bid = `${panelIdx}-${bIdx}`;
+              if (hiddenBubbles.has(bid)) return;
+              if (!d.text || !d.text.trim() || d.text.toLowerCase() === 'null') return;
+              allBubbles.push({ nummer: panel.nummer, bubbleIndex: bIdx, dialog: d.text, speaker: d.speaker, bubble_type: panel.bubble_type });
+            });
+          } else if (panel.dialog && panel.dialog.trim() && panel.dialog.toLowerCase() !== 'null') {
+            const bid = `${panelIdx}-0`;
+            if (!hiddenBubbles.has(bid)) {
+              allBubbles.push({ nummer: panel.nummer, bubbleIndex: 0, dialog: panel.dialog, speaker: panel.speaker, bubble_type: panel.bubble_type });
+            }
+          }
+        });
+        (posterPage.extraBubbles || []).forEach(extra => {
+          allBubbles.push({ nummer: -1, bubbleIndex: 0, dialog: extra.dialog, speaker: extra.speaker || '', bubble_type: 'speech', isExtra: true, extraTop: extra.top, extraLeft: extra.left });
+        });
+
+        console.log(`  → Poster bubbles: ${allBubbles.length} (hidden: ${hiddenBubbles.size})`);
+        console.log(`  → panelPositions: ${(posterPage.panelPositions || []).length}`);
+
+        allBubbles.forEach((bubble, idx) => {
+          const speakerText = (bubble.speaker && bubble.speaker !== 'narrator' && bubble.speaker.toLowerCase() !== 'null') ? bubble.speaker + ': ' : '';
+          const fallbackRow = Math.floor(idx / 2);
+          const fallbackCol = idx % 2;
+          let bX = aX + (fallbackCol === 0 ? 0.05 : 0.55) * aW;
+          let bY = aY + (0.05 + fallbackRow * 0.25) * aH;
+          let bW = aW * 0.20;
+          let bH = aH * 0.07;
+
+          if (bubble.isExtra) {
+            bX = aX + (bubble.extraLeft / 100) * aW;
+            bY = aY + (bubble.extraTop  / 100) * aH;
+          } else {
+            const pos = (posterPage.panelPositions || []).find(p => p.nummer === bubble.nummer && p.bubbleIndex === bubble.bubbleIndex);
+            if (pos) {
+              bX = aX + (pos.left  / 100) * aW;
+              bY = aY + (pos.top   / 100) * aH;
+              if (pos.width && pos.height) {
+                const isDefaultSize = pos.width === 20 && pos.height === 10;
+                if (isDefaultSize) {
+                  const textLen = (bubble.speaker ? bubble.speaker + ': ' : '').length + (bubble.dialog || '').length;
+                  const wPx = Math.min(220, Math.max(100, 80 + textLen * 3.2));
+                  const lines = Math.ceil(textLen / 22);
+                  const hPx = Math.max(48, 28 + lines * 20);
+                  bW = (wPx / 400) * aW;
+                  bH = (hPx / 600) * aH;
+                } else {
+                  bW = (pos.width  / 100) * aW;
+                  bH = (pos.height / 100) * aH;
+                }
+                bW = Math.max(bW, 60);
+                bH = Math.max(bH, 25);
+                console.log(`  → Bubble ${bubble.nummer}-${bubble.bubbleIndex}: pos=${pos.left.toFixed(1)}%,${pos.top.toFixed(1)}% size=${pos.width.toFixed(1)}%×${pos.height.toFixed(1)}% → ${bW.toFixed(0)}×${bH.toFixed(0)}px`);
+              }
+            }
+          }
+
+          const fontSize = 9;
+          const pad = 5;
+          bX = Math.min(Math.max(bX, aX + 2), aX + aW - bW - 2);
+          bY = Math.min(Math.max(bY, aY + 2), aY + aH - bH - 14);
+
+          const isCaption = bubble.bubble_type === 'caption';
+          const bgColor   = isCaption ? '#1E0F32' : '#FFFEF8';
+          const textColor = isCaption ? '#FFFFFF'  : '#1A1410';
+
+          doc.save();
+          doc.roundedRect(bX, bY, bW, bH, 5).lineWidth(1.5).fillAndStroke(bgColor, '#1A1410');
+          if (!isCaption) {
+            const tX = bX + 18;
+            const tY = bY + bH;
+            doc.moveTo(tX, tY).lineTo(tX - 7, tY + 10).lineTo(tX + 10, tY).closePath().fillAndStroke(bgColor, '#1A1410');
+          }
+          if (speakerText) {
+            doc.fontSize(fontSize).font(BUBBLE_FONT).fillColor(textColor)
+               .text(speakerText, bX + pad, bY + pad, { width: bW - pad * 2, lineGap: 0 });
+            const sH = doc.heightOfString(speakerText, { width: bW - pad * 2 });
+            doc.fontSize(fontSize).font(BUBBLE_FONT).fillColor(textColor)
+               .text(bubble.dialog, bX + pad, bY + pad + sH + 1, { width: bW - pad * 2, lineGap: 1 });
+          } else {
+            doc.fontSize(fontSize).font(BUBBLE_FONT).fillColor(textColor)
+               .text(speakerText + bubble.dialog, bX + pad, bY + pad, { width: bW - pad * 2, lineGap: 1 });
+          }
+          doc.restore();
+        });
+
+        console.log(`✓ Poster PDF done`);
+      } catch (e) {
+        console.error('Poster PDF error:', e.message);
+      }
+    }
+
+    // Kein Back-Cover beim Poster
+    const end = new Promise(resolve => doc.on('end', resolve));
+    doc.end();
+    await end;
+    return Buffer.concat(buffers);
+  }
+
   // ── 1. COVER ──────────────────────────────────────────────────────────────
   if (project.coverImageUrl) {
     doc.addPage();

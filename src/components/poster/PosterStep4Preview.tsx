@@ -100,7 +100,7 @@ export default function PosterStep4Preview() {
       // Build a minimal project structure compatible with the PDF generator
       const pdfProject = {
         title: project.title,
-        coverImageUrl: project.imageUrl, // Poster image as "cover"
+        isPoster: true,
         posterDedication: project.dedication || "",
         posterDedicationFrom: project.dedicationFrom || "",
         posterDedicationPosition: project.dedicationPosition || "bottom",
