@@ -1445,26 +1445,38 @@ DO NOT create completely new panels - adjust the existing ones based on feedback
 
 RULES:
 - CRITICAL: Each panel MUST show a COMPLETELY DIFFERENT moment in time
-- Panel 1: First action/moment
-- Panel 2: Second action/moment (DIFFERENT from panel 1)
-- Panel 3: Third action/moment (DIFFERENT from panels 1 and 2)
-- Panel 4: Fourth action/moment (DIFFERENT from all previous)
+- Panel 1: First action/moment — use a WIDE SHOT showing the full scene and setting
+- Panel 2: Second action/moment (DIFFERENT from panel 1) — use a MEDIUM SHOT showing characters from waist up
+- Panel 3: Third action/moment (DIFFERENT from panels 1 and 2) — use a CLOSE-UP or OVER-THE-SHOULDER shot
+- Panel 4: Fourth action/moment (DIFFERENT from all previous) — use a different angle than all previous panels
+- NEVER repeat the same composition, framing, or camera angle across panels
 - NEVER repeat the same scene with different angles - each panel = NEW moment
+
+🚨 ULTRA-CRITICAL: CHARACTERS ARE IN THE SCENE — NOT POSING FOR A PHOTO
+- Characters MUST be engaged in the action described — talking to each other, doing things, reacting
+- ZERO characters may look directly at the viewer/camera — this is FORBIDDEN
+- NO portrait poses, NO group photo poses, NO "looking at camera" poses
+- Characters look at: each other, objects they interact with, the environment, off-screen
+- Show characters from the SIDE, from BEHIND, in 3/4 view — NEVER full-frontal camera stare
+- Characters are LIVING the moment — their eyes are on the scene, not on us
 
 🚨 ULTRA-CRITICAL: NO DUPLICATE CHARACTERS IN SAME PANEL
 - Each character appears EXACTLY ONCE per panel — NEVER show the same person twice
-- If Aymen is in the panel, show him ONCE in ONE position only
-- If Rania is in the panel, show her ONCE in ONE position only
 - NEVER show the same character on the left AND right side of the same panel
-- NEVER show the same character in foreground AND background of the same panel
 - Each person has ONE body, ONE position per panel — this is MANDATORY
-- If you need to show multiple people, use DIFFERENT characters, not the same one twice
+
+🚨 ULTRA-CRITICAL: NATURAL BODY INTEGRATION — NO "HEAD ON NECK" EFFECT
+- Characters must be drawn as COMPLETE INTEGRATED FIGURES — head, neck, shoulders, torso all connected naturally
+- The neck must flow naturally into the shoulders and chest — NO visible seam or disconnection
+- Draw characters in DYNAMIC POSES with body language: leaning forward, turning, gesturing, reaching
+- AVOID straight-on frontal standing poses — they cause the "pasted head" look
+- Show characters at angles: 3/4 view, slight turn, looking sideways — this integrates head and body naturally
+- Shoulders should be at an angle, not perfectly horizontal — natural human posture
 
 - Show CORRECT emotions per scene (sad=tears, funny=laughter, reunion=joy)
-- Sharp detailed faces — eyes, nose, mouth clearly visible, front or 3/4 view
 - Background crowd: faceless silhouettes only
-- Movement/action: show with TILTED POSES and MOTION BLUR in Bande Dessinée style — NOT manga speed lines, NOT anime motion effects
-- Exaggerated expressions: use WESTERN COMIC STYLE — wide mouths, raised eyebrows — NOT anime big eyes, NOT manga sweat drops
+- Movement/action: show with TILTED POSES and MOTION BLUR in Bande Dessinée style — NOT manga speed lines
+- Exaggerated expressions: use WESTERN COMIC STYLE — wide mouths, raised eyebrows — NOT anime big eyes
 - NO text, NO speech bubbles, NO letters, NO titles anywhere in image`);
 
     // ── REFERENCE STRATEGY ────────────────────────────────────────────────────

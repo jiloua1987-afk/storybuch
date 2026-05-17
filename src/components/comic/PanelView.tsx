@@ -130,11 +130,18 @@ function ResizableBubble({
 }) {
   const [size, setSize] = useState({ w: initW, h: initH });
   const resizing = useRef<{ dir: string; startX: number; startY: number; startW: number; startH: number } | null>(null);
+  // Track the last initW/initH we applied so we only update when they meaningfully change
+  const lastInit = useRef({ w: initW, h: initH });
 
-  // CRITICAL: Update size when initW/initH changes (e.g., when loading saved size)
   useEffect(() => {
-    setSize({ w: initW, h: initH });
-    console.log(`🔄 ResizableBubble: Size updated to ${initW}×${initH}px`);
+    // Only update if the new init values differ by more than 2px — avoids shimmer
+    // from sub-pixel container width fluctuations on re-renders
+    const dx = Math.abs(initW - lastInit.current.w);
+    const dy = Math.abs(initH - lastInit.current.h);
+    if (dx > 2 || dy > 2) {
+      lastInit.current = { w: initW, h: initH };
+      setSize({ w: initW, h: initH });
+    }
   }, [initW, initH]);
 
   const onResizeMouseDown = useCallback((e: React.MouseEvent | React.TouchEvent, dir: string) => {
@@ -419,13 +426,18 @@ export default function PanelView({ imageUrl, title, panels = [], panelPositions
         );
         
         if (pos) {
-          console.log(`  ✓ Bubble ${i}-${bubbleIdx}: loaded position (${pos.top}%, ${pos.left}%)`);
-          return {
-            top: pos.top,
-            left: pos.left,
-            w: pos.width || 20,
-            h: pos.height || 10
-          };
+          // Use saved size if available, otherwise calculate from text
+          let w = pos.width;
+          let h = pos.height;
+          if (!w || !h) {
+            const text = (panel.speaker || "") + (panel.dialog || "");
+            const wPx = Math.min(220, Math.max(100, 80 + text.length * 3.2));
+            const lines = Math.ceil(text.length / 22);
+            const hPx = Math.max(48, 28 + lines * 20);
+            w = w || (wPx / 400) * 100;
+            h = h || (hPx / 600) * 100;
+          }
+          return { top: pos.top, left: pos.left, w, h };
         } else {
           console.log(`  ⚠️ Bubble ${i}-${bubbleIdx}: NO saved position, using fallback`);
           // Fallback: simple grid position
@@ -764,34 +776,30 @@ export default function PanelView({ imageUrl, title, panels = [], panelPositions
                   initH={initH} 
                   style={{}}
                   onResize={(w, h) => {
-                    // CRITICAL: Always normalize to 400×600 reference container.
-                    // This ensures PDF and preview use the same base for % calculations.
-                    // w/h are in actual container pixels — convert to % of 400×600 reference.
-                    const REF_W = 400;
-                    const REF_H = 600;
-                    
-                    // Update resolved positions immediately for this bubble
+                    // Store as % of actual container — same reference the preview uses to render.
+                    // PDF image area (aW=510pt) matches max container width (510px), so % values
+                    // are directly comparable between preview and PDF.
+                    const containerWidth  = containerRef.current?.offsetWidth  || 400;
+                    const containerHeight = containerRef.current?.offsetHeight || 600;
+
                     const updatedPositions: PanelPosition[] = dialogPanels.map((p, idx) => {
                       const bid = p.bubbleId ?? `${p.originalIndex}-0`;
                       const dragPos = dragPositions[bid];
                       const resolved = resolvedPositions[idx];
                       const isCurrentBubble = bid === bubbleId;
-                      
                       return {
                         nummer: p.originalIndex + 1,
                         bubbleIndex: p.bubbleIndex,
-                        top: dragPos?.top ?? resolved?.top ?? 5,
-                        left: dragPos?.left ?? resolved?.left ?? 2,
-                        width:  isCurrentBubble ? (w / REF_W) * 100 : (resolved?.w ?? 20),
-                        height: isCurrentBubble ? (h / REF_H) * 100 : (resolved?.h ?? 10),
+                        top:    dragPos?.top  ?? resolved?.top  ?? 5,
+                        left:   dragPos?.left ?? resolved?.left ?? 2,
+                        width:  isCurrentBubble ? (w / containerWidth)  * 100 : (resolved?.w  ?? 20),
+                        height: isCurrentBubble ? (h / containerHeight) * 100 : (resolved?.h ?? 10),
                       };
                     });
                     
                     // Save immediately
                     if (onPositionsChange) {
-                      const REF_W = 400;
-                      const REF_H = 600;
-                      console.log(`📏 Bubble ${bubbleId} resized to ${w}×${h}px → ${((w / REF_W) * 100).toFixed(1)}%×${((h / REF_H) * 100).toFixed(1)}% (of 400×600 ref), saving NOW...`);
+                      console.log(`📏 Bubble ${bubbleId} resized to ${w}×${h}px → ${((w / containerWidth) * 100).toFixed(1)}%×${((h / containerHeight) * 100).toFixed(1)}% (of ${containerWidth}×${containerHeight} container), saving NOW...`);
                       onPositionsChange(updatedPositions);
                       
                       // VERIFY
@@ -832,7 +840,7 @@ export default function PanelView({ imageUrl, title, panels = [], panelPositions
                               }
                             }}
                             className="w-full flex-1 bg-transparent outline-none resize-none text-[#1A1410]"
-                            style={{ fontFamily: "'Bangers', cursive", fontSize: "12px", minHeight: "60px" }}
+                            style={{ fontFamily: "'Bangers', cursive", fontSize: "clamp(9px, 2.35vw, 12px)", minHeight: "60px" }}
                             rows={Math.max(3, Math.ceil(((editedDialogs[bubbleId] ?? displayDialog)?.length || 1) / 20))}
                             onClick={(e) => e.stopPropagation()}
                             placeholder="Text eingeben…"
@@ -848,7 +856,7 @@ export default function PanelView({ imageUrl, title, panels = [], panelPositions
                       ) : (
                         <p
                           className="text-[#1A1410] leading-snug select-none cursor-text hover:bg-yellow-50/30 transition-colors rounded px-1"
-                          style={{ fontFamily: "'Bangers', cursive", fontSize: "12px", fontWeight: 500 }}
+                          style={{ fontFamily: "'Bangers', cursive", fontSize: "clamp(9px, 2.35vw, 12px)", fontWeight: 500 }}
                           onDoubleClick={(e) => { 
                             e.stopPropagation(); 
                             console.log(`✏️ Double-click detected on bubble ${bubbleId}`);
@@ -911,7 +919,7 @@ export default function PanelView({ imageUrl, title, panels = [], panelPositions
                             onChange={(e) => setExtraBubbles(prev => prev.map(b => b.id === bubble.id ? { ...b, speaker: e.target.value } : b))}
                             placeholder="Sprecher (optional)"
                             className="bg-transparent outline-none text-[#1A1410] border-b border-[#C9963A]/40 text-xs font-bold w-full"
-                            style={{ fontFamily: "'Bangers', cursive", fontSize: "11px" }}
+                            style={{ fontFamily: "'Bangers', cursive", fontSize: "clamp(8px, 2.15vw, 11px)" }}
                             onClick={(e) => e.stopPropagation()}
                             onKeyDown={(e) => e.key === "Tab" && e.preventDefault()}
                           />
@@ -926,7 +934,7 @@ export default function PanelView({ imageUrl, title, panels = [], panelPositions
                               }
                             }}
                             className="w-full flex-1 bg-transparent outline-none resize-none text-[#1A1410]"
-                            style={{ fontFamily: "'Bangers', cursive", fontSize: "12px", minHeight: "60px" }}
+                            style={{ fontFamily: "'Bangers', cursive", fontSize: "clamp(9px, 2.35vw, 12px)", minHeight: "60px" }}
                             rows={Math.max(3, Math.ceil((bubble.dialog.length || 1) / 20))}
                             onClick={(e) => e.stopPropagation()}
                             placeholder="Text eingeben…"
@@ -944,7 +952,7 @@ export default function PanelView({ imageUrl, title, panels = [], panelPositions
                       ) : (
                         <p
                           className="text-[#1A1410] leading-snug select-none"
-                          style={{ fontFamily: "'Bangers', cursive", fontSize: "12px", fontWeight: 500 }}
+                          style={{ fontFamily: "'Bangers', cursive", fontSize: "clamp(9px, 2.35vw, 12px)", fontWeight: 500 }}
                           onDoubleClick={(e) => { e.stopPropagation(); setEditingExtra(bubble.id); }}
                         >
                           {bubble.speaker && (
